@@ -61,7 +61,11 @@ Ss/9proJq3zi3LYUPvO8S9JdJw==
 # ---------------------------
 # 2. ページ設定と同期処理
 # ---------------------------
+# 2. ページ設定
 st.set_page_config(page_title="競艇予想 Pro Cloud", layout="wide")
+
+# ブラウザの自動翻訳によるバグを防ぐための設定（これを追加）
+st.markdown("<html lang='ja'>", unsafe_allow_html=True)
 st.title("🚤 競艇予想 Pro Cloud")
 
 if "place_bias" not in st.session_state:
@@ -178,3 +182,4 @@ with tab_study:
                 st.success("✅ スプレッドシートへ保存しました。")
             except Exception as e:
                 st.error(f"保存失敗: {e}")
+
