@@ -100,7 +100,13 @@ with tab_stat:
     # 会場選択（2列目が会場）
     places = sorted(df.iloc[:, 1].dropna().unique())
     race_place = st.selectbox("会場を選択してください", places)
+# -----------------------------
+# 会場別・展示タイム差分（6艇）
+# -----------------------------
+ex_cols = base.iloc[:, 9:15].apply(pd.to_numeric, errors="coerce")
 
+# 6艇それぞれの平均差分
+mean_each_boat = ex_cols.mean()
     # 会場で抽出
     base = df[df.iloc[:, 1] == race_place]
 
@@ -320,6 +326,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
