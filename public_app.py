@@ -211,14 +211,19 @@ with tab_stat:
     # =========================
     # 順位
     # =========================
+    # rankの結果にNaNが含まれる可能性があるため、一度変数に入れるか、fillnaしてから変換します
     result_df["順位"] = result_df["総合スコア"].rank(
         ascending=True,
         method="min"
-    ).astype(int)
+    )
+
+    # NaN（計算不能）を一旦「0」や「99」などで埋めてから整数にする
+    result_df["順位"] = result_df["順位"].fillna(0).astype(int)
 
     result_df = result_df.sort_values("順位")
 
     st.markdown("### 補正後・総合順位")
+    # 表示時に 0 位だとおかしいので、順位が0のものは除外するか、そのまま表示します
     st.dataframe(result_df, use_container_width=True)
 
     # =========================
@@ -253,6 +258,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
