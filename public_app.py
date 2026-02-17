@@ -141,7 +141,8 @@ with tab_stat:
     # -----------------------------
     # 会場平均との差
     # -----------------------------
-    mean_exhibit = base["展示"].mean()
+    ex_cols = base.iloc[:, 9:15]
+    mean_exhibit = ex_cols.mean().mean()
     mean_straight = base["直線"].mean()
     mean_lap = base["一周"].mean()
     mean_turn = base["回り足"].mean()
@@ -214,6 +215,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
