@@ -1,10 +1,5 @@
 import streamlit as st
 import pandas as pd
-import re
-
-def pick_cols(df, prefix):
-    pattern = re.compile(rf"^{re.escape(prefix)}[1-6]$")
-    return [c for c in df.columns if pattern.match(c)]
 import gspread
 import plotly.express as px
 from google.oauth2.service_account import Credentials
@@ -293,6 +288,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
