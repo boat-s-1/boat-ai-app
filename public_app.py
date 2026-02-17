@@ -4,108 +4,148 @@ import gspread
 import plotly.express as px
 from google.oauth2.service_account import Credentials
 
-# --- 1. 認証設定 ---
+# --- 1. 認証 & 接続設定 ---
 def get_gsheet_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     try:
-        if "gcp_service_account" not in st.secrets: return None
         credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         return gspread.authorize(credentials)
-    except: return None
+    except:
+        return None
 
-# --- 2. パスワード検問 ---
+# --- 2. ログイン機能 ---
 def check_password():
-    if "pwd_ok" not in st.session_state: st.session_state["pwd_ok"] = False
-    if st.session_state["pwd_ok"]: return True
-    st.title("🔐 競艇予想 Pro ログイン")
-    pwd = st.text_input("アクセスコードを入力", type="password")
+    if "pwd_ok" not in st.session_state:
+        st.session_state["pwd_ok"] = False
+    if st.session_state["pwd_ok"]:
+        return True
+    
+    st.title("🔐 競艇 Pro 解析ログイン")
+    pwd = st.text_input("アクセスコードを入力してください", type="password")
     if st.button("ログイン"):
-        if pwd == "boat-pro-777":
+        if pwd == "boat-pro-777": # 必要に応じて変更してください
             st.session_state["pwd_ok"] = True
             st.rerun()
-        else: st.error("コードが違います")
+        else:
+            st.error("コードが違います")
     return False
 
-# --- 3. アプリ本体 ---
+# --- メイン処理 ---
 if check_password():
-    st.set_page_config(page_title="競艇予想 Pro", layout="wide")
+    st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
     
-    # 共通データ読み込み
+    # データ読み込み
     df = pd.DataFrame()
-    df_memo = pd.DataFrame()
     gc = get_gsheet_client()
     if gc:
         try:
             sh = gc.open("競艇予想学習データ")
             raw = sh.get_worksheet(0).get_all_values()
-            if len(raw) > 1: df = pd.DataFrame(raw[1:], columns=raw[0])
-            m_raw = sh.worksheet("攻略メモ").get_all_values()
-            if len(m_raw) > 1: df_memo = pd.DataFrame(m_raw[1:], columns=m_raw[0])
-        except: pass
+            if len(raw) > 1:
+                df = pd.DataFrame(raw[1:], columns=raw[0])
+        except:
+            st.error("データ読み込みに失敗しました。シート名を確認してください。")
 
-    st.title("🚤 競艇予想 Pro 解析パネル")
+    st.title("🚀 三連単機力解析システム")
+    st.caption(f"現在の蓄積データ数: {len(df)} レース")
 
-    # タブの作成
-    tab1, tab2, tab3 = st.tabs(["⚡ 簡易版", "📊 詳細分析版", "🎯 リアルタイム解析"])
+    tab1, tab2, tab3 = st.tabs(["🎯 リアルタイム解析", "📊 過去リスト", "📝 攻略メモ"])
 
-    # --- Tab 1: 簡易版 (パッと見たい時) ---
+    # --- Tab 1: リアルタイム解析 ---
     with tab1:
-        st.subheader("シンプル機力チェック")
-        c1, c2 = st.columns(2)
-        target_p = c1.selectbox("会場選択", ["大村", "若松", "多摩川", "蒲郡", "戸田", "住之江", "尼崎", "鳴門", "丸亀", "福岡"], key="simple_p")
-        if not df_memo.empty:
-            memo = df_memo[df_memo["競艇場"] == target_p]
-            if not memo.empty:
-                st.success(f"📌 {target_p}のポイント: {memo.iloc[-1]['攻略内容']}")
-        st.info("展示タイムだけを入力して、ざっくりした機力差を確認するモードです。")
-
-    # --- Tab 2: 詳細分析版 (過去の統計) ---
-    with tab2:
-        st.subheader("📈 過去データ統計")
-        if not df.empty:
-            col_a, col_b = st.columns(2)
-            sel_place = col_a.selectbox("分析する会場", df["会場"].unique())
-            sel_win = col_b.multiselect("絞り込み(号艇)", ["1","2","3","4","5","6"], default=["1","2","3","4","5","6"])
-            
-            filtered_df = df[(df["会場"] == sel_place) & (df["1着号艇"].isin(sel_win))]
-            st.write(f"該当レース数: {len(filtered_df)}件")
-            st.dataframe(filtered_df.head(10), use_container_width=True)
-        else:
-            st.warning("データが蓄積されるとここに詳細な表が表示されます。")
-
-    # --- Tab 3: リアルタイム機力解析 (メイン機能) ---
-    with tab3:
-        st.subheader("⏱ タイム差から的中率を算出")
         col_in, col_res = st.columns([1, 2])
         
         with col_in:
-            p_now = st.selectbox("会場", ["大村", "若松", "多摩川", "蒲郡", "戸田", "平和島", "多摩川"], key="rt_p")
-            w_dir = st.selectbox("風向き", ["向い風", "追い風", "左横風", "右横風", "無風"], key="rt_w")
-            st.write("展示タイム入力")
-            rt_times = [st.number_input(f"{i}号艇", 6.0, 7.5, 6.7, 0.01, key=f"rt_t_{i}") for i in range(1, 7)]
-            calc_btn = st.button("解析実行", use_container_width=True)
+            st.subheader("条件入力")
+            place = st.selectbox("会場", ["大村", "若松", "多摩川", "蒲郡", "戸田", "江戸川", "平和島", "浜名湖", "常滑", "津", "三国", "びわこ", "住之江", "尼崎", "鳴門", "丸亀", "児島", "宮島", "徳山", "下関", "芦屋", "福岡", "唐津", "桐生"])
+            wdir = st.selectbox("風向き", ["向い風", "追い風", "左横風", "右横風", "無風"])
+            
+            st.write("▼ 本日の展示タイム等を入力")
+            # 解析用のタイム入力（ここでは簡易的に1つの代表タイムとして扱いますが、必要に応じて増やせます）
+            times = []
+            for i in range(1, 7):
+                t = st.number_input(f"{i}号艇 タイム", 4.0, 15.0, 6.70, 0.01, key=f"t_{i}")
+                times.append(t)
+            
+            btn = st.button("解析実行", use_container_width=True, type="primary")
 
         with col_res:
-            if calc_btn:
-                fastest = min(rt_times)
-                diffs = [round(t - fastest, 3) for t in rt_times]
+            if btn:
+                # 1. 今回の機力偏差を計算
+                fastest = min(times)
+                diffs = [round(t - fastest, 3) for t in times]
                 
-                # 偏差カード表示
-                st.write("▼ 機力偏差（0.000が最速）")
+                st.subheader("📊 解析結果")
+                
+                # 激アツ条件アラート（ロジック：タイム偏差が0.00の艇に注目）
+                alert_triggered = False
+                for i, d in enumerate(diffs):
+                    if d == 0.00:
+                        st.warning(f"🔥 【機力注目】{i+1}号艇が本日最速タイムをマーク！")
+                        alert_triggered = True
+                
+                if alert_triggered:
+                    st.balloons() # お祝い演出
+
+                # 偏差のメトリクス表示
                 d_cols = st.columns(6)
-                for idx, d in enumerate(diffs):
-                    d_cols[idx].metric(f"{idx+1}号艇", f"{d:.3f}")
-                
-                # 的中率計算
+                for i, d in enumerate(diffs):
+                    d_cols[i].metric(f"{i+1}号", f"{d:.2f}", delta=None)
+
+                # 2. 過去データとの照合
                 if not df.empty:
-                    match = df[(df["会場"] == p_now) & (df["風向き"] == w_dir)]
+                    # 型変換を安全に行う
+                    df["1着"] = pd.to_numeric(df["1着"], errors='coerce')
+                    df["2着"] = pd.to_numeric(df["2着"], errors='coerce')
+                    df["3着"] = pd.to_numeric(df["3着"], errors='coerce')
+                    
+                    match = df[(df["会場"] == place) & (df["風向き"] == wdir)]
+                    
                     if not match.empty:
-                        rates = match["1着号艇"].value_counts(normalize=True) * 100
-                        res_df = pd.DataFrame({
-                            "号艇": [f"{i}号艇" for i in range(1, 7)],
-                            "過去の的中率(%)": [round(rates.get(str(i), 0), 1) for i in range(1, 7)]
-                        })
-                        fig = px.bar(res_df, x="号艇", y="過去の的中率(%)", text="過去の的中率(%)", color="過去の的中率(%)", color_continuous_scale="Reds")
+                        st.write(f"🔎 同条件の過去レース: {len(match)}件")
+                        
+                        res_list = []
+                        w1 = match["1着"].tolist()
+                        all_3 = w1 + match["2着"].tolist() + match["3着"].tolist()
+                        
+                        for i in range(1, 7):
+                            r1 = (w1.count(i) / len(match)) * 100
+                            r3 = (all_3.count(i) / len(match)) * 100
+                            res_list.append({"号艇": f"{i}号艇", "1着率(%)": r1, "3連対率(%)": r3})
+                        
+                        res_df = pd.DataFrame(res_list)
+                        fig = px.bar(res_df, x="号艇", y=["1着率(%)", "3連対率(%)"], 
+                                     barmode="group",
+                                     color_discrete_map={"1着率(%)": "#FF4B4B", "3連対率(%)": "#1F77B4"})
                         st.plotly_chart(fig, use_container_width=True)
                     else:
-                        st.info("同条件の過去データがまだありません。")
+                        st.info("同条件（会場・風向き）の過去データがまだありません。データを蓄積中です！")
+
+    # --- Tab 2: 過去リスト ---
+    with tab2:
+        st.subheader("蓄積データ一覧")
+        if not df.empty:
+            st.dataframe(df, use_container_width=True)
+            # ダウンロードボタン
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button("CSVでダウンロード", csv, "boat_data.csv", "text/csv")
+        else:
+            st.write("データがありません。")
+
+    # --- Tab 3: 攻略メモ ---
+    with tab3:
+        st.subheader("会場別攻略メモ")
+        # 管理者アプリで保存したメモを表示するロジック
+        try:
+            ws_memo = sh.worksheet("攻略メモ")
+            memo_data = ws_memo.get_all_values()
+            if len(memo_data) > 1:
+                memo_df = pd.DataFrame(memo_data[1:], columns=memo_data[0])
+                for index, row in memo_df.iterrows():
+                    with st.chat_message("user"):
+                        st.write(f"**【{row['会場']}】** ({row['日付']})")
+                        st.write(row['メモ'])
+            else:
+                st.write("メモはまだありません。")
+        except:
+            st.write("メモシートが見つかりません。")
