@@ -97,7 +97,7 @@ with tab_stat:
         st.warning("データがありません")
         st.stop()
 
-    # 会場選択
+    # 会場選択（2列目が会場）
     places = sorted(df.iloc[:, 1].dropna().unique())
     race_place = st.selectbox("会場を選択してください", places)
 
@@ -110,94 +110,86 @@ with tab_stat:
         st.warning("補正に使うデータが少なすぎます（最低5件以上推奨）")
         st.stop()
 
-    # ==============================
-    # 展示タイム差分（6艇分）
-    # ==============================
-    # 9〜14列目が展示差分（管理者ページの保存仕様）
+    # =====================================
+    # 展示タイム差分（6艇）
+    # =====================================
     ex_cols = base.iloc[:, 9:15].apply(pd.to_numeric, errors="coerce")
 
-    # 各艇ごとの平均差分
     mean_each_boat = ex_cols.mean()
-
-    # 全体平均との差（参考用）
     mean_exhibit = ex_cols.mean().mean()
 
-    st.markdown("### 展示タイム補正値（平均との差分・小さいほど有利）")
-
-    result = pd.DataFrame({
+    result_ex = pd.DataFrame({
         "号艇": [f"{i}号艇" for i in range(1, 7)],
-        "補正値": mean_each_boat.values
+        "展示補正平均との差": mean_each_boat.values
     })
 
+    st.markdown("### 展示タイム補正値（平均との差）")
     st.dataframe(
-        result.style.format({"補正値": "{:.4f}"}),
+        result_ex.style.format({"展示補正平均との差": "{:.4f}"}),
         use_container_width=True
     )
 
-    st.markdown("### 会場全体の平均補正値")
+    st.markdown("会場全体平均との差（参考）")
     st.write(round(mean_exhibit, 4))
 
-    st.caption("※ 管理者ページで保存された『展示タイム差分』のみを使用しています。")
-    # -----------------------------
-    # 会場平均との差
-    # -----------------------------
-    ex_cols = base.iloc[:, 9:15]
-    mean_exhibit = ex_cols.mean().mean()
-    mean_straight = base["直線"].mean()
-    mean_lap = base["一周"].mean()
-    mean_turn = base["回り足"].mean()
 
-    df = df_view.copy()
+    # =====================================
+    # 直線タイム差分
+    # =====================================
+    st_cols = base.iloc[:, 15:21].apply(pd.to_numeric, errors="coerce")
 
-    # -----------------------------
-    # 1号艇補正係数
-    # -----------------------------
-    def lane_coef(lane):
-        if lane == 1:
-            return 0.7
-        elif lane == 2:
-            return 0.85
-        else:
-            return 1.0
+    mean_each_st = st_cols.mean()
 
-    df["lane_coef"] = df["艇番"].apply(lane_coef)
+    result_st = pd.DataFrame({
+        "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "直線補正平均との差": mean_each_st.values
+    })
 
-    # -----------------------------
-    # 補正値
-    # -----------------------------
-    df["補正展示"] = df["展示"] + (mean_exhibit - df["展示"]) * df["lane_coef"]
-    df["補正直線"] = df["直線"] + (mean_straight - df["直線"]) * df["lane_coef"]
-    df["補正一周"] = df["一周"] + (mean_lap - df["一周"]) * df["lane_coef"]
-    df["補正回り足"] = df["回り足"] + (mean_turn - df["回り足"]) * df["lane_coef"]
-
-    # -----------------------------
-    # 順位（小さいほど良い）
-    # -----------------------------
-    df["展示順位"] = df["補正展示"].rank(method="min")
-    df["直線順位"] = df["補正直線"].rank(method="min")
-    df["一周順位"] = df["補正一周"].rank(method="min")
-
-    st.caption(f"{race_place} 補正母数：{len(base)}件")
-
-    show_cols = [
-        "艇番",
-        "展示", "補正展示", "展示順位",
-        "直線", "補正直線", "直線順位",
-        "一周", "補正一周", "一周順位",
-        "回り足", "補正回り足"
-    ]
-
+    st.markdown("### 直線タイム補正値（平均との差）")
     st.dataframe(
-        df[show_cols]
-        .sort_values("補正展示")
-        .style
-        .applymap(
-            lambda v: "background-color:#ff4d4d" if v == 1 else
-                      "background-color:#ffe066" if v == 2 else "",
-            subset=["展示順位", "直線順位", "一周順位"]
-        )
+        result_st.style.format({"直線補正平均との差": "{:.4f}"}),
+        use_container_width=True
     )
 
+
+    # =====================================
+    # 1周タイム差分
+    # =====================================
+    lp_cols = base.iloc[:, 21:27].apply(pd.to_numeric, errors="coerce")
+
+    mean_each_lp = lp_cols.mean()
+
+    result_lp = pd.DataFrame({
+        "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "1周補正平均との差": mean_each_lp.values
+    })
+
+    st.markdown("### 1周タイム補正値（平均との差）")
+    st.dataframe(
+        result_lp.style.format({"1周補正平均との差": "{:.4f}"}),
+        use_container_width=True
+    )
+
+
+    # =====================================
+    # 回り足タイム差分
+    # =====================================
+    tn_cols = base.iloc[:, 27:33].apply(pd.to_numeric, errors="coerce")
+
+    mean_each_tn = tn_cols.mean()
+
+    result_tn = pd.DataFrame({
+        "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "回り足補正平均との差": mean_each_tn.values
+    })
+
+    st.markdown("### 回り足タイム補正値（平均との差）")
+    st.dataframe(
+        result_tn.style.format({"回り足補正平均との差": "{:.4f}"}),
+        use_container_width=True
+    )
+
+    st.caption("※ 管理者ページで保存された『平均との差分データ』のみを使用しています。")
 # --- タブ3：過去ログ ---
 with tab_log:
     st.subheader("全レースデータ一覧")
@@ -215,6 +207,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
