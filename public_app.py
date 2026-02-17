@@ -202,6 +202,7 @@ with tab_stat:
             t = st.number_input(
                 f"{i+1}号艇 展示タイム",
                 min_value=0.0,
+                value=6.50,
                 step=0.01,
                 key=f"today_ex_{i+1}"
             )
@@ -248,6 +249,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
