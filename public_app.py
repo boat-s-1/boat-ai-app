@@ -271,6 +271,46 @@ with tab_stat:
         }),
         use_container_width=True
     )
+    st.markdown("### 📊 この会場データの信頼度")
+
+st.write(f"対象データ件数：{len(base_df)} 件")
+
+# 列名を自動取得（安全）
+ex_cols = [c for c in base_df.columns if c.startswith("展示")]
+st_cols = [c for c in base_df.columns if c.startswith("直線")]
+lp_cols = [c for c in base_df.columns if c.startswith("一周")]
+tr_cols = [c for c in base_df.columns if c.startswith("回り足")]
+
+def calc_std(cols):
+    if len(cols) == 0:
+        return None
+    v = pd.to_numeric(
+        base_df[cols].stack(),
+        errors="coerce"
+    ).dropna()
+    if len(v) == 0:
+        return None
+    return v.std()
+
+std_ex = calc_std(ex_cols)
+std_st = calc_std(st_cols)
+std_lp = calc_std(lp_cols)
+std_tr = calc_std(tr_cols)
+
+std_table = pd.DataFrame({
+    "項目": ["展示", "直線", "一周", "回り足"],
+    "標準偏差（ばらつき）": [
+        std_ex,
+        std_st,
+        std_lp,
+        std_tr
+    ]
+})
+
+st.dataframe(
+    std_table.style.format({"標準偏差（ばらつき）": "{:.4f}"}),
+    use_container_width=True
+)
 # --- タブ3：過去ログ ---
 with tab_log:
     st.subheader("全レースデータ一覧")
@@ -288,6 +328,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
