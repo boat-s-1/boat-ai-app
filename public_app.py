@@ -90,7 +90,8 @@ with tab_pre:
 
 # --- タブ2：統計解析（過去データ照合） ---
 with tab2:
-
+    df_view = df.copy()
+    df_admin = df.copy()
     st.subheader("補正展示タイム閲覧")
 
     if df_view.empty:
@@ -184,4 +185,5 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
