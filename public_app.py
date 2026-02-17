@@ -37,6 +37,20 @@ if gc:
         st.error(f"読み込みエラー: {e}")
 
 st.title("🚀 三連単機力解析パネル")
+# --- 診断用コード：これを public_app.py の st.title の下あたりに入れてください ---
+st.write("🔧 診断システム起動中...")
+
+if gc is None:
+    st.error("❌ 接続エラー：Googleサービスへの認証に失敗しています。Secretsを確認してください。")
+else:
+    try:
+        sh = gc.open("競艇予想学習データ")
+        st.success("✅ ファイルは見つかりました！")
+        ws = sh.get_worksheet(0)
+        raw = ws.get_all_values()
+        st.write(f"シートの行数: {len(raw)}")
+    except Exception as e:
+        st.error(f"❌ ファイル読み込みエラー: {e}")
 st.info(f"📊 現在の蓄積データ数: {len(df)} レース")
 
 tab1, tab2 = st.tabs(["🎯 リアルタイム解析", "📊 過去リスト"])
@@ -78,3 +92,4 @@ with tab1:
 
 with tab2:
     st.dataframe(df, use_container_width=True)
+
