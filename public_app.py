@@ -102,8 +102,8 @@ with tab_stat:
     # ----------------------------
     # 会場選択（消えていた部分）
     # ----------------------------
-    place_list = sorted(df["会場"].dropna().unique())
-    place = st.selectbox("会場を選択してください", place_list)
+      place_list = sorted(df["会場"].dropna().unique())
+      place = st.selectbox("会場を選択してください", place_list)
 
     base = df[df["会場"] == place].copy()
 
@@ -290,6 +290,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
