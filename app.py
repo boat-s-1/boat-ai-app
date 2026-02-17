@@ -2,165 +2,123 @@ import streamlit as st
 import pandas as pd
 import datetime
 import gspread
-import numpy as np
 from google.oauth2.service_account import Credentials
 
-# --- 1. 認証設定 ---
+# --- 1. 認証 & 接続設定 ---
 def get_gsheet_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     try:
+        # StreamlitのSecretsから認証情報を取得
         if "gcp_service_account" not in st.secrets:
+            st.error("Secretsに 'gcp_service_account' が設定されていません。")
             return None
         credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         return gspread.authorize(credentials)
-    except:
+    except Exception as e:
+        st.error(f"接続エラー: {e}")
         return None
 
-# --- ページ基本設定 ---
-st.set_page_config(page_title="競艇予想 Pro Cloud + Data", page_icon="🚤", layout="wide")
+# --- ページ設定 ---
+st.set_page_config(page_title="管理者用：競艇機力分析", page_icon="⚙️", layout="wide")
 
 # 定数
-BOATS = [1, 2, 3, 4, 5, 6]
-MARK_LIST = ["⭐", "◎", "◯", "▪️", "△", "✖️"]
-MARK_SCORE = {"⭐": 6, "◎": 5, "◯": 4, "▪️": 3, "△": 2, "✖️": 1}
 PLACES = ["桐生", "戸田", "江戸川", "平和島", "多摩川", "浜名湖", "蒲郡", "常滑", "津", "三国", "びわこ", "住之江", "尼崎", "鳴門", "丸亀", "児島", "宮島", "徳山", "下関", "若松", "芦屋", "福岡", "唐津", "大村"]
+DIRS = ["向い風", "追い風", "左横風", "右横風", "無風"]
 
-# --- 2. カード表示関数 ---
-def show_rank_card(rank, boat, percent, score):
-    medal = ["🥇", "🥈", "🥉", "4位", "5位", "6位"]
-    icon = medal[rank-1]
-    bg = "linear-gradient(135deg, #fff1b8, #ffd700)" if percent >= 22 else "linear-gradient(135deg, #ffe6f2, #ffd1ea)" if percent >= 18 else "#ffffff"
-    border = "2px solid #ffb700" if percent >= 22 else "1px solid #ffb0c4" if percent >= 18 else "1px solid #ddd"
-    
-    html = f"""
-    <div style="border-radius:15px; padding:15px; margin-bottom:10px; background:{bg}; border:{border}; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="font-size:18px; font-weight:bold; color:#333;">{icon} {boat}号艇</div>
-        <div style="font-size:22px; font-weight:bold; color:#ff2f92; margin:5px 0;">期待度: {percent:.1f}%</div>
-        <div style="font-size:12px; color:#666;">合計スコア: {score}点</div>
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
+# クラウド接続
+gc = get_gsheet_client()
+sh = None
+ws_data = None
+ws_memo = None
 
-# --- 3. 色付け用関数 ---
-def highlight_times(df):
-    def styling(col):
-        is_best = col == col.min()
-        is_second = col == col.nsmallest(2).iloc[-1]
-        styles = []
-        for b, s in zip(is_best, is_second):
-            if b: styles.append('background-color: #ff4b4b; color: white; font-weight: bold')
-            elif s: styles.append('background-color: #f1c40f; color: black; font-weight: bold')
-            else: styles.append('')
-        return styles
-    return df.style.apply(styling, subset=["展示", "直線", "1周", "回り足"])
-
-# データ読み込み
-all_rows, ws_obj = (None, None)
-try:
-    gc = get_gsheet_client()
-    if gc:
+if gc:
+    try:
         sh = gc.open("競艇予想学習データ")
-        ws = sh.get_worksheet(0)
-        all_rows = ws.get_all_values()
-        ws_obj = ws
-except:
-    pass
+        ws_data = sh.get_worksheet(0)  # 的中データ用シート
+        ws_memo = sh.worksheet("攻略メモ") # 攻略メモ用シート
+    except Exception as e:
+        st.warning(f"シートの読み込みに失敗しました（シート名を確認してください）: {e}")
 
-st.title("🚤 競艇予想 Pro Cloud + Data")
+st.title("🚤 競艇予想 Pro Cloud (管理者)")
 
-tab1, tab2, tab3, tab4 = st.tabs(["📋 簡易版", "📊 詳細版", "🕒 補正比較", "📈 的中データ登録"])
+# タブの作成
+tab1, tab2, tab3 = st.tabs(["🕒 タイム入力・偏差計算", "📊 的中データ登録", "📝 攻略メモ編集"])
 
-# (Tab1, Tab2, Tab3 は前回の内容を維持)
+# --- Tab 1: タイム入力 ---
 with tab1:
-    st.subheader("記号評価（基準：▪️）")
-    simple_scores = {}
+    st.subheader("現在のレース：タイム入力")
+    st.info("💡 ここで入力した数値が、的中登録時の『偏差（トップとの差）』として自動計算されます。")
+    
+    # 6艇分の入力フォーム
+    cols = st.columns(3)
     for i in range(1, 7):
-        with st.expander(f"🚤 {i}号艇 の評価", expanded=True):
-            cols = st.columns(4)
-            m = cols[0].selectbox("モーター", MARK_LIST, index=3, key=f"sm_{i}")
-            w = cols[1].selectbox("当地勝率", MARK_LIST, index=3, key=f"sw_{i}")
-            s = cols[2].selectbox("スタート", MARK_LIST, index=3, key=f"ss_{i}")
-            e = cols[3].selectbox("展示気配", MARK_LIST, index=3, key=f"se_{i}")
-            simple_scores[i] = MARK_SCORE[m] + MARK_SCORE[w] + MARK_SCORE[s] + MARK_SCORE[e]
-    total = sum(simple_scores.values())
-    ranked = sorted(simple_scores.items(), key=lambda x: x[1], reverse=True)
-    card_cols = st.columns(6)
-    for i, (boat, score) in enumerate(ranked, 1):
-        with card_cols[i-1]:
-            percent = (score / total * 100) if total > 0 else 0
-            show_rank_card(i, boat, percent, score)
+        # 2艇ずつ横に並べる
+        with cols[(i-1) % 3]:
+            with st.expander(f"🚤 {i}号艇 タイム", expanded=True):
+                st.number_input("展示タイム", 6.0, 7.5, 6.70, 0.01, key=f"ex_{i}")
+                st.number_input("直線タイム", 6.0, 10.0, 7.00, 0.01, key=f"st_{i}")
+                st.number_input("1周タイム", 34.0, 45.0, 37.00, 0.01, key=f"lp_{i}")
+                st.number_input("回り足タイム", 3.0, 10.0, 5.00, 0.01, key=f"tn_{i}")
 
+# --- Tab 2: 的中データ登録 (ここが保存のメイン) ---
 with tab2:
-    st.subheader("数値精密評価")
-    with st.expander("⚖️ 重み調整"):
-        w_cols = st.columns(4)
-        wm, ww, ws, we = [w_cols[i].slider(["モーター","勝率","ST","展示"][i], 0, 10, 5) for i in range(4)]
-    detail_scores = {}
-    for i in range(1, 7):
-        with st.expander(f"🚤 {i}号艇 数値", expanded=True):
-            cols = st.columns(4)
-            m_v = cols[0].number_input("モーター点", 0.0, 10.0, 5.0, 0.1, key=f"dm_{i}")
-            w_v = cols[1].number_input("勝率点", 0.0, 10.0, 5.0, 0.1, key=f"dw_{i}")
-            s_v = cols[2].number_input("平均ST", 0.10, 0.30, 0.15, 0.01, key=f"ds_{i}")
-            e_v = cols[3].number_input("展示タイム", 6.0, 7.5, 6.7, 0.01, key=f"de_{i}")
-            detail_scores[i] = (m_v * wm) + (w_v * ww) + ((1/s_v) * ws) + ((1/e_v) * we)
-    total_d = sum(detail_scores.values())
-    ranked_d = sorted(detail_scores.items(), key=lambda x: x[1], reverse=True)
-    card_cols_d = st.columns(6)
-    for i, (boat, score) in enumerate(ranked_d, 1):
-        with card_cols_d[i-1]:
-            percent_d = (score / total_d * 100) if total_d > 0 else 0
-            show_rank_card(i, boat, percent_d, round(score, 1))
-
-with tab3:
-    st.subheader("タイム比較（1位:赤 / 2位:黄）")
-    time_data = []
-    for i in range(1, 7):
-        with st.expander(f"🚤 {i}号艇 タイム入力", expanded=True):
-            t_cols = st.columns(4)
-            t_ex = t_cols[0].number_input("展示", 6.0, 7.5, 6.7, 0.01, key=f"tex_{i}")
-            t_st = t_cols[1].number_input("直線", 6.0, 10.0, 7.0, 0.01, key=f"tst_{i}")
-            t_lp = t_cols[2].number_input("1周", 34.0, 45.0, 37.0, 0.01, key=f"tlp_{i}")
-            t_tn = t_cols[3].number_input("回り足", 3.0, 10.0, 5.0, 0.01, key=f"ttn_{i}")
-            time_data.append([f"{i}号艇", t_ex, t_st, t_lp, t_tn])
-    df_times = pd.DataFrame(time_data, columns=["号艇", "展示", "直線", "1周", "回り足"])
-    st.table(highlight_times(df_times))
-
-# ===============================
-# 4. 的中データ登録（収益化に向けた強化項目）
-# ===============================
-with tab4:
-    st.subheader("📈 レース結果と気象の登録")
-    if ws_obj is None:
-        st.warning("クラウド接続中...")
+    st.subheader("🏁 レース結果の保存")
+    if ws_data is None:
+        st.error("スプレッドシートのメインシートが見つかりません。")
     else:
-        with st.form("result_form", clear_on_submit=True):
+        with st.form("result_form"):
+            # 基本情報
             c1, c2, c3 = st.columns(3)
-            f_p = c1.selectbox("会場", PLACES)
-            f_r = c2.number_input("レースR", 1, 12, 1)
-            f_win = c3.selectbox("1着の号艇", BOATS) # 勝率計算に必須
+            f_place = c1.selectbox("会場", PLACES)
+            f_race = c2.number_input("レースR", 1, 12, 1)
+            f_win = c3.selectbox("実際の1着", [1, 2, 3, 4, 5, 6])
             
-            st.divider()
-            st.write("🏁 気象条件（勝率の重み付けに重要）")
+            # 気象
             w1, w2, w3 = st.columns(3)
-            f_wdir = w1.selectbox("風向き", ["向い風", "追い風", "左横風", "右横風", "無風"])
+            f_wdir = w1.selectbox("風向き", DIRS)
             f_wspd = w2.number_input("風速 (m)", 0, 15, 0)
             f_wave = w3.number_input("波高 (cm)", 0, 50, 0)
-            
-            st.divider()
-            st.write("⏱ 展示タイムの偏差（展示 - 節間平均など）")
-            d_cols = st.columns(6)
-            f_ds = [d_cols[i].number_input(f"{i+1}号艇", -0.5, 0.5, 0.0, 0.01, key=f"bias_{i}") for i in range(6)]
-            
-            if st.form_submit_button("的中分析用データを保存", use_container_width=True):
+
+            st.write("---")
+            st.markdown("🔍 **保存内容:** Tab1で入力した各項目の **『トップ差』** を保存します。")
+
+            if st.form_submit_button("最速タイム基準でクラウドへ保存"):
                 try:
-                    # [日付, 会場, レース, 1着号艇, 風向き, 風速, 波高, 1号艇偏差, 2号艇偏差, 3号艇偏差, 4号艇偏差, 5号艇偏差, 6号艇偏差]
+                    # 各タイム項目をリスト化して偏差（自分のタイム - 最速）を計算
+                    def get_diffs(prefix):
+                        times = [st.session_state[f"{prefix}_{i}"] for i in range(1, 7)]
+                        fastest = min(times)
+                        return [round(t - fastest, 3) for t in times]
+
+                    # 各種偏差を算出
+                    diff_ex = get_diffs("ex") # 展示
+                    diff_st = get_diffs("st") # 直線
+                    diff_lp = get_diffs("lp") # 1周
+                    diff_tn = get_diffs("tn") # 回り足
+
+                    # 保存する1行を作成
+                    # [日付, 会場, レース, 1着, 風向, 風速, 波高, 展示偏差(1-6), 直線偏差(1-6), 1周偏差(1-6), 回り足偏差(1-6)]
                     new_row = [
-                        str(datetime.date.today()), f_p, int(f_r), int(f_win), 
-                        f_wdir, int(f_wspd), int(f_wave)
-                    ] + [float(d) for d in f_ds]
+                        str(datetime.date.today()), f_place, f_race, f_win, f_wdir, f_wspd, f_wave
+                    ] + diff_ex + diff_st + diff_lp + diff_tn
                     
-                    ws_obj.append_rows([new_row])
-                    st.success(f"✅ 保存完了！ {f_p}{f_r}R のデータを蓄積しました。")
+                    ws_data.append_row(new_row)
+                    st.success(f"✅ {f_place}{f_race}R のデータを保存しました。")
                 except Exception as e:
-                    st.error(f"保存失敗: {e}")
+                    st.error(f"保存エラー: {e}")
+
+# --- Tab 3: 攻略メモ編集 ---
+with tab3:
+    st.subheader("📝 会場別攻略メモの更新")
+    if ws_memo is None:
+        st.info("スプレッドシートに『攻略メモ』という名前の新しいシートを作成してください。")
+    else:
+        with st.form("memo_form"):
+            m_place = st.selectbox("会場を選択", PLACES)
+            m_text = st.text_area("攻略アドバイスを入力（例：インが強い、展示は直線重視など）", height=150)
+            if st.form_submit_button("メモを更新する"):
+                try:
+                    ws_memo.append_row([m_place, m_text, str(datetime.date.today())])
+                    st.success(f"✅ {m_place}のメモを更新しました。配布アプリに反映されます。")
+                except Exception as e:
+                    st.error(f"メモ保存エラー: {e}")
