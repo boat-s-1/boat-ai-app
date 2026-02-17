@@ -90,6 +90,13 @@ with tab_pre:
 
 # --- タブ2：統計解析・補正シミュレーション ---
 with tab_stat:
+      st.subheader("補正展示タイム（会場別・蓄積データ）")
+
+    places = sorted(df["場"].dropna().unique())
+    selected_place = st.selectbox("会場を選択", places)
+
+    df_place = df[df["場"] == selected_place].copy()
+
     st.header("展示タイム補正シミュレーション")
 
     # ============================
@@ -238,6 +245,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
