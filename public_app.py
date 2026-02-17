@@ -90,212 +90,135 @@ with tab_pre:
 
 # --- タブ2：統計解析・補正シミュレーション ---
 with tab_stat:
-    df_view = df.copy()
-    
-    st.subheader("補正展示タイム（会場別・蓄積データ）")
+    st.header("展示タイム補正シミュレーション")
 
-    if df.empty:
-        st.warning("蓄積データがありません")
-        st.stop()
+    # ============================
+    # ① 仮の補正値（号艇別平均補正）
+    # ※ 後で蓄積データから作る想定
+    # ============================
+    mean_each_boat = pd.Series(
+        [0.000, 0.020, 0.030, 0.050, 0.070, 0.090],
+        index=[1, 2, 3, 4, 5, 6]
+    )
 
-    if df_view.empty:
-        st.warning("今日の表示データがありません")
-        st.stop()
+    # ============================
+    # ② 入力欄
+    # ============================
+    st.subheader("展示タイム")
 
-    # -----------------------------
-    # 会場選択
-    # -----------------------------
-    places = sorted(df.iloc[:, 1].dropna().unique())
-    race_place = st.selectbox("会場を選択してください", places)
+    ex_times = []
+    cols = st.columns(6)
+    for i in range(6):
+        with cols[i]:
+            v = st.number_input(
+                f"{i+1}号艇",
+                value=6.50,      # 初期値
+                step=0.01,
+                min_value=0.00,
+                key=f"tab2_ex_{i+1}"
+            )
+            ex_times.append(v)
 
-    # -----------------------------
-    # 会場で抽出（蓄積データ）
-    # -----------------------------
-    base = df[df.iloc[:, 1] == race_place]
+    st.subheader("直線タイム")
 
-    st.write(f"対象データ数：{len(base)} 件")
+    st_times = []
+    cols = st.columns(6)
+    for i in range(6):
+        with cols[i]:
+            v = st.number_input(
+                f"{i+1}号艇",
+                value=6.50,
+                step=0.01,
+                min_value=0.00,
+                key=f"tab2_st_{i+1}"
+            )
+            st_times.append(v)
 
-    if len(base) < 5:
-        st.warning("補正に使うデータが少なすぎます（最低5件以上推奨）")
-        st.stop()
+    st.subheader("1周タイム")
 
-    # =============================
-    # 展示タイム差分（管理者保存分）
-    # 9〜14列目が 1〜6号艇の差分
-    # =============================
-    ex_cols = base.iloc[:, 9:15].apply(pd.to_numeric, errors="coerce")
+    lap_times = []
+    cols = st.columns(6)
+    for i in range(6):
+        with cols[i]:
+            v = st.number_input(
+                f"{i+1}号艇",
+                value=37.0,
+                step=0.1,
+                min_value=0.0,
+                key=f"tab2_lap_{i+1}"
+            )
+            lap_times.append(v)
 
-    # 号艇ごとの平均差分
-    mean_each_boat = ex_cols.mean()
-
-    st.markdown("### 会場別・展示タイム補正値（蓄積データより）")
-
-    df_corr_table = pd.DataFrame({
+    # ============================
+    # ③ 今日データ作成
+    # ============================
+    df_today = pd.DataFrame({
         "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "展示タイム": ex_times,
+        "直線タイム": st_times,
+        "1周タイム": lap_times,
         "補正値": mean_each_boat.values
     })
 
-    st.dataframe(
-        df_corr_table.style.format({"補正値": "{:.4f}"}),
-        use_container_width=True
+    # ============================
+    # ④ 補正展示タイム
+    # ============================
+    df_today["補正展示タイム"] = (
+        df_today["展示タイム"] + df_today["補正値"]
     )
 
-    # =============================
-    # 今日のレース用データ
-    # =============================
-    today_df = df_view.copy()
+    # ============================
+    # ⑤ 順位
+    # （小さいほど良い）
+    # ============================
+    df_today["展示順位"] = df_today["補正展示タイム"].rank(
+        method="min", ascending=True
+    ).astype(int)
 
-    # 念のため数値化
-    for c in cols:
-    if c in today_df.columns:
-        today_df[c] = pd.to_numeric(today_df[c], errors="coerce")
+    df_today["直線順位"] = df_today["直線タイム"].rank(
+        method="min", ascending=True
+    ).astype(int)
 
-    # -----------------------------
-    # 会場平均との差（参考）
-    # -----------------------------
-    mean_exhibit_all = ex_cols.mean().mean()
-    mean_straight = pd.to_numeric(base["直線"], errors="coerce").mean()
-    mean_lap      = pd.to_numeric(base["一周"], errors="coerce").mean()
-    mean_turn     = pd.to_numeric(base["回り足"], errors="coerce").mean()
+    df_today["1周順位"] = df_today["1周タイム"].rank(
+        method="min", ascending=True
+    ).astype(int)
 
-    # -----------------------------
-    # レーン補正係数
-    # -----------------------------
-    def lane_coef(lane):
-        if lane == 1:
-            return 0.7
-        elif lane == 2:
-            return 0.85
-        else:
-            return 1.0
+    # ============================
+    # ⑥ 色付け
+    # ============================
+    def highlight_rank(col):
+        styles = []
+        for v in col:
+            if v == 1:
+                styles.append("background-color:#ffcccc")   # 1位 赤
+            elif v == 2:
+                styles.append("background-color:#fff2cc")   # 2位 黄
+            else:
+                styles.append("")
+        return styles
 
-    today_df["lane_coef"] = today_df["艇番"].apply(lane_coef)
-
-    # -----------------------------
-    # 補正値
-    # （展示は号艇別補正値を使用）
-    # -----------------------------
-    today_df["展示補正値"] = mean_each_boat.values
-
-    today_df["補正展示"] = today_df["展示"] + today_df["展示補正値"] * today_df["lane_coef"]
-    today_df["補正直線"] = today_df["直線"] + (mean_straight - today_df["直線"]) * today_df["lane_coef"]
-    today_df["補正一周"] = today_df["一周"] + (mean_lap - today_df["一周"]) * today_df["lane_coef"]
-    today_df["補正回り足"] = today_df["回り足"] + (mean_turn - today_df["回り足"]) * today_df["lane_coef"]
-
-    # -----------------------------
-    # 順位（小さいほど良い）
-    # -----------------------------
-    today_df["展示順位"] = today_df["補正展示"].rank(method="min")
-    today_df["直線順位"] = today_df["補正直線"].rank(method="min")
-    today_df["一周順位"] = today_df["補正一周"].rank(method="min")
-    today_df["回り足順位"] = today_df["補正回り足"].rank(method="min")
-
-    st.markdown("### 今日の補正結果（蓄積データ反映）")
-
-    show_cols = [
-        "艇番",
-        "展示", "補正展示", "展示順位",
-        "直線", "補正直線", "直線順位",
-        "一周", "補正一周", "一周順位",
-        "回り足", "補正回り足", "回り足順位"
-    ]
-
-    st.dataframe(
-        today_df[show_cols]
-        .sort_values("補正展示")
+    styled = (
+        df_today
         .style
         .format({
-            "展示": "{:.2f}", "補正展示": "{:.3f}",
-            "直線": "{:.2f}", "補正直線": "{:.3f}",
-            "一周": "{:.2f}", "補正一周": "{:.3f}",
-            "回り足": "{:.2f}", "補正回り足": "{:.3f}"
+            "展示タイム": "{:.2f}",
+            "直線タイム": "{:.2f}",
+            "1周タイム": "{:.1f}",
+            "補正値": "{:.3f}",
+            "補正展示タイム": "{:.3f}"
         })
-        .applymap(
-            lambda v: "background-color:#ff4d4d" if v == 1 else
-                      "background-color:#ffe066" if v == 2 else "",
-            subset=["展示順位", "直線順位", "一周順位", "回り足順位"]
-        ),
-        use_container_width=True
+        .apply(highlight_rank, subset=["展示順位"])
+        .apply(highlight_rank, subset=["直線順位"])
+        .apply(highlight_rank, subset=["1周順位"])
     )
 
-    st.caption(f"{race_place} 補正母数：{len(base)}件")
-
-    # ==================================================
-    # 今日の手入力シミュレーション（初期値あり）
-    # ==================================================
-    st.markdown("---")
-    st.markdown("## 今日の補正タイム入力シミュレーション")
-
-    boats = [f"{i}号艇" for i in range(1, 7)]
-
-    input_cols = st.columns(6)
-
-    ex = []
-    stl = []
-    lap = []
-    turn = []
-
-    for i in range(6):
-        with input_cols[i]:
-            st.markdown(f"**{i+1}号艇**")
-            ex.append(
-                st.number_input("展示", value=6.50, step=0.01, key=f"sim_ex_{i}")
-            )
-            stl.append(
-                st.number_input("直線", value=7.00, step=0.01, key=f"sim_st_{i}")
-            )
-            lap.append(
-                st.number_input("一周", value=37.00, step=0.01, key=f"sim_lap_{i}")
-            )
-            turn.append(
-                st.number_input("回り足", value=0.00, step=0.01, key=f"sim_turn_{i}")
-            )
-
-    sim_df = pd.DataFrame({
-        "艇番": [1,2,3,4,5,6],
-        "展示": ex,
-        "直線": stl,
-        "一周": lap,
-        "回り足": turn
-    })
-
-    sim_df["lane_coef"] = sim_df["艇番"].apply(lane_coef)
-
-    sim_df["展示補正値"] = mean_each_boat.values
-
-    sim_df["補正展示"] = sim_df["展示"] + sim_df["展示補正値"] * sim_df["lane_coef"]
-    sim_df["補正直線"] = sim_df["直線"] + (mean_straight - sim_df["直線"]) * sim_df["lane_coef"]
-    sim_df["補正一周"] = sim_df["一周"] + (mean_lap - sim_df["一周"]) * sim_df["lane_coef"]
-    sim_df["補正回り足"] = sim_df["回り足"] + (mean_turn - sim_df["回り足"]) * sim_df["lane_coef"]
-
-    sim_df["展示順位"] = sim_df["補正展示"].rank(method="min")
-    sim_df["直線順位"] = sim_df["補正直線"].rank(method="min")
-    sim_df["一周順位"] = sim_df["補正一周"].rank(method="min")
-    sim_df["回り足順位"] = sim_df["補正回り足"].rank(method="min")
-
-    st.markdown("### 入力値から算出した補正結果")
+    # ============================
+    # ⑦ 表示
+    # ============================
+    st.subheader("公式ページ風 比較表")
 
     st.dataframe(
-        sim_df[[
-            "艇番",
-            "展示","補正展示","展示順位",
-            "直線","補正直線","直線順位",
-            "一周","補正一周","一周順位",
-            "回り足","補正回り足","回り足順位"
-        ]]
-        .sort_values("補正展示")
-        .style
-        .format({
-            "展示": "{:.2f}", "補正展示": "{:.3f}",
-            "直線": "{:.2f}", "補正直線": "{:.3f}",
-            "一周": "{:.2f}", "補正一周": "{:.3f}",
-            "回り足": "{:.2f}", "補正回り足": "{:.3f}"
-        })
-        .applymap(
-            lambda v: "background-color:#ff4d4d" if v == 1 else
-                      "background-color:#ffe066" if v == 2 else "",
-            subset=["展示順位", "直線順位", "一周順位", "回り足順位"]
-        ),
+        styled,
         use_container_width=True
     )
 # --- タブ3：過去ログ ---
@@ -315,6 +238,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
