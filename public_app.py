@@ -89,7 +89,7 @@ with tab_pre:
         if sorted_boats[0][1] >= 85: st.balloons()
 
 # --- タブ2：補正展示タイム（蓄積データから算出） ---
-with tab2:
+with tab_stat:
 
     st.subheader("補正展示タイム閲覧（会場別・蓄積データ）")
 
@@ -214,6 +214,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
