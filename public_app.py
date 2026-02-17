@@ -105,11 +105,11 @@ with tab_stat:
       place_list = sorted(df["会場"].dropna().unique())
       place = st.selectbox("会場を選択してください", place_list)
 
-    base = df[df["会場"] == place].copy()
+      base = df[df["会場"] == place].copy()
 
-    st.caption(f"対象データ数：{len(base)}件")
+      st.caption(f"対象データ数：{len(base)}件")
 
-    if len(base) < 5:
+      if len(base) < 5:
         st.warning("補正に使うデータが少なすぎます（最低5件推奨）")
 
     # ----------------------------
@@ -290,6 +290,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
