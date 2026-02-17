@@ -93,7 +93,7 @@ with tab_pre:
 # -------------------------
 with tab_stat:
 
-     st.subheader("会場別 補正・総合順位")
+    st.subheader("会場別 補正・総合順位")
 
     # =========================
     # 会場選択（消えていた部分）
@@ -252,6 +252,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
