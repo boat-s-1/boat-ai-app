@@ -99,6 +99,8 @@ with tab_stat:
     # =========================
     # 会場選択（消えていた部分）
     # =========================
+    st.write("現在の列名一覧:", df.columns.tolist())  # これを追加！# エラーが出ている行
+    place_list = sorted(df["会場"].dropna().unique
     place_list = sorted(df["会場"].dropna().unique())
     place = st.selectbox("会場を選択", place_list)
 
@@ -258,6 +260,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
