@@ -54,39 +54,54 @@ with tab1:
                 st.number_input("回り足タイム", 3.0, 15.0, 5.00, 0.01, key=f"tn_{i}")
 
 # --- Tab 2: 的中データ登録 ---
+# --- Tab 2: 的中データ登録 (1-3着対応版) ---
 with tab2:
     if ws_data is None:
-        st.error("スプレッドシートが見つかりません。")
+        st.error("シートが見つかりません。")
     else:
         with st.form("result_form"):
             c1, c2, c3 = st.columns(3)
             f_place = c1.selectbox("会場", PLACES)
             f_race = c2.number_input("レースR", 1, 12, 1)
-            f_win = c3.selectbox("実際の1着", [1, 2, 3, 4, 5, 6])
+            
+            # 1着・2着・3着を選べるように変更
+            res_cols = st.columns(3)
+            f_win1 = res_cols[0].selectbox("1着", [1, 2, 3, 4, 5, 6], key="w1")
+            f_win2 = res_cols[1].selectbox("2着", [1, 2, 3, 4, 5, 6], key="w2")
+            f_win3 = res_cols[2].selectbox("3着", [1, 2, 3, 4, 5, 6], key="w3")
             
             w1, w2, w3 = st.columns(3)
             f_wdir = w1.selectbox("風向き", DIRS)
             f_wspd = w2.number_input("風速 (m)", 0, 15, 0)
             f_wave = w3.number_input("波高 (cm)", 0, 50, 0)
 
-            if st.form_submit_button("データを保存"):
-                try:
-                    def get_diffs(prefix):
-                        times = [st.session_state[f"{prefix}_{i}"] for i in range(1, 7)]
-                        fastest = min(times)
-                        return [round(t - fastest, 3) for t in times]
+            if st.form_submit_button("3着までまとめて保存"):
+                # バリデーション：着順が重複していないか
+                if len({f_win1, f_win2, f_win3}) < 3:
+                    st.error("着順が重複しています！正しく入力してください。")
+                else:
+                    try:
+                        def get_diffs(prefix):
+                            times = [st.session_state[f"{prefix}_{i}"] for i in range(1, 7)]
+                            fastest = min(times)
+                            return [round(t - fastest, 3) for t in times]
 
-                    d_ex = get_diffs("ex")
-                    d_st = get_diffs("st")
-                    d_lp = get_diffs("lp")
-                    d_tn = get_diffs("tn")
+                        d_ex = get_diffs("ex")
+                        d_st = get_diffs("st")
+                        d_lp = get_diffs("lp")
+                        d_tn = get_diffs("tn")
 
-                    new_row = [str(datetime.date.today()), f_place, f_race, f_win, f_wdir, f_wspd, f_wave] + d_ex + d_st + d_lp + d_tn
-                    ws_data.append_row(new_row)
-                    st.success("✅ 保存完了！")
-                except Exception as e:
-                    st.error(f"保存失敗: {e}")
-
+                        # 保存データに 2着, 3着 を追加
+                        new_row = [
+                            str(datetime.date.today()), f_place, f_race, 
+                            f_win1, f_win2, f_win3, # ここを拡張
+                            f_wdir, f_wspd, f_wave
+                        ] + d_ex + d_st + d_lp + d_tn
+                        
+                        ws_data.append_row(new_row)
+                        st.success(f"✅ {f_win1}-{f_win2}-{f_win3} で保存しました！")
+                    except Exception as e:
+                        st.error(f"保存失敗: {e}")
 # --- Tab 3: 攻略メモ ---
 with tab3:
     if ws_memo is not None:
@@ -96,3 +111,4 @@ with tab3:
             if st.form_submit_button("メモ更新"):
                 ws_memo.append_row([m_place, m_text, str(datetime.date.today())])
                 st.success("✅ メモを更新しました。")
+
