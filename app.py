@@ -5,32 +5,38 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # 1. 認証設定
+# --- ここから書き換え ---
 def get_gsheet_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     try:
+        # Secretsが読み込めているかチェック
+        if "gcp_service_account" not in st.secrets:
+            st.error("Secretsの設定（gcp_service_account）が見つかりません。")
+            return None
         credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         return gspread.authorize(credentials)
-    except:
+    except Exception as e:
+        st.error(f"認証エラーが発生しました: {e}") # ←ここで本当の理由を表示
         return None
 
 st.set_page_config(page_title="競艇予想 Pro Cloud", layout="wide")
 st.title("🚤 競艇予想 Pro Cloud")
 
-# データの読み込み
-@st.cache_data(ttl=60) # テストのためキャッシュを1分に短縮
+@st.cache_data(ttl=10)
 def load_data():
     try:
         gc = get_gsheet_client()
         if gc:
             sh = gc.open("競艇予想学習データ")
             ws = sh.get_worksheet(0)
-            # get_all_values() を使い、列の番号で制御する
             return ws.get_all_values(), ws
     except Exception as e:
+        st.error(f"スプレッドシート読み込みエラー: {e}") # ←ここで本当の理由を表示
         return None, None
     return None, None
 
 all_rows, ws_obj = load_data()
+# --- ここまで書き換え ---
 
 if all_rows is None:
     st.error("スプレッドシートにアクセスできません。共有設定を確認してください。")
@@ -89,3 +95,4 @@ else:
                 ws_obj.append_row([str(datetime.date.today()), f_p, f_r] + f_ds)
                 st.success("保存しました！")
                 st.cache_data.clear()
+
