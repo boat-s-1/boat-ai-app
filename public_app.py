@@ -88,26 +88,56 @@ with tab_pre:
                     elif score >= 50: st.info("✅ 狙い目")
         if sorted_boats[0][1] >= 85: st.balloons()
 
-# --- タブ2：統計解析（過去データ照合） ---
-with tab_stat:
-    df_view = df.copy()
-    df_admin = df.copy()
-    st.subheader("補正展示タイム閲覧")
+# --- タブ2：補正展示タイム（蓄積データから算出） ---
+with tab2:
 
-    if df_view.empty:
-        st.warning("表示データがありません")
+    st.subheader("補正展示タイム閲覧（会場別・蓄積データ）")
+
+    if df.empty:
+        st.warning("データがありません")
         st.stop()
 
-    if df_admin.empty:
-        st.warning("補正用の蓄積データがありません")
-        st.stop()
+    # 会場選択
+    places = sorted(df.iloc[:, 1].dropna().unique())
+    race_place = st.selectbox("会場を選択してください", places)
 
-    race_place = df_view["会場"].iloc[0]
+    # 会場で抽出
+    base = df[df.iloc[:, 1] == race_place]
 
-    base = df_admin[df_admin["会場"] == race_place]
+    st.write(f"対象データ数：{len(base)} 件")
 
     if len(base) < 5:
-        st.warning(f"{race_place} の補正データが少なすぎます（{len(base)}件）")
+        st.warning("補正に使うデータが少なすぎます（最低5件以上推奨）")
+        st.stop()
+
+    # ==============================
+    # 展示タイム差分（6艇分）
+    # ==============================
+    # 9〜14列目が展示差分（管理者ページの保存仕様）
+    ex_cols = base.iloc[:, 9:15].apply(pd.to_numeric, errors="coerce")
+
+    # 各艇ごとの平均差分
+    mean_each_boat = ex_cols.mean()
+
+    # 全体平均との差（参考用）
+    mean_exhibit = ex_cols.mean().mean()
+
+    st.markdown("### 展示タイム補正値（平均との差分・小さいほど有利）")
+
+    result = pd.DataFrame({
+        "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "補正値": mean_each_boat.values
+    })
+
+    st.dataframe(
+        result.style.format({"補正値": "{:.4f}"}),
+        use_container_width=True
+    )
+
+    st.markdown("### 会場全体の平均補正値")
+    st.write(round(mean_exhibit, 4))
+
+    st.caption("※ 管理者ページで保存された『展示タイム差分』のみを使用しています。")
     # -----------------------------
     # 会場平均との差
     # -----------------------------
@@ -184,6 +214,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
