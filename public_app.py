@@ -89,7 +89,7 @@ with tab_pre:
         if sorted_boats[0][1] >= 85: st.balloons()
 
 # --- タブ2：統計解析（過去データ照合） ---
-with tab2:
+with tab_stat:
     df_view = df.copy()
     df_admin = df.copy()
     st.subheader("補正展示タイム閲覧")
@@ -108,7 +108,6 @@ with tab2:
 
     if len(base) < 5:
         st.warning(f"{race_place} の補正データが少なすぎます（{len(base)}件）")
-
     # -----------------------------
     # 会場平均との差
     # -----------------------------
@@ -185,5 +184,6 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
