@@ -146,7 +146,8 @@ with tab_stat:
     today_df = df_view.copy()
 
     # 念のため数値化
-    for c in ["展示", "直線", "一周", "回り足"]:
+    for c in cols:
+    if c in today_df.columns:
         today_df[c] = pd.to_numeric(today_df[c], errors="coerce")
 
     # -----------------------------
@@ -314,6 +315,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
