@@ -91,7 +91,7 @@ with tab_pre:
 # --- タブ2：統計解析（過去データ照合・完全版） ---
 with tab_stat:
 
-       st.subheader("統計解析（過去データ照合）")
+    st.subheader("統計解析（過去データ照合）")
 
     # -------------------------
     # 会場選択（消えていたやつ）
@@ -268,6 +268,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
