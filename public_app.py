@@ -95,7 +95,7 @@ with tab_stat:
 
       st.subheader("会場別 補正タイム解析（蓄積データ）")
 
-    if df.empty:
+      if df.empty:
         st.warning("データがありません")
         st.stop()
 
@@ -290,6 +290,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
