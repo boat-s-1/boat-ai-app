@@ -89,39 +89,83 @@ with tab_pre:
         if sorted_boats[0][1] >= 85: st.balloons()
 
 # --- タブ2：統計解析（過去データ照合） ---
-with tab_stat:
-    st.subheader("蓄積データからの的中率算出")
-    if df.empty:
-        st.warning("データがありません。")
-    else:
-        c1, c2 = st.columns([1, 2])
-        with c1:
-            place = st.selectbox("会場", ["若松", "大村", "多摩川", "蒲郡", "戸田", "江戸川", "平和島", "浜名湖", "常滑", "津", "三国", "びわこ", "住之江", "尼崎", "鳴門", "丸亀", "児島", "宮島", "徳山", "下関", "芦屋", "福岡", "唐津", "桐生"])
-            wdir = st.selectbox("風向き", ["向い風", "追い風", "左横風", "右横風", "無風"])
-            btn_ana = st.button("統計解析を実行")
+with tab2:
 
-        with c2:
-            if btn_ana:
-                # 列インデックスで指定（2列目=会場, 7列目=風向き）
-                match = df[(df.iloc[:, 1] == place) & (df.iloc[:, 6] == wdir)]
-                if not match.empty:
-                    st.write(f"📊 同条件の過去レース: {len(match)}件")
-                    w1 = pd.to_numeric(match.iloc[:, 3], errors='coerce').tolist()
-                    w2 = pd.to_numeric(match.iloc[:, 4], errors='coerce').tolist()
-                    w3 = pd.to_numeric(match.iloc[:, 5], errors='coerce').tolist()
-                    all_3 = w1 + w2 + w3
-                    
-                    res_data = []
-                    for i in range(1, 7):
-                        r1 = (w1.count(i) / len(match)) * 100
-                        r3 = (all_3.count(i) / len(match)) * 100
-                        res_data.append({"号艇": f"{i}号", "1着率": r1, "3連対率": r3})
-                    
-                    fig = px.bar(pd.DataFrame(res_data), x="号艇", y=["1着率", "3連対率"], barmode="group",
-                                 color_discrete_map={"1着率": "#FF4B4B", "3連対率": "#1F77B4"})
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("同条件のデータがまだありません。")
+    st.subheader("補正展示タイム閲覧")
+
+    if df_view.empty:
+        st.warning("表示データがありません")
+        st.stop()
+
+    if df_admin.empty:
+        st.warning("補正用の蓄積データがありません")
+        st.stop()
+
+    race_place = df_view["会場"].iloc[0]
+
+    base = df_admin[df_admin["会場"] == race_place]
+
+    if len(base) < 5:
+        st.warning(f"{race_place} の補正データが少なすぎます（{len(base)}件）")
+
+    # -----------------------------
+    # 会場平均との差
+    # -----------------------------
+    mean_exhibit = base["展示"].mean()
+    mean_straight = base["直線"].mean()
+    mean_lap = base["一周"].mean()
+    mean_turn = base["回り足"].mean()
+
+    df = df_view.copy()
+
+    # -----------------------------
+    # 1号艇補正係数
+    # -----------------------------
+    def lane_coef(lane):
+        if lane == 1:
+            return 0.7
+        elif lane == 2:
+            return 0.85
+        else:
+            return 1.0
+
+    df["lane_coef"] = df["艇番"].apply(lane_coef)
+
+    # -----------------------------
+    # 補正値
+    # -----------------------------
+    df["補正展示"] = df["展示"] + (mean_exhibit - df["展示"]) * df["lane_coef"]
+    df["補正直線"] = df["直線"] + (mean_straight - df["直線"]) * df["lane_coef"]
+    df["補正一周"] = df["一周"] + (mean_lap - df["一周"]) * df["lane_coef"]
+    df["補正回り足"] = df["回り足"] + (mean_turn - df["回り足"]) * df["lane_coef"]
+
+    # -----------------------------
+    # 順位（小さいほど良い）
+    # -----------------------------
+    df["展示順位"] = df["補正展示"].rank(method="min")
+    df["直線順位"] = df["補正直線"].rank(method="min")
+    df["一周順位"] = df["補正一周"].rank(method="min")
+
+    st.caption(f"{race_place} 補正母数：{len(base)}件")
+
+    show_cols = [
+        "艇番",
+        "展示", "補正展示", "展示順位",
+        "直線", "補正直線", "直線順位",
+        "一周", "補正一周", "一周順位",
+        "回り足", "補正回り足"
+    ]
+
+    st.dataframe(
+        df[show_cols]
+        .sort_values("補正展示")
+        .style
+        .applymap(
+            lambda v: "background-color:#ff4d4d" if v == 1 else
+                      "background-color:#ffe066" if v == 2 else "",
+            subset=["展示順位", "直線順位", "一周順位"]
+        )
+    )
 
 # --- タブ3：過去ログ ---
 with tab_log:
@@ -140,3 +184,4 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
