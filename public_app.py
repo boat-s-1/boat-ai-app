@@ -88,150 +88,189 @@ with tab_pre:
                     elif score >= 50: st.info("✅ 狙い目")
         if sorted_boats[0][1] >= 85: st.balloons()
 
+# --- タブ2：統計解析（過去データ照合・完全版） ---
 with tab_stat:
 
-    st.subheader("会場別 補正・総合順位")
+    st.subheader("会場別 補正タイム解析（蓄積データ）")
 
-    # =========================
-    # 会場選択（消えていた部分）
-    # =========================
-    place_list = sorted(df["会場"].dropna().unique())
-    place = st.selectbox("会場を選択", place_list)
-
-    df_view = df[df["会場"] == place].copy()
-
-    if len(df_view) == 0:
-        st.warning("この会場のデータがありません")
+    if df.empty:
+        st.warning("データがありません")
         st.stop()
 
-    st.write(f"対象データ件数：{len(df_view)} 件")
+    # ----------------------------
+    # 会場選択（消えていた部分）
+    # ----------------------------
+    place_list = sorted(df["会場"].dropna().unique())
+    place = st.selectbox("会場を選択してください", place_list)
 
-    # =========================
+    base = df[df["会場"] == place].copy()
+
+    st.caption(f"対象データ数：{len(base)}件")
+
+    if len(base) < 5:
+        st.warning("補正に使うデータが少なすぎます（最低5件推奨）")
+
+    # ----------------------------
     # 数値化
-    # =========================
-    for b in range(1, 7):
-        for c in ["展示", "直線", "一周", "回り足"]:
-            col = f"{c}{b}"
-            if col in df_view.columns:
-                df_view[col] = pd.to_numeric(df_view[col], errors="coerce")
+    # ----------------------------
+    ex_cols       = base.iloc[:, 9:15].apply(pd.to_numeric, errors="coerce")
+    straight_cols = base.iloc[:, 15:21].apply(pd.to_numeric, errors="coerce")
+    lap_cols      = base.iloc[:, 21:27].apply(pd.to_numeric, errors="coerce")
+    turn_cols     = base.iloc[:, 27:33].apply(pd.to_numeric, errors="coerce")
 
-    # =========================
-    # 各艇・各項目の平均
-    # =========================
-    mean_each_boat = {}
+    # ----------------------------
+    # 艇別平均との差（補正値）
+    # ----------------------------
+    mean_each_boat_ex = ex_cols.mean() - ex_cols.mean().mean()
+    mean_each_boat_st = straight_cols.mean() - straight_cols.mean().mean()
+    mean_each_boat_lp = lap_cols.mean() - lap_cols.mean().mean()
+    mean_each_boat_tr = turn_cols.mean() - turn_cols.mean().mean()
 
-    for b in range(1, 7):
-        mean_each_boat[b] = {}
-        for c in ["展示", "直線", "一周", "回り足"]:
-            col = f"{c}{b}"
-            if col in df_view.columns:
-                mean_each_boat[b][c] = df_view[col].mean()
-            else:
-                mean_each_boat[b][c] = np.nan
+    corr_table = pd.DataFrame({
+        "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "展示補正": mean_each_boat_ex.values,
+        "直線補正": mean_each_boat_st.values,
+        "一周補正": mean_each_boat_lp.values,
+        "回り足補正": mean_each_boat_tr.values,
+    })
 
-    # =========================
-    # 入力
-    # =========================
-    st.markdown("### 補正前入力")
+    st.markdown("### 艇別補正値（平均との差）")
 
-    input_data = {}
+    st.dataframe(
+        corr_table.style.format({
+            "展示補正": "{:+.4f}",
+            "直線補正": "{:+.4f}",
+            "一周補正": "{:+.4f}",
+            "回り足補正": "{:+.4f}",
+        }),
+        use_container_width=True
+    )
+
+    # ====================================================
+    # 今日のシミュレーション
+    # ====================================================
+    st.markdown("---")
+    st.markdown("## 今日の補正シミュレーション")
+
+    st.markdown("### 展示タイム")
 
     cols = st.columns(6)
-    for b in range(1, 7):
-        with cols[b - 1]:
-            st.markdown(f"#### {b}号艇")
+    today_ex = []
 
-            tenji = st.number_input(
-                "展示",
-                value=6.50,
-                step=0.01,
-                key=f"tenji_{b}"
+    for i in range(6):
+        with cols[i]:
+            today_ex.append(
+                st.number_input(
+                    f"{i+1}号艇",
+                    value=6.50,
+                    step=0.01,
+                    key=f"today_ex_{i}"
+                )
             )
 
-            chokusen = st.number_input(
-                "直線",
-                value=mean_each_boat[b]["直線"]
-                if not np.isnan(mean_each_boat[b]["直線"]) else 6.90,
-                step=0.01,
-                key=f"choku_{b}"
+    st.markdown("### 直線タイム")
+
+    cols = st.columns(6)
+    today_st = []
+
+    for i in range(6):
+        with cols[i]:
+            today_st.append(
+                st.number_input(
+                    f"{i+1}号艇",
+                    value=7.00,
+                    step=0.01,
+                    key=f"today_st_{i}"
+                )
             )
 
-            isshu = st.number_input(
-                "一周",
-                value=mean_each_boat[b]["一周"]
-                if not np.isnan(mean_each_boat[b]["一周"]) else 37.00,
-                step=0.01,
-                key=f"isshu_{b}"
+    st.markdown("### 一周タイム")
+
+    cols = st.columns(6)
+    today_lp = []
+
+    for i in range(6):
+        with cols[i]:
+            today_lp.append(
+                st.number_input(
+                    f"{i+1}号艇",
+                    value=37.00,
+                    step=0.01,
+                    key=f"today_lp_{i}"
+                )
             )
 
-            mawari = st.number_input(
-                "回り足",
-                value=mean_each_boat[b]["回り足"]
-                if not np.isnan(mean_each_boat[b]["回り足"]) else 5.00,
-                step=0.01,
-                key=f"mawari_{b}"
+    st.markdown("### 回り足（評価値など）")
+
+    cols = st.columns(6)
+    today_tr = []
+
+    for i in range(6):
+        with cols[i]:
+            today_tr.append(
+                st.number_input(
+                    f"{i+1}号艇",
+                    value=5.00,
+                    step=0.1,
+                    key=f"today_tr_{i}"
+                )
             )
 
-            input_data[b] = {
-                "展示": tenji,
-                "直線": chokusen,
-                "一周": isshu,
-                "回り足": mawari
-            }
+    # ----------------------------
+    # 補正適用
+    # ----------------------------
+    corr_ex = mean_each_boat_ex.values
+    corr_st = mean_each_boat_st.values
+    corr_lp = mean_each_boat_lp.values
+    corr_tr = mean_each_boat_tr.values
 
-    # =========================
-    # 補正（平均との差）
-    # =========================
-    rows = []
+    corrected_ex = [today_ex[i] + corr_ex[i] for i in range(6)]
+    corrected_st = [today_st[i] + corr_st[i] for i in range(6)]
+    corrected_lp = [today_lp[i] + corr_lp[i] for i in range(6)]
+    corrected_tr = [today_tr[i] + corr_tr[i] for i in range(6)]
 
-    for b in range(1, 7):
+    # ----------------------------
+    # 総合スコア
+    # ※小さい方が良い指標はそのまま
+    # ※回り足は大きい方が良い前提でマイナス化
+    # ----------------------------
+    total_score = []
 
-        tenji_adj = input_data[b]["展示"] - mean_each_boat[b]["展示"]
-        choku_adj = input_data[b]["直線"] - mean_each_boat[b]["直線"]
-        isshu_adj = input_data[b]["一周"] - mean_each_boat[b]["一周"]
-        mawari_adj = input_data[b]["回り足"] - mean_each_boat[b]["回り足"]
+    for i in range(6):
+        s = (
+            corrected_ex[i]
+            + corrected_st[i]
+            + corrected_lp[i]
+            - corrected_tr[i]
+        )
+        total_score.append(s)
 
-        total = tenji_adj + choku_adj + isshu_adj + mawari_adj
+    result_today = pd.DataFrame({
+        "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "展示(補正後)": corrected_ex,
+        "直線(補正後)": corrected_st,
+        "一周(補正後)": corrected_lp,
+        "回り足(補正後)": corrected_tr,
+        "総合スコア": total_score
+    })
 
-        rows.append({
-            "号艇": f"{b}号艇",
-            "展示(補正後)": round(tenji_adj, 3),
-            "直線(補正後)": round(choku_adj, 3),
-            "一周(補正後)": round(isshu_adj, 3),
-            "回り足(補正後)": round(mawari_adj, 3),
-            "総合スコア": round(total, 3)
-        })
+    # 順位（小さい方が良い）
+    result_today["順位"] = result_today["総合スコア"].rank(method="min").astype(int)
 
-    result_df = pd.DataFrame(rows)
+    result_today = result_today.sort_values("順位")
 
-    # =========================
-    # 順位
-    # =========================
-    result_df["順位"] = result_df["総合スコア"].rank(
-        ascending=True,
-        method="min"
-    ).astype(int)
+    st.markdown("## 補正後・総合順位")
 
-    result_df = result_df.sort_values("順位")
-
-    st.markdown("### 補正後・総合順位")
-    st.dataframe(result_df, use_container_width=True)
-
-    # =========================
-    # 信頼度（base_dfではなく df_view）
-    # =========================
-    st.markdown("### この会場データの信頼度")
-
-    st.write(f"対象データ件数：{len(df_view)} 件")
-
-    if len(df_view) >= 200:
-        st.success("データ量：非常に多い（高信頼）")
-    elif len(df_view) >= 100:
-        st.info("データ量：十分あり（中〜高信頼）")
-    elif len(df_view) >= 30:
-        st.warning("データ量：やや少なめ（参考程度）")
-    else:
-        st.error("データ量が少ないため参考値です")
+    st.dataframe(
+        result_today.style.format({
+            "展示(補正後)": "{:.3f}",
+            "直線(補正後)": "{:.3f}",
+            "一周(補正後)": "{:.3f}",
+            "回り足(補正後)": "{:.3f}",
+            "総合スコア": "{:.3f}",
+        }),
+        use_container_width=True
+    )
 # --- タブ3：過去ログ ---
 with tab_log:
     st.subheader("全レースデータ一覧")
@@ -249,6 +288,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
