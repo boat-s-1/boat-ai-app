@@ -11,6 +11,7 @@ def get_gsheet_client():
     try:
         if "gcp_service_account" not in st.secrets:
             return None
+        # 最新の推奨される認証方法
         credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         return gspread.authorize(credentials)
     except Exception as e:
@@ -21,7 +22,7 @@ st.set_page_config(page_title="競艇予想 Pro Cloud", layout="wide")
 st.title("🚤 競艇予想 Pro Cloud")
 
 # 2. データの読み込み
-@st.cache_data(ttl=5) # 登録後すぐに反映させるため5秒に設定
+@st.cache_data(ttl=5)
 def load_data():
     try:
         gc = get_gsheet_client()
@@ -36,7 +37,7 @@ def load_data():
 all_rows, ws_obj = load_data()
 
 if all_rows is None:
-    st.error("スプレッドシートにアクセスできません。共有設定またはSecretsを再確認してください。")
+    st.error("スプレッドシートにアクセスできません。")
 else:
     tab1, tab2, tab3 = st.tabs(["⚡ 簡易比較", "📊 詳細補正", "📈 データ登録"])
 
@@ -76,29 +77,26 @@ else:
             
             corrected = [round(t - b, 3) for t, b in zip(d_times, avg_bias)]
             best = min(corrected)
-            res = pd.DataFrame({"号艇": range(1,7), "補正後": corrected, "評価": ["⭐" if v==best else "" for v in corrected]})
+            res = pd.DataFrame({"号艇": [f"{i}号艇" for i in range(1,7)], "補正後": corrected, "評価": ["⭐" if v==best else "" for v in corrected]})
             st.table(res)
 
     # --- 📈 データ登録 ---
     with tab3:
         st.subheader("学習登録")
-        # フォームに名前をつけて管理を厳密にする
-        with st.form("my_registration_form", clear_on_submit=True):
+        with st.form("my_form", clear_on_submit=True):
             f_p = st.selectbox("場", ["桐生", "戸田", "江戸川", "平和島", "多摩川", "浜名湖", "蒲郡", "常滑", "津", "三国", "びわこ", "住之江", "尼崎", "鳴門", "丸亀", "児島", "宮島", "徳山", "下関", "若松", "芦屋", "福岡", "唐津", "大村"])
             f_r = st.number_input("レース(1-12)", 1, 12, 1)
-            f_ds = [st.number_input(f"{i+1}号艇差分", -0.5, 0.5, 0.0, 0.01, key=f"reg_val_{i}") for i in range(6)]
+            f_ds = [st.number_input(f"{i+1}号艇差分", -0.5, 0.5, 0.0, 0.01, key=f"reg_{i}") for i in range(6)]
             
             submit = st.form_submit_button("クラウドに保存")
             
             if submit:
-                if ws_obj:
-                    try:
-                        # 書き込み用データの作成
-                        new_data = [str(datetime.date.today()), f_p, int(f_r)] + [float(d) for d in f_ds]
-                        ws_obj.append_row(new_data)
-                        st.success("✅ スプレッドシートへ保存しました！")
-                        st.cache_data.clear() # データを最新の状態にする
-                    except Exception as e:
-                        st.error(f"保存エラー: {e}")
-                else:
-                    st.error("保存先のシートが見つかりません。")
+                try:
+                    # データを1行にまとめる
+                    row_to_add = [str(datetime.date.today()), f_p, int(f_r)] + [float(d) for d in f_ds]
+                    # append_rowの代わりに、より確実な方法で書き込み
+                    ws_obj.append_rows([row_to_add])
+                    st.success("✅ スプレッドシートへ保存しました！")
+                    st.cache_data.clear()
+                except Exception as e:
+                    st.error(f"保存失敗: {e}")
