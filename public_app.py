@@ -88,144 +88,115 @@ with tab_pre:
                     elif score >= 50: st.info("✅ 狙い目")
         if sorted_boats[0][1] >= 85: st.balloons()
 
-# --- タブ2：統計解析・補正シミュレーション ---
-with tab_stat:
-      st.subheader("補正展示タイム（会場別・蓄積データ）")
+# ----------------------------
+# タブ2：補正展示タイム（統計解析）
+# ----------------------------
+with tab2:
 
-    places = sorted(df["場"].dropna().unique())
-    selected_place = st.selectbox("会場を選択", places)
+    st.subheader("補正展示タイム（会場別・蓄積データ）")
 
-    df_place = df[df["場"] == selected_place].copy()
+    if df.empty:
+        st.warning("蓄積データがありません")
+        st.stop()
 
-    st.header("展示タイム補正シミュレーション")
+    # ----------------------------
+    # 会場選択
+    # ----------------------------
+    places = sorted(df["会場"].dropna().unique())
+    selected_place = st.selectbox("会場を選択してください", places)
 
-    # ============================
-    # ① 仮の補正値（号艇別平均補正）
-    # ※ 後で蓄積データから作る想定
-    # ============================
-    mean_each_boat = pd.Series(
-        [0.000, 0.020, 0.030, 0.050, 0.070, 0.090],
-        index=[1, 2, 3, 4, 5, 6]
-    )
+    base = df[df["会場"] == selected_place].copy()
 
-    # ============================
-    # ② 入力欄
-    # ============================
-    st.subheader("展示タイム")
+    st.caption(f"対象データ数：{len(base)} 件")
 
-    ex_times = []
-    cols = st.columns(6)
-    for i in range(6):
-        with cols[i]:
-            v = st.number_input(
-                f"{i+1}号艇",
-                value=6.50,      # 初期値
-                step=0.01,
-                min_value=0.00,
-                key=f"tab2_ex_{i+1}"
-            )
-            ex_times.append(v)
+    if len(base) < 5:
+        st.warning("補正に使うデータが少なすぎます（5件以上推奨）")
+        st.stop()
 
-    st.subheader("直線タイム")
+    # ----------------------------
+    # 展示タイム差分（管理者ページの保存列）
+    # 9～14列目を使用
+    # ----------------------------
+    ex_cols = base.iloc[:, 9:15].apply(pd.to_numeric, errors="coerce")
 
-    st_times = []
-    cols = st.columns(6)
-    for i in range(6):
-        with cols[i]:
-            v = st.number_input(
-                f"{i+1}号艇",
-                value=6.50,
-                step=0.01,
-                min_value=0.00,
-                key=f"tab2_st_{i+1}"
-            )
-            st_times.append(v)
+    # 各艇ごとの平均差分
+    mean_each_boat = ex_cols.mean()
 
-    st.subheader("1周タイム")
+    # 参考：全体平均
+    mean_exhibit = ex_cols.mean().mean()
 
-    lap_times = []
-    cols = st.columns(6)
-    for i in range(6):
-        with cols[i]:
-            v = st.number_input(
-                f"{i+1}号艇",
-                value=37.0,
-                step=0.1,
-                min_value=0.0,
-                key=f"tab2_lap_{i+1}"
-            )
-            lap_times.append(v)
+    st.markdown("### 会場別 展示タイム補正値（平均との差分）")
 
-    # ============================
-    # ③ 今日データ作成
-    # ============================
-    df_today = pd.DataFrame({
+    df_bias = pd.DataFrame({
         "号艇": [f"{i}号艇" for i in range(1, 7)],
-        "展示タイム": ex_times,
-        "直線タイム": st_times,
-        "1周タイム": lap_times,
         "補正値": mean_each_boat.values
     })
 
-    # ============================
-    # ④ 補正展示タイム
-    # ============================
-    df_today["補正展示タイム"] = (
-        df_today["展示タイム"] + df_today["補正値"]
+    st.dataframe(
+        df_bias.style.format({"補正値": "{:.4f}"}),
+        use_container_width=True
     )
 
-    # ============================
-    # ⑤ 順位
-    # （小さいほど良い）
-    # ============================
-    df_today["展示順位"] = df_today["補正展示タイム"].rank(
-        method="min", ascending=True
-    ).astype(int)
+    st.caption(f"全体平均差分：{mean_exhibit:.4f}")
 
-    df_today["直線順位"] = df_today["直線タイム"].rank(
-        method="min", ascending=True
-    ).astype(int)
+    # ================================
+    # 今日の展示タイム補正シミュレーション
+    # ================================
+    st.markdown("---")
+    st.markdown("## 今日の展示タイム補正シミュレーション")
 
-    df_today["1周順位"] = df_today["1周タイム"].rank(
-        method="min", ascending=True
-    ).astype(int)
+    raw_times = []
 
-    # ============================
-    # ⑥ 色付け
-    # ============================
-    def highlight_rank(col):
-        styles = []
-        for v in col:
-            if v == 1:
-                styles.append("background-color:#ffcccc")   # 1位 赤
-            elif v == 2:
-                styles.append("background-color:#fff2cc")   # 2位 黄
-            else:
-                styles.append("")
-        return styles
+    cols = st.columns(6)
 
-    styled = (
-        df_today
-        .style
-        .format({
-            "展示タイム": "{:.2f}",
-            "直線タイム": "{:.2f}",
-            "1周タイム": "{:.1f}",
-            "補正値": "{:.3f}",
-            "補正展示タイム": "{:.3f}"
-        })
-        .apply(highlight_rank, subset=["展示順位"])
-        .apply(highlight_rank, subset=["直線順位"])
-        .apply(highlight_rank, subset=["1周順位"])
-    )
+    for i in range(6):
+        with cols[i]:
+            t = st.number_input(
+                f"{i+1}号艇 展示タイム",
+                min_value=0.00,
+                step=0.01,
+                value=6.50,   # ← 初期値
+                key=f"today_ex_{i}"
+            )
+            raw_times.append(t)
 
-    # ============================
-    # ⑦ 表示
-    # ============================
-    st.subheader("公式ページ風 比較表")
+    # 補正値配列
+    corr = mean_each_boat.values
+
+    corrected = []
+    for i in range(6):
+        if raw_times[i] == 0:
+            corrected.append(np.nan)
+        else:
+            corrected.append(raw_times[i] + corr[i])
+
+    result_today = pd.DataFrame({
+        "艇番": [1, 2, 3, 4, 5, 6],
+        "元展示タイム": raw_times,
+        "補正展示タイム": corrected
+    })
+
+    # ----------------------------
+    # 順位（小さいほど良い）
+    # ----------------------------
+    result_today["順位"] = result_today["補正展示タイム"].rank(method="min")
+
+    st.markdown("### 補正後展示タイム（順位つき）")
 
     st.dataframe(
-        styled,
+        result_today
+        .sort_values("補正展示タイム")
+        .style
+        .format({
+            "元展示タイム": "{:.2f}",
+            "補正展示タイム": "{:.3f}",
+            "順位": "{:.0f}"
+        })
+        .applymap(
+            lambda v: "background-color:#ff4d4d" if v == 1 else
+                      "background-color:#ffe066" if v == 2 else "",
+            subset=["順位"]
+        ),
         use_container_width=True
     )
 # --- タブ3：過去ログ ---
@@ -245,6 +216,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
