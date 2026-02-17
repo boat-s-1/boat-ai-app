@@ -190,6 +190,47 @@ with tab_stat:
     )
 
     st.caption("※ 管理者ページで保存された『平均との差分データ』のみを使用しています。")
+    
+    st.markdown("---")
+    st.markdown("## 今日の展示タイム補正シミュレーション")
+
+    raw_times = []
+    cols = st.columns(6)
+
+    for i in range(6):
+        with cols[i]:
+            t = st.number_input(
+                f"{i+1}号艇 展示タイム",
+                min_value=0.0,
+                step=0.01,
+                key=f"today_ex_{i+1}"
+            )
+            raw_times.append(t)
+
+    corr = mean_each_boat.values
+
+    corrected = []
+    for i in range(6):
+        if raw_times[i] == 0:
+            corrected.append(None)
+        else:
+            corrected.append(raw_times[i] + corr[i])
+
+    result_today = pd.DataFrame({
+        "号艇": [f"{i}号艇" for i in range(1, 7)],
+        "元展示タイム": raw_times,
+        "補正展示タイム": corrected
+    })
+
+    st.markdown("### 補正後展示タイム")
+
+    st.dataframe(
+        result_today.style.format({
+            "元展示タイム": "{:.2f}",
+            "補正展示タイム": "{:.3f}"
+        }),
+        use_container_width=True
+    )
 # --- タブ3：過去ログ ---
 with tab_log:
     st.subheader("全レースデータ一覧")
@@ -207,6 +248,7 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+
 
 
 
