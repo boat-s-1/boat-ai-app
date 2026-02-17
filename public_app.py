@@ -32,23 +32,21 @@ if check_password():
     if gc:
         try:
             sh = gc.open("競艇予想学習データ")
-            # データの読み込みをより柔軟にする
             ws = sh.get_worksheet(0)
-            data = ws.get_all_records() # 見出しを自動認識して辞書形式で読み込む
+            data = ws.get_all_records() # 見出しを読み込む
             if data:
                 df = pd.DataFrame(data)
         except Exception as e:
             st.error(f"データ読み込みエラー: {e}")
 
     st.title("🚀 三連単機力解析パネル")
-    # ここでデータ件数を表示
     st.info(f"📊 現在の蓄積データ数: {len(df)} レース")
 
     tab1, tab2 = st.tabs(["🎯 リアルタイム解析", "📊 過去リスト"])
 
     with tab1:
         if df.empty:
-            st.warning("スプレッドシートにデータが見つかりません。管理者アプリから登録するか、シートを確認してください。")
+            st.warning("スプレッドシートのデータを読み込めていません。見出し名を確認してください。")
         else:
             col_in, col_res = st.columns([1, 2])
             with col_in:
@@ -64,14 +62,19 @@ if check_password():
                     d_cols = st.columns(6)
                     for i, d in enumerate(diffs): d_cols[i].metric(f"{i+1}号艇", f"{d:.3f}")
 
-                    # 会場と風向きで絞り込み
+                    # 【重要】スプレッドシートの実際の見出し名（画像に基づき修正）に合わせて抽出
                     match = df[(df["会場"] == place) & (df["風向き"] == wdir)]
                     if not match.empty:
                         res = []
-                        # 列名を数値として取得
-                        w1 = pd.to_numeric(match["1着"], errors='coerce').tolist()
-                        w2 = pd.to_numeric(match["2着"], errors='coerce').tolist()
-                        w3 = pd.to_numeric(match["3着"], errors='coerce').tolist()
+                        # 画像の見出し名に合わせて「1着号艇」「2着号艇」「3着号低(※)」などを取得
+                        # ※画像で「3着号低」となっていたので、それにも対応できるようにしています
+                        w1_col = "1着号艇" if "1着号艇" in df.columns else "1着"
+                        w2_col = "2着号艇" if "2着号艇" in df.columns else "2着"
+                        w3_col = "3着号低" if "3着号低" in df.columns else ("3着号艇" if "3着号艇" in df.columns else "3着")
+                        
+                        w1 = pd.to_numeric(match[w1_col], errors='coerce').tolist()
+                        w2 = pd.to_numeric(match[w2_col], errors='coerce').tolist()
+                        w3 = pd.to_numeric(match[w3_col], errors='coerce').tolist()
                         all_3 = w1 + w2 + w3
                         
                         for i in range(1, 7):
