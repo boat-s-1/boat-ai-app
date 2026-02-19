@@ -25,7 +25,42 @@ if not st.session_state["pwd_ok"]:
     st.stop()
 
 # --- 3. データ読み込み ---
-st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
+st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")st.markdown("""
+<style>
+.slit-area{
+    background:#dff3ff;
+    padding:20px;
+    border-radius:12px;
+    position:relative;
+}
+
+/* スタート基準ライン */
+.slit-line{
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:120px;
+    width:3px;
+    background:#ff5c5c;
+    opacity:0.9;
+}
+
+.slit-row{
+    display:flex;
+    align-items:center;
+    height:70px;
+    position:relative;
+    z-index:2;
+}
+
+.slit-boat{
+    transition: all 0.4s ease;
+    display:flex;
+    align-items:center;
+}
+</style>
+""", unsafe_allow_html=True)
+
 df = pd.DataFrame()
 gc = get_gsheet_client()
 
@@ -318,6 +353,7 @@ ST：{row.ST:.2f}
 予想値：{row.start_score:.2f}
 """
             )
+
 
 
 
