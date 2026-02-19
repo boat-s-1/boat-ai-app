@@ -127,17 +127,60 @@ with tab_memo:
 
 # --- タブ5：スタート予想 ---
 with tab5:
-    st.subheader("🚀 スタート予想")
-    try:
-        ws_new = sh.worksheet("管理用_NEW")
-        data_new = ws_new.get_all_records()
-        df_new = pd.DataFrame(data_new)
 
-        if not df_new.empty:
-            latest = df_new.sort_values("登録日時").tail(6)
-            st.write("直近のスタート傾向")
-            st.table(latest[["艇番", "ST", "スタート評価"]])
-        else:
-            st.info("管理用データがありません")
-    except:
-        st.error("管理用_NEW シートが見つかりません")
+    st.subheader("🚀 スタート予想（展示気配＋ST）")
+
+    ws = sh.worksheet("data")
+
+    data = ws.get_all_records()
+    df = pd.DataFrame(data)
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    # 直近レースを対象にする
+    latest = df.sort_values("登録日時").groupby(
+        ["日付", "会場", "レース番号"]
+    ).tail(6)
+
+    # スタート評価を数値化
+    eval_map = {
+        "◎": 2.0,
+        "◯": 1.0,
+        "△": 0.5,
+        "×": -1.0,
+        "": 0.0
+    }
+
+    latest["評価補正"] = latest["スタート評価"].map(eval_map).fillna(0)
+
+    # STは小さいほど良いのでマイナス
+    latest["start_score"] = -latest["ST"] + latest["評価補正"]
+
+    latest = latest.sort_values("start_score", ascending=False)
+
+    st.caption(
+        f'{latest.iloc[0]["日付"]} '
+        f'{latest.iloc[0]["会場"]} '
+        f'{int(latest.iloc[0]["レース番号"])}R'
+    )
+
+    cols = st.columns(6)
+
+    for i, row in enumerate(latest.itertuples()):
+        with cols[i]:
+
+            img_path = f"images/boat{row.艇番}.png"
+
+            st.image(img_path, use_container_width=True)
+
+            st.markdown(
+                f"""
+**{row.艇番}号艇**
+
+ST：{row.ST:.2f}  
+評価：{row.スタート評価}  
+予想値：{row.start_score:.2f}
+"""
+            )
