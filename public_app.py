@@ -25,7 +25,8 @@ if not st.session_state["pwd_ok"]:
     st.stop()
 
 # --- 3. データ読み込み ---
-st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")st.markdown("""
+st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
+st.markdown("""
 <style>
 .slit-area{
     background:#dff3ff;
@@ -353,6 +354,7 @@ ST：{row.ST:.2f}
 予想値：{row.start_score:.2f}
 """
             )
+
 
 
 
