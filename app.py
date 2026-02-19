@@ -111,7 +111,6 @@ with tab4:
     race_no = st.radio("レース番号",  list(range(1, 13)),  horizontal=True)
 
     wind_dir = st.radio(  "風向き", ["追い風", "向かい風", "左横風", "右横風", "無風"], horizontal=True)
-    )
 
     wind_speed = st.number_input("風速（m）", 0.0, 20.0, 0.0, 0.1)
     wave = st.number_input("波高（cm）", 0.0, 50.0, 0.0, 0.5)
@@ -188,6 +187,7 @@ with tab4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
