@@ -420,10 +420,10 @@ with tab5:
     # -----------------------------
     st.markdown("### 🟦 スリット予想イメージ")
 
-    st.markdown('<div class="slit-area">', unsafe_allow_html=True)
-    st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
+   st.markdown('<div class="slit-area">', unsafe_allow_html=True)
+st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
-   for _, r in latest.iterrows():
+for _, r in latest.iterrows():
 
     boat_no = int(r["艇番"])
     score = float(r["スタート予想スコア"])
@@ -454,6 +454,7 @@ with tab5:
     st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
