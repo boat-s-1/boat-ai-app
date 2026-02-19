@@ -41,7 +41,7 @@ if gc:
 st.title("🚤 競艇 Pro ハイブリッド解析システム")
 
 # タブ構成
-tab_pre, tab_stat, tab_log, tab_memo = st.tabs(["⭐ 事前簡易予想", "📊 統計解析", "📜 過去ログ", "📝 攻略メモ"])
+tab_pre, tab_stat, tab_log, tab_memo,tab5 = st.tabs(["⭐ 事前簡易予想", "📊 統計解析", "📜 過去ログ", "📝 攻略メモ","スタート予想"])
 
 # --- タブ1：事前簡易予想（4項目評価） ---
 with tab_pre:
@@ -259,6 +259,66 @@ with tab_memo:
                     st.write(f"**{m['会場']}** ({m['日付']})")
                     st.write(m['メモ'])
     except: st.write("メモはありません。")
+# --- タブ5：スタート予想 ---
+with tab5:
+
+    st.subheader("🚀 スタート予想（展示気配＋ST）")
+
+    ws = sh.worksheet("data")
+
+    data = ws.get_all_records()
+    df = pd.DataFrame(data)
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    # 直近レースを対象にする
+    latest = df.sort_values("登録日時").groupby(
+        ["日付", "会場", "レース番号"]
+    ).tail(6)
+
+    # スタート評価を数値化
+    eval_map = {
+        "◎": 2.0,
+        "◯": 1.0,
+        "△": 0.5,
+        "×": -1.0,
+        "": 0.0
+    }
+
+    latest["評価補正"] = latest["スタート評価"].map(eval_map).fillna(0)
+
+    # STは小さいほど良いのでマイナス
+    latest["start_score"] = -latest["ST"] + latest["評価補正"]
+
+    latest = latest.sort_values("start_score", ascending=False)
+
+    st.caption(
+        f'{latest.iloc[0]["日付"]} '
+        f'{latest.iloc[0]["会場"]} '
+        f'{int(latest.iloc[0]["レース番号"])}R'
+    )
+
+    cols = st.columns(6)
+
+    for i, row in enumerate(latest.itertuples()):
+        with cols[i]:
+
+            img_path = f"images/boat{row.艇番}.png"
+
+            st.image(img_path, use_container_width=True)
+
+            st.markdown(
+                f"""
+**{row.艇番}号艇**
+
+ST：{row.ST:.2f}  
+評価：{row.スタート評価}  
+予想値：{row.start_score:.2f}
+"""
+            )
+
 
 
 
