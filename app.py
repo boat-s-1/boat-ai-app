@@ -103,23 +103,22 @@ with tab4:
     # =========================
     c_meta1, c_meta2, c_meta3 = st.columns(3)
     with c_meta1:
-        race_date = st.date_input("レース日付")
+        race_date = st.date_input("レース日付", key="ad_race_date") # key追加
     with c_meta2:
-        place = st.selectbox("会場", ["蒲郡","常滑","浜名湖","住之江","大村","徳山","唐津"])
+        place = st.selectbox("会場", ["蒲郡","常滑","浜名湖","住之江","大村","徳山","唐津"], key="ad_place") # key追加
     with c_meta3:
-        race_no = st.number_input("レース番号", 1, 12, 1)
+        race_no = st.number_input("レース番号", 1, 12, 1, key="ad_race_no") # key追加
 
     c_meta4, c_meta5, c_meta6 = st.columns(3)
     with c_meta4:
-        wind_dir = st.selectbox("風向き", ["追い風","向かい風","左横風","右横風","無風"])
+        wind_dir = st.selectbox("風向き", ["追い風","向かい風","左横風","右横風","無風"], key="ad_wind_dir") # key追加
     with c_meta5:
-        wind_speed = st.number_input("風速（m）", 0, 20, 0)
+        wind_speed = st.number_input("風速（m）", 0, 20, 0, key="ad_wind_speed") # key追加
     with c_meta6:
-        wave = st.number_input("波高（cm）", 0, 50, 0)
+        wave = st.number_input("波高（cm）", 0, 50, 0, key="ad_wave") # key追加
 
     st.markdown("---")
     
-    # データ保持用辞書
     boat_data = {}
     eval_list = ["◎","◯","△","×",""]
 
@@ -131,18 +130,16 @@ with tab4:
         with st.expander(f"{b}号艇 - 展示データ", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
-                ex = st.number_input("展示", 0.0, 10.0, 6.50, 0.01, key=f"ex_{b}")
+                # key="ex_{b}" を "ad_ex_{b}" に変更
+                ex = st.number_input("展示", 0.0, 10.0, 6.50, 0.01, key=f"ad_ex_{b}")
             with c2:
-                stt = st.number_input("直線", 0.0, 10.0, 5.00, 0.01, key=f"st_{b}")
+                stt = st.number_input("直線", 0.0, 10.0, 5.00, 0.01, key=f"ad_st_{b}")
             with c3:
-                lap = st.number_input("一周", 0.0, 80.0, 37.0, 0.01, key=f"lp_{b}")
+                lap = st.number_input("一周", 0.0, 80.0, 37.0, 0.01, key=f"ad_lp_{b}")
             with c4:
-                turn = st.number_input("回り足", 0.0, 10.0, 5.0, 0.1, key=f"tr_{b}")
+                turn = st.number_input("回り足", 0.0, 10.0, 5.0, 0.1, key=f"ad_tr_{b}")
             
-            # 辞書に一時保存
-            boat_data[b] = {
-                "展示": ex, "直線": stt, "一周": lap, "回り足": turn
-            }
+            boat_data[b] = {"展示": ex, "直線": stt, "一周": lap, "回り足": turn}
 
     st.markdown("---")
 
@@ -151,7 +148,6 @@ with tab4:
     # =========================
     st.markdown("### 🏁 レース結果 (ST・評価・着順)")
     
-    # 見出し行
     h1, h2, h3, h4 = st.columns([1, 2, 2, 2])
     h1.write("**艇番**")
     h2.write("**ST**")
@@ -163,27 +159,22 @@ with tab4:
         with c1:
             st.markdown(f"**{b}**")
         with c2:
-            st_time = st.number_input("ST", -0.50, 1.00, 0.10, 0.01, key=f"res_stt_{b}", label_visibility="collapsed")
+            st_time = st.number_input("ST", -0.50, 1.00, 0.10, 0.01, key=f"ad_res_stt_{b}", label_visibility="collapsed")
         with c3:
-            start_eval = st.selectbox("評価", eval_list, key=f"res_eval_{b}", label_visibility="collapsed")
+            start_eval = st.selectbox("評価", eval_list, key=f"ad_res_eval_{b}", label_visibility="collapsed")
         with c4:
-            rank = st.number_input("着順", 1, 6, b, key=f"res_rank_{b}", label_visibility="collapsed")
+            rank = st.number_input("着順", 1, 6, b, key=f"ad_res_rank_{b}", label_visibility="collapsed")
         
-        # 既存の辞書に結合
-        boat_data[b].update({
-            "ST": st_time,
-            "スタート評価": start_eval,
-            "着順": rank
-        })
+        boat_data[b].update({"ST": st_time, "スタート評価": start_eval, "着順": rank})
 
     # =========================
-    # データのパッキング
+    # 保存処理
     # =========================
     rows = []
     now_ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     for b in range(1, 7):
-        row = {
+        rows.append({
             "日付": race_date.strftime("%Y-%m-%d"),
             "登録日時": now_ts,
             "会場": place,
@@ -199,23 +190,14 @@ with tab4:
             "波高": wave,
             "着順": boat_data[b]["着順"],
             "スタート評価": boat_data[b]["スタート評価"]
-        }
-        rows.append(row)
+        })
 
-    # =========================
-    # 保存実行
-    # =========================
     st.markdown("---")
-    if st.button("このレースを登録する", key="final_save_button"):
+    if st.button("このレースを登録する", key="ad_final_save_button"):
         try:
             ws = sh.worksheet("管理用_NEW")
             df_add = pd.DataFrame(rows)
-            
-            # スプレッドシートへ追加
-            ws.append_rows(
-                df_add.values.tolist(),
-                value_input_option="USER_ENTERED"
-            )
+            ws.append_rows(df_add.values.tolist(), value_input_option="USER_ENTERED")
             st.success("スプレッドシートに登録しました！")
         except Exception as e:
             st.error(f"エラーが発生しました: {e}")
