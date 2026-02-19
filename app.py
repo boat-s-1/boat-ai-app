@@ -24,7 +24,7 @@ DIRS = ["向い風", "追い風", "左横風", "右横風", "無風"]
 
 gc = get_gsheet_client()
 sh = gc.open("競艇予想学習データ") if gc else None
-ws_data = sh.get_worksheet("管理用_NEW") if sh else None
+ws_data = sh.worksheet("管理用_NEW") if sh else None
 ws_memo = sh.worksheet("攻略メモ") if sh else None
 
 st.title("🚤 競艇予想 Pro (管理者用)")
@@ -190,4 +190,5 @@ with tab_admin:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
