@@ -345,6 +345,7 @@ with tab_memo:
     except: st.write("メモはありません。")
 # --- タブ5：スタート予想 ---
 with tab5:
+
     st.subheader("🚀 スタート予想（展示気配＋ST）")
 
     ws = sh.worksheet("管理用_NEW")
@@ -379,18 +380,22 @@ with tab5:
         latest["スタート評価"] = ""
 
     latest["評価補正"] = latest["スタート評価"].map(eval_map).fillna(0)
+
+    # STは小さいほど良い
     latest["ST"] = pd.to_numeric(latest["ST"], errors="coerce").fillna(0)
+
     latest["スタート予想スコア"] = -latest["ST"] + latest["評価補正"]
+
     latest = latest.sort_values("スタート予想スコア", ascending=False)
 
     # -----------------------------
     # 見出し
     # -----------------------------
-    if not latest.empty:
-        head = latest.iloc[0]
-        st.caption(
-            f'{head["日付"]}  {head["会場"]}  {int(head["レース番号"])}R'
-        )
+    head = latest.iloc[0]
+
+    st.caption(
+        f'{head["日付"]}  {head["会場"]}  {int(head["レース番号"])}R'
+    )
 
     # -----------------------------
     # CSS（スリット表示）
@@ -401,7 +406,6 @@ with tab5:
         background:#dff3ff;
         padding:12px;
         border-radius:12px;
-        margin-bottom: 20px;
     }
     .slit-row{
         height:70px;
@@ -421,29 +425,35 @@ with tab5:
     """, unsafe_allow_html=True)
 
     # -----------------------------
-    # スリット表示イメージ
+    # スリット表示
     # -----------------------------
     st.markdown("### 🟦 スリット予想イメージ")
-    
-    # 全体を囲うdivを開始
+
     st.markdown('<div class="slit-area">', unsafe_allow_html=True)
     st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
     for _, r in latest.iterrows():
-        boat_no = int(r["艇番"])
-        score = float(r["スタート予想スコア"])
 
-        # スコアに基づいたオフセット計算
-        offset = max(0, min(200, score * 25))
+        boat_no = int(r["艇番"])
+        score   = float(r["スタート予想スコア"])
+
+        # 前に出る量
+        offset = max(0, min(220, score * 35))
 
         img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
 
-        if os.path.exists(img_path):
-            img_base64 = encode_image(img_path)
+        if not os.path.exists(img_path):
+
             html = f"""
             <div class="slit-row">
                 <div class="slit-boat" style="margin-left:{offset}px">
-                    <img src="data:image/png;base64,{img_base64}" height="55">
+                    <div style="width:55px;height:40px;
+                                background:#ccc;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;">
+                        {boat_no}
+                    </div>
                     <div style="margin-left:10px;font-weight:bold;">
                         {boat_no}号艇　
                         <span style="font-size:12px;color:#444;">
@@ -454,18 +464,30 @@ with tab5:
             </div>
             """
             st.markdown(html, unsafe_allow_html=True)
+            continue
 
-    # 全体を囲うdivを終了
+        img_base64 = encode_image(img_path)
+
+        html = f"""
+        <div class="slit-row">
+            <div class="slit-boat" style="margin-left:{offset}px">
+                <img src="data:image/png;base64,{img_base64}" height="55">
+                <div style="margin-left:10px;font-weight:bold;">
+                    {boat_no}号艇　
+                    <span style="font-size:12px;color:#444;">
+                        {score:.2f}
+                    </span><br>
+                    <span style="font-size:12px;">
+                        ST {r["ST"]:.2f}　評価 {r["スタート評価"]}
+                    </span>
+                </div>
+            </div>
+        </div>
+        """
+
+        st.markdown(html, unsafe_allow_html=True)
+
     st.markdown("</div>", unsafe_allow_html=True)
-
-    # -----------------------------
-    # 一括登録ボタン（ループの外かつtab5の中）
-    # -----------------------------
-    # keyを追加することで重複エラーを防止します
-    if st.button("このレースを登録する", key="btn_register_race_final"):
-        # ここに登録処理を記述
-        st.success("レース情報を一括で登録しました！")
-
 
 
 
