@@ -24,7 +24,7 @@ DIRS = ["向い風", "追い風", "左横風", "右横風", "無風"]
 
 gc = get_gsheet_client()
 sh = gc.open("競艇予想学習データ") if gc else None
-ws_data = sh.get_worksheet(0) if sh else None
+ws_data = sh.get_worksheet(管理用_NEW) if sh else None
 ws_memo = sh.worksheet("攻略メモ") if sh else None
 
 st.title("🚤 競艇予想 Pro (管理者用)")
@@ -94,3 +94,99 @@ with tab3:
             if st.form_submit_button("メモ保存"):
                 ws_memo.append_row([m_p, m_t, str(datetime.date.today())])
                 st.success("メモを保存しました")
+# --- タブ：管理用データ入力 ---
+with tab_admin:
+
+    st.subheader("管理用データ登録")
+
+    # =========================
+    # 基本情報
+    # =========================
+    race_date = st.date_input("レース日付")
+    place = st.selectbox(
+        "会場",
+        ["蒲郡","常滑","浜名湖","住之江","大村","徳山","唐津"]
+    )
+
+    race_no = st.number_input("レース番号", 1, 12, 1)
+
+    wind_dir = st.selectbox(
+        "風向き",
+        ["追い風","向かい風","左横風","右横風","無風"]
+    )
+
+    wind_speed = st.number_input("風速（m）", 0.0, 20.0, 0.0, 0.1)
+    wave = st.number_input("波高（cm）", 0.0, 50.0, 0.0, 0.5)
+
+    st.markdown("---")
+    st.markdown("### 各艇データ入力")
+
+    rows = []
+
+    eval_list = ["◎","◯","△","×",""]
+
+    for b in range(1, 7):
+
+        st.markdown(f"#### {b}号艇")
+
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
+
+        with c1:
+            ex = st.number_input("展示", 0.0, 10.0, 6.50, 0.01, key=f"ad_ex_{b}")
+        with c2:
+            stt = st.number_input("直線", 0.0, 10.0, 5.00, 0.01, key=f"ad_st_{b}")
+        with c3:
+            lap = st.number_input("一周", 0.0, 80.0, 37.0, 0.01, key=f"ad_lp_{b}")
+        with c4:
+            turn = st.number_input("回り足", 1, 10, 5, key=f"ad_tr_{b}")
+        with c5:
+            st_time = st.number_input("ST", -0.50, 1.00, 0.10, 0.01, key=f"ad_stt_{b}")
+        with c6:
+            start_eval = st.selectbox(
+                "スタート評価",
+                eval_list,
+                key=f"ad_eval_{b}"
+            )
+
+        rank = st.number_input("着順", 1, 6, b, key=f"ad_rank_{b}")
+
+        rows.append({
+            "日付": race_date.strftime("%Y-%m-%d"),
+            "登録日時": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "会場": place,
+            "レース番号": race_no,
+            "艇番": b,
+            "展示": ex,
+            "直線": stt,
+            "一周": lap,
+            "回り足": turn,
+            "ST": st_time,
+            "風向き": wind_dir,
+            "風速": wind_speed,
+            "波高": wave,
+            "着順": rank,
+            "スタート評価": start_eval
+        })
+
+    # =========================
+    # 保存
+    # =========================
+    st.markdown("---")
+
+    if st.button("このレースを登録する"):
+
+        try:
+            ws = sh.worksheet("管理用_NEW")
+
+            df_add = pd.DataFrame(rows)
+
+            ws.append_rows(
+                df_add.values.tolist(),
+                value_input_option="USER_ENTERED"
+            )
+
+            st.success("登録しました")
+
+        except Exception as e:
+            st.error("スプレッドシートへの保存に失敗しました")
+            st.write(e)
