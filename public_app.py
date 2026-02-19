@@ -34,58 +34,37 @@ if not st.session_state["pwd_ok"]:
 st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
 st.markdown("""
 <style>
-
-.slit-area{
-    background:#cfefff;
-    padding:20px 10px;
-    border-radius:10px;
-    position:relative;
-    width:100%;
+.slit-area {
+    background: #cfefff;
+    padding: 20px 10px;
+    border-radius: 8px;
 }
 
-/* スリットライン */
-.slit-line{
-    position:absolute;
-    top:0;
-    left:160px;
-    width:3px;
-    height:100%;
-    background:#ff3333;
+.slit-row {
+    position: relative;
+    height: 60px;
+    margin-bottom: 12px;
 }
 
-/* 1艇ぶん */
-.slit-row{
-    position:relative;
-    height:65px;
-    margin-bottom:6px;
+.slit-line {
+    position: absolute;
+    left: 120px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #007acc;
 }
 
-/* 艇本体 */
-.slit-boat{
-    position:absolute;
-    left:0;
-    top:5px;
-    display:flex;
-    align-items:center;
+.slit-boat {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    left: 0;
+    top: 5px;
+    transition: all 0.3s ease;
 }
-
-/* 艇画像 */
-.slit-boat img{
-    height:40px;
-}
-
-/* 下の文字 */
-.slit-label{
-    position:absolute;
-    left:0;
-    top:40px;
-    font-size:12px;
-    font-weight:bold;
-    white-space:nowrap;
-}
-
 </style>
-""", unsafe_allow_html=True
+""", unsafe_allow_html=True)
 st.markdown("""
 <style>
 .slit-area{
@@ -498,6 +477,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
