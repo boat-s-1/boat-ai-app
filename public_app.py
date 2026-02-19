@@ -7,6 +7,11 @@ import gspread
 import plotly.express as px
 from google.oauth2.service_account import Credentials
 import datetime
+import base64
+
+def encode_image(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -221,5 +226,6 @@ ST：{row.ST:.2f}
 予想値：{row.start_score:.2f}
 """
             )
+
 
 
