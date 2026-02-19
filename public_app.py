@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import base64
+
+def encode_image(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 import gspread
 import plotly.express as px
 from google.oauth2.service_account import Credentials
@@ -354,6 +359,7 @@ ST：{row.ST:.2f}
 予想値：{row.start_score:.2f}
 """
             )
+
 
 
 
