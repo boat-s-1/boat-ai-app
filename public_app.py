@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 import base64
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 def encode_image(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
@@ -445,6 +446,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
