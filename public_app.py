@@ -32,6 +32,60 @@ if not st.session_state["pwd_ok"]:
 
 # --- 3. データ読み込み ---
 st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
+　st.markdown("""
+<style>
+
+.slit-area{
+    background:#cfefff;
+    padding:20px 10px;
+    border-radius:10px;
+    position:relative;
+    width:100%;
+}
+
+/* スリットライン */
+.slit-line{
+    position:absolute;
+    top:0;
+    left:160px;
+    width:3px;
+    height:100%;
+    background:#ff3333;
+}
+
+/* 1艇ぶん */
+.slit-row{
+    position:relative;
+    height:65px;
+    margin-bottom:6px;
+}
+
+/* 艇本体 */
+.slit-boat{
+    position:absolute;
+    left:0;
+    top:5px;
+    display:flex;
+    align-items:center;
+}
+
+/* 艇画像 */
+.slit-boat img{
+    height:40px;
+}
+
+/* 下の文字 */
+.slit-label{
+    position:absolute;
+    left:0;
+    top:40px;
+    font-size:12px;
+    font-weight:bold;
+    white-space:nowrap;
+}
+
+</style>
+""", unsafe_allow_html=True
 st.markdown("""
 <style>
 .slit-area{
@@ -426,26 +480,25 @@ with tab5:
 
         img_base64 = encode_image(img_path)
 
-        html = f"""
-        <div class="slit-row">
-            <div class="slit-boat" style="margin-left:{offset}px">
-                <img src="data:image/png;base64,{img_base64}" height="55">
-                <div style="margin-left:10px;font-weight:bold;">
-                    {boat_no}号艇　
-                    <span style="font-size:12px;color:#444;">
-                        {score:.2f}
-                    </span><br>
-                    <span style="font-size:12px;">
-                        ST {r["ST"]:.2f}　評価 {r["スタート評価"]}
-                    </span>
-                </div>
-            </div>
-        </div>
-        """
+       html = f"""
+<div class="slit-row">
+
+    <div class="slit-boat" style="left:{offset}px;">
+        <img src="data:image/png;base64,{img_base64}">
+    </div>
+
+    <div class="slit-label" style="left:{offset}px;">
+        {boat_no}号艇　
+        {score:.2f}
+    </div>
+
+</div>
+"""
 
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
