@@ -95,7 +95,7 @@ with tab3:
                 ws_memo.append_row([m_p, m_t, str(datetime.date.today())])
                 st.success("メモを保存しました")
 # --- タブ：管理用データ入力 ---
-with tab_4:
+with tab4:
 
     st.subheader("管理用データ登録")
 
@@ -190,6 +190,7 @@ with tab_4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
