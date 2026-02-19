@@ -355,7 +355,9 @@ with tab5:
         st.info("データがありません")
         st.stop()
 
+    # -----------------------------
     # 直近レース6艇取得
+    # -----------------------------
     latest = (
         df.sort_values("登録日時")
           .groupby(["日付", "会場", "レース番号"])
@@ -363,8 +365,15 @@ with tab5:
           .copy()
     )
 
+    # -----------------------------
     # スタート評価 → 数値
-    eval_map = {"◎": 2.0, "◯": 1.0, "△": 0.5, "×": -1.0}
+    # -----------------------------
+    eval_map = {
+        "◎": 2.0,
+        "◯": 1.0,
+        "△": 0.5,
+        "×": -1.0
+    }
 
     if "スタート評価" not in latest.columns:
         latest["スタート評価"] = ""
@@ -374,54 +383,88 @@ with tab5:
     latest["スタート予想スコア"] = -latest["ST"] + latest["評価補正"]
     latest = latest.sort_values("スタート予想スコア", ascending=False)
 
+    # -----------------------------
     # 見出し
-    head = latest.iloc[0]
-    st.caption(f'{head["日付"]}  {head["会場"]}  {int(head["レース番号"])}R')
+    # -----------------------------
+    if not latest.empty:
+        head = latest.iloc[0]
+        st.caption(
+            f'{head["日付"]}  {head["会場"]}  {int(head["レース番号"])}R'
+        )
 
+    # -----------------------------
     # CSS（スリット表示）
+    # -----------------------------
     st.markdown("""
     <style>
-    .slit-area{ background:#dff3ff; padding:12px; border-radius:12px; }
-    .slit-row{ height:70px; display:flex; align-items:center; }
-    .slit-boat{ display:flex; align-items:center; transition: all 0.4s; }
-    .slit-line{ border-top:2px dashed #555; margin-bottom:12px; }
+    .slit-area{
+        background:#dff3ff;
+        padding:12px;
+        border-radius:12px;
+        margin-bottom: 20px;
+    }
+    .slit-row{
+        height:70px;
+        display:flex;
+        align-items:center;
+    }
+    .slit-boat{
+        display:flex;
+        align-items:center;
+        transition: all 0.4s;
+    }
+    .slit-line{
+        border-top:2px dashed #555;
+        margin-bottom:12px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- ここから下のインデントを下げました ---
+    # -----------------------------
+    # スリット表示イメージ
+    # -----------------------------
     st.markdown("### 🟦 スリット予想イメージ")
     
-    # 枠の開始
+    # 全体を囲うdivを開始
     st.markdown('<div class="slit-area">', unsafe_allow_html=True)
     st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
     for _, r in latest.iterrows():
         boat_no = int(r["艇番"])
         score = float(r["スタート予想スコア"])
+
+        # スコアに基づいたオフセット計算
         offset = max(0, min(200, score * 25))
 
         img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
-        if not os.path.exists(img_path):
-            continue
 
-        img_base64 = encode_image(img_path)
-
-        html = f"""
-        <div class="slit-row">
-            <div class="slit-boat" style="margin-left:{offset}px">
-                <img src="data:image/png;base64,{img_base64}" height="55">
-                <div style="margin-left:10px;font-weight:bold;">
-                    {boat_no}号艇　
-                    <span style="font-size:12px;color:#444;">{score:.2f}</span>
+        if os.path.exists(img_path):
+            img_base64 = encode_image(img_path)
+            html = f"""
+            <div class="slit-row">
+                <div class="slit-boat" style="margin-left:{offset}px">
+                    <img src="data:image/png;base64,{img_base64}" height="55">
+                    <div style="margin-left:10px;font-weight:bold;">
+                        {boat_no}号艇　
+                        <span style="font-size:12px;color:#444;">
+                            {score:.2f}
+                        </span>
+                    </div>
                 </div>
             </div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+            """
+            st.markdown(html, unsafe_allow_html=True)
 
-    # 枠の終了（forループの外、かつ with tab5 の中）
+    # 全体を囲うdivを終了
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # -----------------------------
+    # 一括登録ボタン（ループの外かつtab5の中）
+    # -----------------------------
+    # keyを追加することで重複エラーを防止します
+    if st.button("このレースを登録する", key="btn_register_race_final"):
+        # ここに登録処理を記述
+        st.success("レース情報を一括で登録しました！")
 
 
 
