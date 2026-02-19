@@ -32,7 +32,7 @@ if not st.session_state["pwd_ok"]:
 
 # --- 3. データ読み込み ---
 st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
-　st.markdown("""
+　  st.markdown("""
 <style>
 
 .slit-area{
@@ -498,6 +498,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
