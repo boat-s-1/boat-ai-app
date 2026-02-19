@@ -336,7 +336,6 @@ with tab_memo:
     except: st.write("メモはありません。")
 # --- タブ5：スタート予想 ---
 with tab5:
-
     st.subheader("🚀 スタート予想（展示気配＋ST）")
 
     ws = sh.worksheet("管理用_NEW")
@@ -347,9 +346,7 @@ with tab5:
         st.info("データがありません")
         st.stop()
 
-    # -----------------------------
     # 直近レース6艇取得
-    # -----------------------------
     latest = (
         df.sort_values("登録日時")
           .groupby(["日付", "会場", "レース番号"])
@@ -357,102 +354,63 @@ with tab5:
           .copy()
     )
 
-    # -----------------------------
     # スタート評価 → 数値
-    # -----------------------------
-    eval_map = {
-        "◎": 2.0,
-        "◯": 1.0,
-        "△": 0.5,
-        "×": -1.0
-    }
+    eval_map = {"◎": 2.0, "◯": 1.0, "△": 0.5, "×": -1.0}
 
     if "スタート評価" not in latest.columns:
         latest["スタート評価"] = ""
 
     latest["評価補正"] = latest["スタート評価"].map(eval_map).fillna(0)
-
-    # STは小さいほど良い
     latest["ST"] = pd.to_numeric(latest["ST"], errors="coerce").fillna(0)
-
     latest["スタート予想スコア"] = -latest["ST"] + latest["評価補正"]
-
     latest = latest.sort_values("スタート予想スコア", ascending=False)
 
-    # -----------------------------
     # 見出し
-    # -----------------------------
     head = latest.iloc[0]
+    st.caption(f'{head["日付"]}  {head["会場"]}  {int(head["レース番号"])}R')
 
-    st.caption(
-        f'{head["日付"]}  {head["会場"]}  {int(head["レース番号"])}R'
-    )
-
-    # -----------------------------
     # CSS（スリット表示）
-    # -----------------------------
     st.markdown("""
     <style>
-    .slit-area{
-        background:#dff3ff;
-        padding:12px;
-        border-radius:12px;
-    }
-    .slit-row{
-        height:70px;
-        display:flex;
-        align-items:center;
-    }
-    .slit-boat{
-        display:flex;
-        align-items:center;
-        transition: all 0.4s;
-    }
-    .slit-line{
-        border-top:2px dashed #555;
-        margin-bottom:12px;
-    }
+    .slit-area{ background:#dff3ff; padding:12px; border-radius:12px; }
+    .slit-row{ height:70px; display:flex; align-items:center; }
+    .slit-boat{ display:flex; align-items:center; transition: all 0.4s; }
+    .slit-line{ border-top:2px dashed #555; margin-bottom:12px; }
     </style>
     """, unsafe_allow_html=True)
 
-    # -----------------------------
-    # スリット表示
-    # -----------------------------
+    # --- ここから下のインデントを下げました ---
     st.markdown("### 🟦 スリット予想イメージ")
+    
+    # 枠の開始
+    st.markdown('<div class="slit-area">', unsafe_allow_html=True)
+    st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
-st.markdown('<div class="slit-area">', unsafe_allow_html=True)
-st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
+    for _, r in latest.iterrows():
+        boat_no = int(r["艇番"])
+        score = float(r["スタート予想スコア"])
+        offset = max(0, min(200, score * 25))
 
-for _, r in latest.iterrows():
+        img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
+        if not os.path.exists(img_path):
+            continue
 
-    boat_no = int(r["艇番"])
-    score = float(r["スタート予想スコア"])
+        img_base64 = encode_image(img_path)
 
-    offset = max(0, min(200, score * 25))
-
-    img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
-
-    if not os.path.exists(img_path):
-        continue
-
-    img_base64 = encode_image(img_path)
-
-    html = f"""
-    <div class="slit-row">
-        <div class="slit-boat" style="margin-left:{offset}px">
-            <img src="data:image/png;base64,{img_base64}" height="55">
-            <div style="margin-left:10px;font-weight:bold;">
-                {boat_no}号艇　
-                <span style="font-size:12px;color:#444;">
-                    {score:.2f}
-                </span>
+        html = f"""
+        <div class="slit-row">
+            <div class="slit-boat" style="margin-left:{offset}px">
+                <img src="data:image/png;base64,{img_base64}" height="55">
+                <div style="margin-left:10px;font-weight:bold;">
+                    {boat_no}号艇　
+                    <span style="font-size:12px;color:#444;">{score:.2f}</span>
+                </div>
             </div>
         </div>
-    </div>
-    """
+        """
+        st.markdown(html, unsafe_allow_html=True)
 
-    st.markdown(html, unsafe_allow_html=True)
-
+    # 枠の終了（forループの外、かつ with tab5 の中）
     st.markdown("</div>", unsafe_allow_html=True)
 
 
