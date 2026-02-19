@@ -108,11 +108,9 @@ with tab4:
         ["蒲郡","常滑","浜名湖","住之江","大村","徳山","唐津"]
     )
 
-    race_no = st.number_input("レース番号", 1, 12, 1)
+    race_no = st.radio("レース番号",  list(range(1, 13)),  horizontal=True)
 
-    wind_dir = st.selectbox(
-        "風向き",
-        ["追い風","向かい風","左横風","右横風","無風"]
+    wind_dir = st.radio(  "風向き", ["追い風", "向かい風", "左横風", "右横風", "無風"], horizontal=True)
     )
 
     wind_speed = st.number_input("風速（m）", 0.0, 20.0, 0.0, 0.1)
@@ -190,6 +188,7 @@ with tab4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
