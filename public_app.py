@@ -208,24 +208,46 @@ with tab5:
         f'{int(latest.iloc[0]["レース番号"])}R'
     )
 
-    cols = st.columns(6)
+    # ←★★ ここからも全部 tab5 の中 ★★
 
-    for i, row in enumerate(latest.itertuples()):
-        with cols[i]:
+    # 艇番順に縦に並べる
+    latest_view = latest.sort_values("艇番")
 
-            img_path = f"images/boat{row.艇番}.png"
+    st.markdown("### 🟦 スリット予想イメージ")
 
-            st.image(img_path, use_container_width=True)
+    st.markdown('<div class="slit-area">', unsafe_allow_html=True)
+    st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
-            st.markdown(
-                f"""
-**{row.艇番}号艇**
+    for _, r in latest_view.iterrows():
 
-ST：{row.ST:.2f}  
-評価：{row.スタート評価}  
-予想値：{row.start_score:.2f}
-"""
-            )
+        boat_no = int(r["艇番"])
+        score   = float(r["start_score"])
+
+        # 前に出る量（スコアに応じて）
+        offset = max(0, min(160, (score + 0.5) * 120))
+
+        img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
+
+        img_base64 = encode_image(img_path)
+
+        html = f"""
+        <div class="slit-row">
+            <div class="slit-boat" style="margin-left:{offset}px;">
+                <img src="data:image/png;base64,{img_base64}" height="48">
+                <div style="margin-left:8px;font-size:13px;">
+                    <b>{boat_no}号艇</b><br>
+                    ST {r["ST"]:.2f}　
+                    {r["スタート評価"]}　
+                    {score:.2f}
+                </div>
+            </div>
+        </div>
+        """
+
+        st.markdown(html, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
