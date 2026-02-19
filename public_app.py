@@ -306,7 +306,6 @@ with tab5:
     st.subheader("🚀 スタート予想（展示気配＋ST）")
 
     ws = sh.worksheet("管理用_NEW")
-
     data = ws.get_all_records()
     df = pd.DataFrame(data)
 
@@ -314,51 +313,138 @@ with tab5:
         st.info("データがありません")
         st.stop()
 
-    # 直近レースを対象にする
-    latest = df.sort_values("登録日時").groupby(
-        ["日付", "会場", "レース番号"]
-    ).tail(6)
+    # -----------------------------
+    # 直近レース6艇取得
+    # -----------------------------
+    latest = (
+        df.sort_values("登録日時")
+          .groupby(["日付", "会場", "レース番号"])
+          .tail(6)
+          .copy()
+    )
 
-    # スタート評価を数値化
+    # -----------------------------
+    # スタート評価 → 数値
+    # -----------------------------
     eval_map = {
         "◎": 2.0,
         "◯": 1.0,
         "△": 0.5,
-        "×": -1.0,
-        "": 0.0
+        "×": -1.0
     }
+
+    if "スタート評価" not in latest.columns:
+        latest["スタート評価"] = ""
 
     latest["評価補正"] = latest["スタート評価"].map(eval_map).fillna(0)
 
-    # STは小さいほど良いのでマイナス
-    latest["start_score"] = -latest["ST"] + latest["評価補正"]
+    # STは小さいほど良い
+    latest["ST"] = pd.to_numeric(latest["ST"], errors="coerce").fillna(0)
 
-    latest = latest.sort_values("start_score", ascending=False)
+    latest["スタート予想スコア"] = -latest["ST"] + latest["評価補正"]
+
+    latest = latest.sort_values("スタート予想スコア", ascending=False)
+
+    # -----------------------------
+    # 見出し
+    # -----------------------------
+    head = latest.iloc[0]
 
     st.caption(
-        f'{latest.iloc[0]["日付"]} '
-        f'{latest.iloc[0]["会場"]} '
-        f'{int(latest.iloc[0]["レース番号"])}R'
+        f'{head["日付"]}  {head["会場"]}  {int(head["レース番号"])}R'
     )
 
-    cols = st.columns(6)
+    # -----------------------------
+    # CSS（スリット表示）
+    # -----------------------------
+    st.markdown("""
+    <style>
+    .slit-area{
+        background:#dff3ff;
+        padding:12px;
+        border-radius:12px;
+    }
+    .slit-row{
+        height:70px;
+        display:flex;
+        align-items:center;
+    }
+    .slit-boat{
+        display:flex;
+        align-items:center;
+        transition: all 0.4s;
+    }
+    .slit-line{
+        border-top:2px dashed #555;
+        margin-bottom:12px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    for i, row in enumerate(latest.itertuples()):
-        with cols[i]:
+    # -----------------------------
+    # スリット表示
+    # -----------------------------
+    st.markdown("### 🟦 スリット予想イメージ")
 
-            img_path = f"images/boat{row.艇番}.png"
+    st.markdown('<div class="slit-area">', unsafe_allow_html=True)
+    st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
-            st.image(img_path, use_container_width=True)
+    for _, r in latest.iterrows():
 
-            st.markdown(
-                f"""
-**{row.艇番}号艇**
+        boat_no = int(r["艇番"])
+        score   = float(r["スタート予想スコア"])
 
-ST：{row.ST:.2f}  
-評価：{row.スタート評価}  
-予想値：{row.start_score:.2f}
-"""
-            )
+        # 前に出る量
+        offset = max(0, min(220, score * 35))
+
+        img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
+
+        if not os.path.exists(img_path):
+
+            html = f"""
+            <div class="slit-row">
+                <div class="slit-boat" style="margin-left:{offset}px">
+                    <div style="width:55px;height:40px;
+                                background:#ccc;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;">
+                        {boat_no}
+                    </div>
+                    <div style="margin-left:10px;font-weight:bold;">
+                        {boat_no}号艇　
+                        <span style="font-size:12px;color:#444;">
+                            {score:.2f}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            """
+            st.markdown(html, unsafe_allow_html=True)
+            continue
+
+        img_base64 = encode_image(img_path)
+
+        html = f"""
+        <div class="slit-row">
+            <div class="slit-boat" style="margin-left:{offset}px">
+                <img src="data:image/png;base64,{img_base64}" height="55">
+                <div style="margin-left:10px;font-weight:bold;">
+                    {boat_no}号艇　
+                    <span style="font-size:12px;color:#444;">
+                        {score:.2f}
+                    </span><br>
+                    <span style="font-size:12px;">
+                        ST {r["ST"]:.2f}　評価 {r["スタート評価"]}
+                    </span>
+                </div>
+            </div>
+        </div>
+        """
+
+        st.markdown(html, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 
