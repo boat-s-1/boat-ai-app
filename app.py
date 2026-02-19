@@ -122,7 +122,7 @@ with tab4:
 
     eval_list = ["◎","◯","△","×",""]
 
-　　for b in range(1, 7):
+for b in range(1, 7):
 
     st.markdown(f"### 🚤 {b}号艇")
 
@@ -197,6 +197,7 @@ with tab4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
