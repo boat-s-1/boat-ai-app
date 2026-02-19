@@ -180,7 +180,7 @@ with tab_stat:
 # --- 入力エリア ---
 for b in range(1, 7):
     # (インデントあり) 各艇の入力項目
-    pass
+  if st.button("このレースを登録する", key="btn_check_01"):
 
 # --- 登録エリア（ループの外！） ---
 # (インデントを戻す)
@@ -421,6 +421,7 @@ with tab5:
 
     # 枠の終了（forループの外、かつ with tab5 の中）
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
