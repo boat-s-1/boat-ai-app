@@ -183,8 +183,7 @@ for b in range(1, 7):
   if st.button("このレースを登録する", key="btn_check_01"):
 
 # --- 登録エリア（ループの外！） ---
-# (インデントを戻す)
-if st.button("このレースを登録する"): 
+
     # ボタンが押された時の処理
     pass
     df_view = df[df["会場"] == place].copy()
@@ -488,6 +487,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
