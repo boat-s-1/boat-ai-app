@@ -423,60 +423,38 @@ with tab5:
     st.markdown('<div class="slit-area">', unsafe_allow_html=True)
     st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
-    for _, r in latest.iterrows():
+   for _, r in latest.iterrows():
 
-        boat_no = int(r["艇番"])
-        score   = float(r["スタート予想スコア"])
+    boat_no = int(r["艇番"])
+    score = float(r["スタート予想スコア"])
 
-        # 前に出る量
-        offset = max(0, min(220, score * 35))
+    offset = max(0, min(200, score * 25))
 
-        img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
+    img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
 
-        if not os.path.exists(img_path):
+    if not os.path.exists(img_path):
+        continue
 
-            html = f"""
-            <div class="slit-row">
-                <div class="slit-boat" style="margin-left:{offset}px">
-                    <div style="width:55px;height:40px;
-                                background:#ccc;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;">
-                        {boat_no}
-                    </div>
-                    <div style="margin-left:10px;font-weight:bold;">
-                        {boat_no}号艇　
-                        <span style="font-size:12px;color:#444;">
-                            {score:.2f}
-                        </span>
-                    </div>
-                </div>
+    img_base64 = encode_image(img_path)
+
+    html = f"""
+    <div class="slit-row">
+        <div class="slit-boat" style="margin-left:{offset}px">
+            <img src="data:image/png;base64,{img_base64}" height="55">
+            <div style="margin-left:10px;font-weight:bold;">
+                {boat_no}号艇　
+                <span style="font-size:12px;color:#444;">
+                    {score:.2f}
+                </span>
             </div>
-            """
-            st.markdown(html, unsafe_allow_html=True)
-            continue
-
-        img_base64 = encode_image(img_path)
-
-       html = f"""
-<div class="slit-row">
-
-    <div class="slit-boat" style="left:{offset}px;">
-        <img src="data:image/png;base64,{img_base64}">
+        </div>
     </div>
+    """
 
-    <div class="slit-label" style="left:{offset}px;">
-        {boat_no}号艇　
-        {score:.2f}
-    </div>
-
-</div>
-"""
-
-        st.markdown(html, unsafe_allow_html=True)
+    st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
