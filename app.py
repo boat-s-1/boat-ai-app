@@ -122,49 +122,59 @@ with tab4:
 
     eval_list = ["◎","◯","△","×",""]
 
-    for b in range(1, 7):
+   for b in range(1, 7):
 
-        st.markdown(f"#### {b}号艇")
+    st.markdown(f"### 🚤 {b}号艇")
 
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
+    st.markdown("#### 展示データ入力")
 
-        with c1:
-            ex = st.number_input("展示", 0.0, 10.0, 6.50, 0.01, key=f"ad_ex_{b}")
-        with c2:
-            stt = st.number_input("直線", 0.0, 10.0, 5.00, 0.01, key=f"ad_st_{b}")
-        with c3:
-            lap = st.number_input("一周", 0.0, 80.0, 37.0, 0.01, key=f"ad_lp_{b}")
-        with c4:
-            turn = st.number_input("回り足", min_value=0.00,  max_value=10.00,  value=5.00, step=0.01, format="%.2f", key=f"ad_tr_{b}")
-        with c5:
-            st_time = st.number_input("ST", -0.50, 1.00, 0.10, 0.01, key=f"ad_stt_{b}")
-        with c6:
-            start_eval = st.selectbox(
-                "スタート評価",
-                eval_list,
-                key=f"ad_eval_{b}"
-            )
+    c1, c2, c3, c4 = st.columns(4)
 
+    with c1:
+        ex = st.number_input("展示", 0.0, 10.0, 6.50, 0.01, key=f"ad_ex_{b}")
+    with c2:
+        stt = st.number_input("直線", 0.0, 10.0, 5.00, 0.01, key=f"ad_st_{b}")
+    with c3:
+        lap = st.number_input("一周", 0.0, 80.0, 37.0, 0.01, key=f"ad_lp_{b}")
+    with c4:
+        turn = st.number_input("回り足", 0.0, 10.0, 5.0, 0.01, key=f"ad_tr_{b}")
+
+    st.markdown("#### 結果入力")
+
+    r1, r2, r3 = st.columns(3)
+
+    with r1:
+        st_time = st.number_input("ST", -0.50, 1.00, 0.10, 0.01, key=f"ad_stt_{b}")
+
+    with r2:
+        start_eval = st.selectbox(
+            "スタート評価",
+            eval_list,
+            key=f"ad_eval_{b}"
+        )
+
+    with r3:
         rank = st.number_input("着順", 1, 6, b, key=f"ad_rank_{b}")
 
-        rows.append({
-            "日付": race_date.strftime("%Y-%m-%d"),
-            "登録日時": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "会場": place,
-            "レース番号": race_no,
-            "艇番": b,
-            "展示": ex,
-            "直線": stt,
-            "一周": lap,
-            "回り足": turn,
-            "ST": st_time,
-            "風向き": wind_dir,
-            "風速": wind_speed,
-            "波高": wave,
-            "着順": rank,
-            "スタート評価": start_eval
-        })
+    rows.append({
+        "日付": race_date.strftime("%Y-%m-%d"),
+        "登録日時": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "会場": place,
+        "レース番号": race_no,
+        "艇番": b,
+        "展示": ex,
+        "直線": stt,
+        "一周": lap,
+        "回り足": turn,
+        "ST": st_time,
+        "風向き": wind_dir,
+        "風速": wind_speed,
+        "波高": wave,
+        "着順": rank,
+        "スタート評価": start_eval
+    })
 
+    st.markdown("---")
     # =========================
     # 保存
     # =========================
@@ -187,6 +197,7 @@ with tab4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
