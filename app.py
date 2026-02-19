@@ -116,7 +116,7 @@ with tab4:
     )
 
     wind_speed = st.number_input("風速（m）", 0, 20, 0, 0)
-    wave = st.number_input("波高（cm）", 0.0, 50.0, 0.0, 0.5)
+    wave = st.number_input("波高（cm）", 0, 50, 0, 0)
 
     st.markdown("---")
     st.markdown("### 各艇データ入力")
@@ -190,6 +190,7 @@ with tab4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
