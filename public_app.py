@@ -420,7 +420,7 @@ with tab5:
     # -----------------------------
     st.markdown("### 🟦 スリット予想イメージ")
 
-   st.markdown('<div class="slit-area">', unsafe_allow_html=True)
+st.markdown('<div class="slit-area">', unsafe_allow_html=True)
 st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
 for _, r in latest.iterrows():
@@ -454,6 +454,7 @@ for _, r in latest.iterrows():
     st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
