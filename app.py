@@ -176,7 +176,7 @@ with tab4:
     if st.button("このレースを登録する"):
 
         try:
-            ws = sh.worksheet("data")
+            ws = sh.worksheet("管理用_NEW")
 
             df_add = pd.DataFrame(rows)
 
@@ -190,6 +190,7 @@ with tab4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
