@@ -137,16 +137,8 @@ with tab4:
             stt = st.number_input("直線", 0.0, 10.0, 5.00, 0.01, key=f"ad_st_{b}")
         with c3:
             lap = st.number_input("一周", 0.0, 80.0, 37.0, 0.01, key=f"ad_lp_{b}")
-       with c4:
-    turn = st.number_input(
-        "回り足",
-        min_value=0.00,
-        max_value=10.00,
-        value=5.00,
-        step=0.01,
-        format="%.2f",
-        key=f"ad_tr_{b}"
-    )
+        with c4:
+            turn = st.number_input("回り足", min_value=0.00,  max_value=10.00,  value=5.00, step=0.01, format="%.2f", key=f"ad_tr_{b}")
         with c5:
             st_time = st.number_input("ST", -0.50, 1.00, 0.10, 0.01, key=f"ad_stt_{b}")
         with c6:
@@ -198,6 +190,7 @@ with tab4:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
 
