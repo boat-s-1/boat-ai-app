@@ -177,7 +177,16 @@ with tab_stat:
     place_list = sorted(df["会場"].dropna().unique())
     place_list = sorted(df["会場"].dropna().unique())
     place = st.selectbox("会場を選択", place_list)
+# --- 入力エリア ---
+for b in range(1, 7):
+    # (インデントあり) 各艇の入力項目
+    pass
 
+# --- 登録エリア（ループの外！） ---
+# (インデントを戻す)
+if st.button("このレースを登録する"): 
+    # ボタンが押された時の処理
+    pass
     df_view = df[df["会場"] == place].copy()
 
     if len(df_view) == 0:
@@ -412,6 +421,7 @@ with tab5:
 
     # 枠の終了（forループの外、かつ with tab5 の中）
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
