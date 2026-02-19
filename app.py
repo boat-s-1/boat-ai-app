@@ -29,7 +29,7 @@ ws_memo = sh.worksheet("攻略メモ") if sh else None
 
 st.title("🚤 競艇予想 Pro (管理者用)")
 
-tab1, tab2, tab3 = st.tabs(["🕒 タイム入力", "🏁 的中データ登録", "📝 攻略メモ"])
+tab1, tab2, tab3,tab4 = st.tabs(["🕒 タイム入力", "🏁 的中データ登録", "📝 攻略メモ","詳細入力"])
 
 # --- Tab 1: タイム入力 ---
 with tab1:
@@ -95,7 +95,7 @@ with tab3:
                 ws_memo.append_row([m_p, m_t, str(datetime.date.today())])
                 st.success("メモを保存しました")
 # --- タブ：管理用データ入力 ---
-with tab_admin:
+with tab4:
 
     st.subheader("管理用データ登録")
 
@@ -190,5 +190,6 @@ with tab_admin:
         except Exception as e:
             st.error("スプレッドシートへの保存に失敗しました")
             st.write(e)
+
 
 
