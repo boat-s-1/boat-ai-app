@@ -130,7 +130,7 @@ with tab5:
 
     st.subheader("🚀 スタート予想（展示気配＋ST）")
 
-    ws = sh.worksheet("data")
+    ws = sh.worksheet("管理用_NEW")
 
     data = ws.get_all_records()
     df = pd.DataFrame(data)
@@ -184,3 +184,4 @@ ST：{row.ST:.2f}
 予想値：{row.start_score:.2f}
 """
             )
+
