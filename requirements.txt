@@ -5,3 +5,6 @@ google-auth
 plotly
 beautifulsoup4
 requests
+playwright
+beautifulsoup4
+lxml
