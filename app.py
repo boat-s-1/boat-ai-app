@@ -181,18 +181,27 @@ with tab4:
     # ------------------------
     st.markdown("## 🏁 結果入力")
 
-    # 先頭に風向き・波高
-    w1, w2 = st.columns(2)
+    # 先頭に風向き・風速・波高
+    w1, w2, w3 = st.columns(3)
 
     with w1:
         wind_dir = st.radio(
             "風向き（方位）",
-            ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
+            ["無風", "北", "北東", "東", "南東", "南", "南西", "西", "北西"],
             horizontal=True,
             key="tab4_wind"
         )
 
     with w2:
+        wind_speed = st.number_input(
+            "風速（m）",
+            min_value=0.0,
+            step=0.1,
+            format="%.1f",
+            key="tab4_wind_speed"
+        )
+
+    with w3:
         wave_height = st.number_input(
             "波高（cm）",
             min_value=0.0,
@@ -256,9 +265,9 @@ with tab4:
                 st.session_state[f"tab4_isshu_{boat}"],         # 一周
                 st.session_state[f"tab4_mawari_{boat}"],        # 回り足
                 st.session_state[f"tab4_st_{boat}"],            # ST
-                wind_dir,                                       # 風向き
-                "",                                             # 風速（未入力）
-                st.session_state["tab4_wave"],                  # 波高
+                st.session_state["tab4_wind"],                  # 風向き
+                st.session_state["tab4_wind_speed"],           # 風速
+                st.session_state["tab4_wave"],                 # 波高
                 st.session_state[f"tab4_rank_{boat}"],          # 着順
                 st.session_state[f"tab4_eval_{boat}"],          # スタート評価
             ])
