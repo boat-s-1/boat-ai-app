@@ -108,7 +108,7 @@ ws_memo = sh.worksheet("攻略メモ") if sh else None
 
 st.title("🚤 競艇予想 Pro (管理者用)")
 
-tab1, tab2, tab3,tab4,tab_admin = st.tabs(["🕒 タイム入力", "🏁 的中データ登録", "📝 攻略メモ","詳細入力","スクレイプ"])
+tab1, tab2, tab3,tab4,tab5 = st.tabs(["🕒 タイム入力", "🏁 的中データ登録", "📝 攻略メモ","詳細入力","スクレイプ"])
 
 # --- Tab 1: タイム入力 ---
 with tab1:
@@ -356,52 +356,62 @@ with tab4:
         )
 
         st.success("登録しました！")
-with tab_admin:
+with tab5:
 
-    st.subheader("管理用｜オリジナル展示 取込")
+    st.subheader("📋 展示データ コピペ取込")
 
-    url = st.text_input(
-        "boaters-boatrace 展示URL",
-        key="admin_scrape_url"
+    st.info("公式サイトの展示表をそのままコピーして貼り付けてください")
+
+    raw = st.text_area(
+        "展示表を貼り付け",
+        height=200
     )
 
-    if st.button("展示データ取得（管理用）"):
+    if st.button("展示データに変換"):
 
-        try:
-            df = scrape_original_tenji(url)
+        lines = [l.strip() for l in raw.splitlines() if l.strip()]
 
-            st.dataframe(df)
+        data = []
 
-            st.markdown("### 反映先")
+        for line in lines:
 
-            col1, col2 = st.columns(2)
+            # タブ or スペース区切りを両対応
+            parts = line.replace("　", " ").split()
 
-            with col1:
-                target = st.selectbox(
-                    "反映するタブ",
-                    ["タブ2（統計）", "タブ4（管理）"],
-                    key="admin_target_tab"
-                )
+            # 最低5項目（艇番 展示 直線 一周 回り足）を想定
+            if len(parts) < 5:
+                continue
 
-            if st.button("選択したタブへ反映"):
+            try:
+                boat = int(parts[0])
+            except:
+                continue
 
-                prefix = "tab2" if target == "タブ2（統計）" else "tab4"
+            def f(x):
+                try:
+                    return float(x)
+                except:
+                    return None
 
-                for b in range(1, 7):
+            data.append({
+                "艇番": boat,
+                "展示": f(parts[1]),
+                "直線": f(parts[2]),
+                "一周": f(parts[3]),
+                "回り足": f(parts[4])
+            })
 
-                    if b not in df.index:
-                        continue
+        if len(data) == 0:
+            st.error("データが読み取れませんでした")
+            st.stop()
 
-                    st.session_state[f"{prefix}_in_tenji_{b}"]  = float(df.loc[b, "展示"])
-                    st.session_state[f"{prefix}_in_choku_{b}"]  = float(df.loc[b, "直線"])
-                    st.session_state[f"{prefix}_in_isshu_{b}"]  = float(df.loc[b, "一周"])
-                    st.session_state[f"{prefix}_in_mawari_{b}"] = float(df.loc[b, "回り足"])
+        df = pd.DataFrame(data).sort_values("艇番")
 
-                st.success("反映しました")
+        st.success("変換しました")
 
-        except Exception as e:
-            st.error(e)
+        st.dataframe(df, use_container_width=True)
 
+        st.session_state["copied_tenji_df"] = df
 
 
 
