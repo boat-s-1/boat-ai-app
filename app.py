@@ -5,6 +5,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import requests
 from bs4 import BeautifulSoup
+import pandas as pd   # ←これを追加
 
 def scrape_original_tenji(url):
 
@@ -17,12 +18,10 @@ def scrape_original_tenji(url):
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # テーブルを全部探す（構造が変わっても壊れにくくするため）
     tables = soup.find_all("table")
 
     target_table = None
 
-    # 「艇番」「展示」などが含まれる表を探す
     for table in tables:
         text = table.get_text()
         if "展示" in text and "艇" in text:
@@ -36,17 +35,16 @@ def scrape_original_tenji(url):
 
     header = [th.get_text(strip=True) for th in rows[0].find_all(["th","td"])]
 
-    # 列位置を自動取得
     def find_col(name):
         for i, h in enumerate(header):
             if name in h:
                 return i
         return None
 
-    idx_boat  = find_col("艇")
-    idx_tenji = find_col("展示")
-    idx_choku = find_col("直線")
-    idx_isshu = find_col("一周")
+    idx_boat   = find_col("艇")
+    idx_tenji  = find_col("展示")
+    idx_choku  = find_col("直線")
+    idx_isshu  = find_col("一周")
     idx_mawari = find_col("回")
 
     if None in [idx_boat, idx_tenji, idx_choku, idx_isshu, idx_mawari]:
@@ -402,6 +400,7 @@ with tab_admin:
 
         except Exception as e:
             st.error(e)
+
 
 
 
