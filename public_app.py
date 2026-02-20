@@ -227,9 +227,17 @@ with tab5:
     # -----------------------
     # 直近レース（ST＋評価用）
     # -----------------------
-    base = df_place.sort_values("登録日時").groupby(
-        ["日付","会場","レース番号"]
-    ).tail(6)
+    # その会場の最新レースだけ取得
+latest_key = (
+    df_place.sort_values("登録日時")
+    .iloc[-1][["日付","会場","レース番号"]]
+)
+
+base = df_place[
+    (df_place["日付"] == latest_key["日付"]) &
+    (df_place["会場"] == latest_key["会場"]) &
+    (df_place["レース番号"] == latest_key["レース番号"])
+].copy()
 
     if len(base) < 6:
         st.warning("この会場のデータがまだ少ないです")
@@ -315,6 +323,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
