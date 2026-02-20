@@ -103,13 +103,13 @@ with tab4:
     master_df = pd.DataFrame(ws_master.get_all_records())
 
     # 全ボートレース場（固定）
-place_list = [
-    "桐生","戸田","江戸川","平和島","多摩川",
-    "浜名湖","蒲郡","常滑","津","三国",
-    "びわこ","住之江","尼崎","鳴門","丸亀",
-    "児島","宮島","徳山","下関","若松",
-    "芦屋","福岡","唐津","大村"
-]
+    place_list = [
+        "桐生","戸田","江戸川","平和島","多摩川",
+        "浜名湖","蒲郡","常滑","津","三国",
+        "びわこ","住之江","尼崎","鳴門","丸亀",
+        "児島","宮島","徳山","下関","若松",
+        "芦屋","福岡","唐津","大村"
+    ]
 
     col1, col2, col3 = st.columns(3)
 
@@ -117,14 +117,11 @@ place_list = [
         date = st.date_input("日付", key="tab4_date")
 
     with col2:
-        if place_list:
-            place = st.selectbox(
-                "会場",
-                place_list,
-                key="tab4_place"
-            )
-        else:
-            place = st.text_input("会場", key="tab4_place")
+        place = st.selectbox(
+            "会場",
+            place_list,
+            key="tab4_place"
+        )
 
     with col3:
         race_no = st.number_input(
