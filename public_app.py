@@ -170,10 +170,9 @@ with tab_memo:
 # --- タブ5：スタート予想 ---
 with tab5:
 
-    st.subheader("🚀 スタート予想（展示気配＋ST）")
+    st.subheader("🚀 スタート予想（展示＋1周＋ST 補正）")
 
     ws = sh.worksheet("管理用_NEW")
-
     data = ws.get_all_records()
     df_place = pd.DataFrame(data)
 
@@ -181,43 +180,70 @@ with tab5:
         st.info("データがありません")
         st.stop()
 
-    # 型をそろえる（超重要）
+    df_place["登録日時"] = pd.to_datetime(df_place["登録日時"], errors="coerce")
     df_place["レース番号"] = df_place["レース番号"].astype(str)
 
-    # 登録日時を日時型に
-    df_place["登録日時"] = pd.to_datetime(df_place["登録日時"], errors="coerce")
+    latest_row = df_place.sort_values("登録日時").iloc[-1]
 
-    # 直近レースキーを取得
-    latest_key = (
-        df_place.sort_values("登録日時")
-        .iloc[-1][["日付", "会場", "レース番号"]]
-    )
+    race_date  = latest_row["日付"]
+    race_place = latest_row["会場"]
+    race_no    = str(latest_row["レース番号"])
 
-    latest_key["レース番号"] = str(latest_key["レース番号"])
-
-    # 対象レース6艇だけ抽出
     base = df_place[
-        (df_place["日付"] == latest_key["日付"]) &
-        (df_place["会場"] == latest_key["会場"]) &
-        (df_place["レース番号"] == latest_key["レース番号"])
+        (df_place["日付"] == race_date) &
+        (df_place["会場"] == race_place) &
+        (df_place["レース番号"] == race_no)
     ].copy()
 
     if len(base) < 6:
-        st.warning("このレースのデータが6艇そろっていません")
-        st.write(base)
+        st.warning("このレースの6艇データが揃っていません")
         st.stop()
 
-    # 表示用
-    st.caption(
-        f'{latest_key["日付"]} '
-        f'{latest_key["会場"]} '
-        f'{latest_key["レース番号"]}R'
-    )
+    st.caption(f"{race_date} {race_place} {race_no}R")
 
-    # 数値化
+    # -----------------------
+    # 会場平均との差を出すための平均
+    # -----------------------
+    place_df = df_place[df_place["会場"] == race_place].copy()
+
+    for c in ["展示", "一周", "ST"]:
+        place_df[c] = pd.to_numeric(place_df[c], errors="coerce")
+
+    mean_tenji = place_df["展示"].mean()
+    mean_isshu = place_df["一周"].mean()
+
+    st.markdown("### 📝 今回レースの展示・1周入力（補正用）")
+
+    input_cols = st.columns(6)
+
+    tenji_input = {}
+    isshu_input = {}
+
+    base = base.sort_values("艇番")
+
+    for i, (_, r) in enumerate(base.iterrows()):
+        boat = int(r["艇番"])
+
+        with input_cols[i]:
+            st.markdown(f"**{boat}号艇**")
+            tenji_input[boat] = st.number_input(
+                "展示",
+                step=0.01,
+                value=float(r["展示"]) if pd.notna(r["展示"]) else 0.0,
+                key=f"tab5_tenji_{boat}"
+            )
+            isshu_input[boat] = st.number_input(
+                "一周",
+                step=0.01,
+                value=float(r["一周"]) if pd.notna(r["一周"]) else 0.0,
+                key=f"tab5_isshu_{boat}"
+            )
+
+    # -----------------------
+    # スコア計算
+    # -----------------------
     base["ST"] = pd.to_numeric(base["ST"], errors="coerce")
 
-    # スタート評価を数値化
     eval_map = {
         "◎": 2.0,
         "◯": 1.0,
@@ -227,12 +253,33 @@ with tab5:
 
     base["評価補正"] = base["スタート評価"].map(eval_map).fillna(0)
 
-    # スタートスコア
-    base["start_score"] = -base["ST"] + base["評価補正"]
+    scores = []
 
-    # 艇番順で表示
-    base = base.sort_values("艇番")
+    for _, r in base.iterrows():
 
+        boat = int(r["艇番"])
+
+        st_score = -r["ST"] + r["評価補正"]
+
+        # 展示補正（速いほどプラス）
+        tenji_diff = mean_tenji - tenji_input[boat]
+
+        # 1周補正（速いほどプラス）
+        isshu_diff = mean_isshu - isshu_input[boat]
+
+        total = (
+            st_score
+            + tenji_diff * 2.0
+            + isshu_diff * 0.3
+        )
+
+        scores.append(total)
+
+    base["start_score"] = scores
+
+    # -----------------------
+    # スリット表示
+    # -----------------------
     st.markdown("### 🟦 スリット予想イメージ")
 
     st.markdown('<div class="slit-area">', unsafe_allow_html=True)
@@ -241,9 +288,8 @@ with tab5:
     for _, r in base.iterrows():
 
         boat_no = int(r["艇番"])
-        score = float(r["start_score"])
+        score   = float(r["start_score"])
 
-        # 前に出る量
         offset = max(0, min(160, (score + 0.5) * 120))
 
         img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
@@ -253,11 +299,11 @@ with tab5:
         <div class="slit-row">
             <div class="slit-boat" style="margin-left:{offset}px;">
                 <img src="data:image/png;base64,{img_base64}" height="48">
-                <div style="margin-left:10px;font-size:13px;line-height:1.4;">
+                <div style="margin-left:10px;font-size:13px;">
                     <b>{boat_no}号艇</b><br>
-                    ST {r["ST"]:.2f}　
-                    {r["スタート評価"]}　
-                    score {score:.2f}
+                    展示 {tenji_input[boat_no]:.2f}
+                    一周 {isshu_input[boat_no]:.2f}<br>
+                    ST {r["ST"]:.2f} {r["スタート評価"]}
                 </div>
             </div>
         </div>
@@ -266,6 +312,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
