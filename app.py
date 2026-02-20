@@ -100,9 +100,8 @@ with tab4:
     st.subheader("🛠 管理用データ入力")
 
     ws_master = sh.worksheet("管理用_NEW")
-    master_df = pd.DataFrame(ws_master.get_all_records())
 
-    # 全ボートレース場（固定）
+    # 全ボートレース場
     place_list = [
         "桐生","戸田","江戸川","平和島","多摩川",
         "浜名湖","蒲郡","常滑","津","三国",
@@ -125,18 +124,10 @@ with tab4:
 
     with col3:
         race_no = st.number_input(
-            "レース番号", 1, 12, 1,
+            "レース番号",
+            1, 12, 1,
             key="tab4_race"
         )
-
-    st.divider()
-
-    wind_dir = st.radio(
-        "風向き（方位）",
-        ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
-        horizontal=True,
-        key="tab4_wind"
-    )
 
     st.divider()
 
@@ -188,8 +179,31 @@ with tab4:
     # ------------------------
     # 結果入力
     # ------------------------
-    st.markdown("## 🏁 結果入力（スタート・評価・着順）")
+    st.markdown("## 🏁 結果入力")
 
+    # 先頭に風向き・波高
+    w1, w2 = st.columns(2)
+
+    with w1:
+        wind_dir = st.radio(
+            "風向き（方位）",
+            ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
+            horizontal=True,
+            key="tab4_wind"
+        )
+
+    with w2:
+        wave_height = st.number_input(
+            "波高（cm）",
+            min_value=0.0,
+            step=1.0,
+            format="%.0f",
+            key="tab4_wave"
+        )
+
+    st.divider()
+
+    # 各艇の結果
     for boat in range(1, 7):
 
         st.markdown(f"### 🚤 {boat}号艇")
@@ -220,41 +234,40 @@ with tab4:
 
     st.divider()
 
-# ------------------------
-# 登録処理
-# ------------------------
-if st.button("このレースを登録する", key="tab4_save"):
+    # ------------------------
+    # 登録処理
+    # ------------------------
+    if st.button("このレースを登録する", key="tab4_save"):
 
-    rows = []
-    now = pd.Timestamp.now()
+        now = pd.Timestamp.now()
 
-    for boat in range(1, 7):
+        rows = []
 
-        rows.append([
-            str(date),                                     # 日付
-            now,                                           # 登録日時
-            place,                                         # 会場
-            race_no,                                       # レース番号
-            boat,                                          # 艇番
-            st.session_state[f"tab4_tenji_{boat}"],       # 展示
-            st.session_state[f"tab4_choku_{boat}"],       # 直線
-            st.session_state[f"tab4_isshu_{boat}"],       # 一周
-            st.session_state[f"tab4_mawari_{boat}"],      # 回り足
-            st.session_state[f"tab4_st_{boat}"],          # ST
-            wind_dir,                                     # 風向き
-            "",                                            # 風速（未入力）
-            "",                                            # 波高（未入力）
-            st.session_state[f"tab4_rank_{boat}"],        # 着順
-            st.session_state[f"tab4_eval_{boat}"],        # スタート評価
-        ])
+        for boat in range(1, 7):
 
-    ws = sh.worksheet("管理用_NEW")
+            rows.append([
+                str(date),                                      # 日付
+                now,                                            # 登録日時
+                place,                                          # 会場
+                race_no,                                        # レース番号
+                boat,                                           # 艇番
+                st.session_state[f"tab4_tenji_{boat}"],         # 展示
+                st.session_state[f"tab4_choku_{boat}"],         # 直線
+                st.session_state[f"tab4_isshu_{boat}"],         # 一周
+                st.session_state[f"tab4_mawari_{boat}"],        # 回り足
+                st.session_state[f"tab4_st_{boat}"],            # ST
+                wind_dir,                                       # 風向き
+                "",                                             # 風速（未入力）
+                st.session_state["tab4_wave"],                  # 波高
+                st.session_state[f"tab4_rank_{boat}"],          # 着順
+                st.session_state[f"tab4_eval_{boat}"],          # スタート評価
+            ])
 
-    ws.append_rows(
-        [[str(v) for v in row] for row in rows]
-    )
+        ws_master.append_rows(
+            pd.DataFrame(rows).astype(str).values.tolist()
+        )
 
-    st.success("登録しました！")
+        st.success("登録しました！")
 
 
 
