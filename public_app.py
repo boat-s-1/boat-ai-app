@@ -170,23 +170,70 @@ with tab_memo:
 # --- タブ5：スタート予想 ---
 with tab5:
 
-    st.subheader("🚀 スタート予想（展示気配＋ST）")
+    st.subheader("🚀 スタート予想（場別補正＋展示＋1周）")
 
-    ws = sh.worksheet("管理用_NEW")
+    ws_new = sh.worksheet("管理用_NEW")
+    df_new = pd.DataFrame(ws_new.get_all_records())
 
-    data = ws.get_all_records()
-    df = pd.DataFrame(data)
-
-    if df.empty:
+    if df_new.empty:
         st.info("データがありません")
         st.stop()
 
-    # 直近レースを対象にする
-    latest = df.sort_values("登録日時").groupby(
-        ["日付", "会場", "レース番号"]
+    # 数値化
+    for c in ["展示","一周","ST"]:
+        df_new[c] = pd.to_numeric(df_new[c], errors="coerce")
+
+    # -----------------------
+    # 会場選択
+    # -----------------------
+    place_list = sorted(df_new["会場"].dropna().unique())
+
+    place = st.selectbox(
+        "会場を選択",
+        place_list,
+        key="tab5_place"
+    )
+
+    df_place = df_new[df_new["会場"] == place].copy()
+
+    # -----------------------
+    # 当日展示入力
+    # -----------------------
+    st.markdown("### 🧮 当日の展示タイム入力")
+
+    input_tenji = {}
+    input_isshu = {}
+
+    cols = st.columns(6)
+
+    for b in range(1, 7):
+        with cols[b-1]:
+            st.markdown(f"**{b}号艇**")
+            input_tenji[b] = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                key=f"tab5_tenji_{b}"
+            )
+            input_isshu[b] = st.number_input(
+                "1周",
+                step=0.01,
+                format="%.2f",
+                key=f"tab5_isshu_{b}"
+            )
+
+    st.divider()
+
+    # -----------------------
+    # 直近レース（ST＋評価用）
+    # -----------------------
+    base = df_place.sort_values("登録日時").groupby(
+        ["日付","会場","レース番号"]
     ).tail(6)
 
-    # スタート評価を数値化
+    if len(base) < 6:
+        st.warning("この会場のデータがまだ少ないです")
+
     eval_map = {
         "◎": 2.0,
         "◯": 1.0,
@@ -195,39 +242,62 @@ with tab5:
         "": 0.0
     }
 
-    latest["評価補正"] = latest["スタート評価"].map(eval_map).fillna(0)
+    base["評価補正"] = base["スタート評価"].map(eval_map).fillna(0)
 
-    # STは小さいほど良いのでマイナス
-    latest["start_score"] = -latest["ST"] + latest["評価補正"]
+    # -----------------------
+    # 会場平均との差
+    # -----------------------
+    tenji_mean = df_place.groupby("艇番")["展示"].mean()
+    isshu_mean = df_place.groupby("艇番")["一周"].mean()
 
-    latest = latest.sort_values("start_score", ascending=False)
+    rows = []
 
-    st.caption(
-        f'{latest.iloc[0]["日付"]} '
-        f'{latest.iloc[0]["会場"]} '
-        f'{int(latest.iloc[0]["レース番号"])}R'
-    )
+    for _, r in base.iterrows():
 
-    # ←★★ ここからも全部 tab5 の中 ★★
+        b = int(r["艇番"])
 
-    # 艇番順に縦に並べる
-    latest_view = latest.sort_values("艇番")
+        tenji_diff = 0
+        isshu_diff = 0
+
+        if b in tenji_mean and input_tenji[b] > 0:
+            tenji_diff = tenji_mean[b] - input_tenji[b]
+
+        if b in isshu_mean and input_isshu[b] > 0:
+            isshu_diff = isshu_mean[b] - input_isshu[b]
+
+        # -----------------------
+        # 最終スコア
+        # -----------------------
+        score = (
+            - r["ST"]
+            + r["評価補正"]
+            + tenji_diff * 2.0
+            + isshu_diff * 0.3
+        )
+
+        rows.append({
+            "艇番": b,
+            "ST": r["ST"],
+            "スタート評価": r["スタート評価"],
+            "score": score
+        })
+
+    result = pd.DataFrame(rows)
+    result = result.sort_values("艇番")
 
     st.markdown("### 🟦 スリット予想イメージ")
 
     st.markdown('<div class="slit-area">', unsafe_allow_html=True)
     st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
-    for _, r in latest_view.iterrows():
+    for _, r in result.iterrows():
 
         boat_no = int(r["艇番"])
-        score   = float(r["start_score"])
+        score   = float(r["score"])
 
-        # 前に出る量（スコアに応じて）
         offset = max(0, min(160, (score + 0.5) * 120))
 
         img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
-
         img_base64 = encode_image(img_path)
 
         html = f"""
@@ -236,9 +306,7 @@ with tab5:
                 <img src="data:image/png;base64,{img_base64}" height="48">
                 <div style="margin-left:8px;font-size:13px;">
                     <b>{boat_no}号艇</b><br>
-                    ST {r["ST"]:.2f}　
-                    {r["スタート評価"]}　
-                    {score:.2f}
+                    score {score:.2f}
                 </div>
             </div>
         </div>
@@ -247,7 +315,6 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 
 
