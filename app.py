@@ -220,40 +220,41 @@ with tab4:
 
     st.divider()
 
-    # ------------------------
-    # 登録処理
-    # ------------------------
-    if st.button("このレースを登録する", key="tab4_save"):
+# ------------------------
+# 登録処理
+# ------------------------
+if st.button("このレースを登録する", key="tab4_save"):
 
-        boats_data = []
+    rows = []
+    now = pd.Timestamp.now()
 
-        for boat in range(1, 7):
+    for boat in range(1, 7):
 
-            boats_data.append({
-                "日付": str(date),
-                "会場": place,
-                "レース番号": race_no,
-                "風向き": wind_dir,
-                "艇番": boat,
-                "展示": st.session_state[f"tab4_tenji_{boat}"],
-                "直線": st.session_state[f"tab4_choku_{boat}"],
-                "一周": st.session_state[f"tab4_isshu_{boat}"],
-                "回り足": st.session_state[f"tab4_mawari_{boat}"],
-                "ST": st.session_state[f"tab4_st_{boat}"],
-                "スタート評価": st.session_state[f"tab4_eval_{boat}"],
-                "着順": st.session_state[f"tab4_rank_{boat}"],
-            })
+        rows.append([
+            str(date),                                     # 日付
+            now,                                           # 登録日時
+            place,                                         # 会場
+            race_no,                                       # レース番号
+            boat,                                          # 艇番
+            st.session_state[f"tab4_tenji_{boat}"],       # 展示
+            st.session_state[f"tab4_choku_{boat}"],       # 直線
+            st.session_state[f"tab4_isshu_{boat}"],       # 一周
+            st.session_state[f"tab4_mawari_{boat}"],      # 回り足
+            st.session_state[f"tab4_st_{boat}"],          # ST
+            wind_dir,                                     # 風向き
+            "",                                            # 風速（未入力）
+            "",                                            # 波高（未入力）
+            st.session_state[f"tab4_rank_{boat}"],        # 着順
+            st.session_state[f"tab4_eval_{boat}"],        # スタート評価
+        ])
 
-        df_add = pd.DataFrame(boats_data)
-        df_add["登録日時"] = pd.Timestamp.now()
+    ws = sh.worksheet("管理用_NEW")
 
-        ws = sh.worksheet("管理用_NEW")
+    ws.append_rows(
+        [[str(v) for v in row] for row in rows]
+    )
 
-        ws.append_rows(
-            df_add.astype(str).values.tolist()
-        )
-
-        st.success("登録しました！")
+    st.success("登録しました！")
 
 
 
