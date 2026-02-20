@@ -102,13 +102,14 @@ with tab4:
     ws_master = sh.worksheet("管理用_NEW")
     master_df = pd.DataFrame(ws_master.get_all_records())
 
-    # 会場候補を既存データから取得
-    if "会場" in master_df.columns:
-        place_list = sorted(
-            [p for p in master_df["会場"].unique() if str(p).strip() != ""]
-        )
-    else:
-        place_list = []
+    # 全ボートレース場（固定）
+place_list = [
+    "桐生","戸田","江戸川","平和島","多摩川",
+    "浜名湖","蒲郡","常滑","津","三国",
+    "びわこ","住之江","尼崎","鳴門","丸亀",
+    "児島","宮島","徳山","下関","若松",
+    "芦屋","福岡","唐津","大村"
+]
 
     col1, col2, col3 = st.columns(3)
 
@@ -256,6 +257,7 @@ with tab4:
         )
 
         st.success("登録しました！")
+
 
 
 
