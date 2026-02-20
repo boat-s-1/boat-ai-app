@@ -94,135 +94,129 @@ with tab3:
             if st.form_submit_button("メモ保存"):
                 ws_memo.append_row([m_p, m_t, str(datetime.date.today())])
                 st.success("メモを保存しました")
-# --- タブ4：管理者入力 ---
+# --- タブ4：管理用入力 ---
 with tab4:
 
-    st.subheader("📝 管理者入力（展示 → 結果）")
-
-    ws = sh.worksheet("管理用_NEW")
+    st.subheader("🛠 管理用データ入力")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        日付 = st.date_input("日付")
+        date = st.date_input("日付", key="tab4_date")
 
     with col2:
-        会場 = st.text_input("会場")
+        place = st.text_input("会場", key="tab4_place")
 
     with col3:
-        レース番号 = st.number_input("レース番号", 1, 12, 1)
+        race_no = st.number_input("レース番号", 1, 12, 1, key="tab4_race")
 
     st.divider()
 
-    # 風向き（レース共通）
     wind_dir = st.radio(
         "風向き（方位）",
         ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
-        horizontal=True
+        horizontal=True,
+        key="tab4_wind"
     )
 
     st.divider()
 
-    boat_inputs = {}
+    boats_data = []
 
     for boat in range(1, 7):
 
         st.markdown(f"### 🚤 {boat}号艇")
 
+        # ---------- 展示系 ----------
         c1, c2, c3, c4 = st.columns(4)
 
         with c1:
-            展示 = st.number_input(
-                f"{boat}号艇 展示",
+            tenji = st.number_input(
+                "展示",
                 step=0.01,
                 format="%.2f",
-                key=f"tenji_{boat}"
+                key=f"tab4_tenji_{boat}"
             )
 
         with c2:
-            直線 = st.number_input(
-                f"{boat}号艇 直線",
+            choku = st.number_input(
+                "直線",
                 step=0.01,
                 format="%.2f",
-                key=f"choku_{boat}"
+                key=f"tab4_choku_{boat}"
             )
 
         with c3:
-            一周 = st.number_input(
-                f"{boat}号艇 一周",
+            isshu = st.number_input(
+                "一周",
                 step=0.01,
                 format="%.2f",
-                key=f"issyuu_{boat}"
+                key=f"tab4_isshu_{boat}"
             )
 
         with c4:
-            回り足 = st.number_input(
-                f"{boat}号艇 回り足",
+            mawari = st.number_input(
+                "回り足",
                 step=0.01,
                 format="%.2f",
-                key=f"mawari_{boat}"
+                key=f"tab4_mawari_{boat}"
             )
 
-        r1, r2 = st.columns(2)
+        # ---------- 結果系 ----------
+        r1, r2, r3 = st.columns(3)
 
         with r1:
-            ST = st.number_input(
-                f"{boat}号艇 スタート（ST）",
+            st_time = st.number_input(
+                "スタート（ST）",
                 step=0.01,
                 format="%.2f",
-                key=f"st_{boat}"
+                key=f"tab4_st_{boat}"
             )
 
         with r2:
-            着順 = st.number_input(
-                f"{boat}号艇 着順",
-                1, 6, 1,
-                key=f"rank_{boat}"
+            start_eval = st.selectbox(
+                "スタート評価",
+                ["", "◎", "◯", "△", "×"],
+                key=f"tab4_eval_{boat}"
             )
 
-        boat_inputs[boat] = {
-            "展示": 展示,
-            "直線": 直線,
-            "一周": 一周,
-            "回り足": 回り足,
-            "ST": ST,
-            "着順": 着順
-        }
+        with r3:
+            rank = st.number_input(
+                "着順",
+                1, 6, 1,
+                key=f"tab4_rank_{boat}"
+            )
+
+        boats_data.append({
+            "日付": str(date),
+            "会場": place,
+            "レース番号": race_no,
+            "風向き": wind_dir,
+            "艇番": boat,
+            "展示": tenji,
+            "直線": choku,
+            "一周": isshu,
+            "回り足": mawari,
+            "ST": st_time,
+            "スタート評価": start_eval,
+            "着順": rank
+        })
 
         st.divider()
 
-    if st.button("✅ このレースを保存"):
+    if st.button("このレースを登録する", key="tab4_save"):
 
-        headers = ws.row_values(1)
+        df_add = pd.DataFrame(boats_data)
 
-        for boat in range(1, 7):
+        df_add["登録日時"] = pd.Timestamp.now()
 
-            row = [""] * len(headers)
+        ws = sh.worksheet("管理用_NEW")
 
-            row[headers.index("日付")] = str(日付)
-            row[headers.index("会場")] = 会場
-            row[headers.index("レース番号")] = int(レース番号)
-            row[headers.index("艇番")] = boat
+        ws.append_rows(
+            df_add.astype(str).values.tolist()
+        )
 
-            row[headers.index("展示")] = boat_inputs[boat]["展示"]
-            row[headers.index("直線")] = boat_inputs[boat]["直線"]
-            row[headers.index("一周")] = boat_inputs[boat]["一周"]
-            row[headers.index("回り足")] = boat_inputs[boat]["回り足"]
-
-            row[headers.index("ST")] = boat_inputs[boat]["ST"]
-            row[headers.index("着順")] = boat_inputs[boat]["着順"]
-
-            row[headers.index("風向き")] = wind_dir
-
-            # 登録日時列がある場合のみ入れる
-            if "登録日時" in headers:
-                row[headers.index("登録日時")] = datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-
-            ws.append_row(row)
-
-        st.success("保存しました！")
+        st.success("登録しました！")
 
 
 
