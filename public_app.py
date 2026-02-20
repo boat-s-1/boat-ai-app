@@ -128,34 +128,50 @@ with tab_pre:
             with res_cols[idx % 3]:
                 st.metric(f"{boat_num}号艇", f"{score}%")
 
-# --- タブ2：統計解析 ---
+# --- タブ2：統計解析（管理用_NEWベース） ---
 with tab_stat:
 
-    st.subheader("📊 会場別 補正タイム比較")
+    st.subheader("📊 会場別 展示タイム補正（管理用_NEW）")
 
-    if df.empty:
-        st.warning("データが読み込めていません")
+    ws2 = sh.worksheet("管理用_NEW")
+    data2 = ws2.get_all_records()
+    df2 = pd.DataFrame(data2)
+
+    if df2.empty:
+        st.warning("管理用_NEW にデータがありません")
         st.stop()
 
+    # 数値化（安全）
+    base_cols = ["展示", "直線", "一周", "回り足"]
+
+    for c in base_cols:
+        if c in df2.columns:
+            df2[c] = pd.to_numeric(df2[c], errors="coerce")
+
     # 会場選択
-    place_list = sorted(df["会場"].dropna().unique())
-    place = st.selectbox("会場を選択", place_list, key="stat_place_select")
+    place_list = sorted(df2["会場"].dropna().unique())
+    place = st.selectbox("会場を選択", place_list, key="stat2_place")
 
-    df_view = df[df["会場"] == place].copy()
+    df_view = df2[df2["会場"] == place].copy()
 
-    # 数値化
-    for c in ["展示", "直線", "一周", "回り足"]:
-        df_view[c] = pd.to_numeric(df_view[c], errors="coerce")
+    if df_view.empty:
+        st.info("この会場のデータがまだありません")
+        st.stop()
 
-    # 会場平均との差（補正基準）
-    mean_vals = {
-        "展示": df_view["展示"].mean(),
-        "直線": df_view["直線"].mean(),
-        "一周": df_view["一周"].mean(),
-        "回り足": df_view["回り足"].mean()
-    }
+    # ----------------------------
+    # 会場平均との差（基準）
+    # ----------------------------
+    mean_vals = {}
 
-    st.markdown("### 📝 当日展示データ入力")
+    for c in base_cols:
+        if c in df_view.columns:
+            mean_vals[c] = df_view[c].mean()
+        else:
+            mean_vals[c] = np.nan
+
+    st.divider()
+
+    st.markdown("### 📝 当日 展示データ入力（1号艇〜6号艇）")
 
     input_rows = []
 
@@ -170,28 +186,31 @@ with tab_stat:
                 "展示",
                 step=0.01,
                 format="%.2f",
-                key=f"stat_tenji_{b}"
+                key=f"tab2_tenji_{b}"
             )
+
         with c2:
             choku = st.number_input(
                 "直線",
                 step=0.01,
                 format="%.2f",
-                key=f"stat_choku_{b}"
+                key=f"tab2_choku_{b}"
             )
+
         with c3:
             isshu = st.number_input(
                 "一周",
                 step=0.01,
                 format="%.2f",
-                key=f"stat_isshu_{b}"
+                key=f"tab2_isshu_{b}"
             )
+
         with c4:
             mawari = st.number_input(
                 "回り足",
                 step=0.01,
                 format="%.2f",
-                key=f"stat_mawari_{b}"
+                key=f"tab2_mawari_{b}"
             )
 
         input_rows.append({
@@ -206,33 +225,31 @@ with tab_stat:
 
     st.divider()
 
-    st.markdown("### 📋 展示タイム一覧（公式風）")
+    # ----------------------------
+    # 公式展示風 表
+    # ----------------------------
+    st.markdown("### 📋 展示データ（入力値）")
 
-    show_df = input_df.copy()
-    show_df = show_df.set_index("艇番")
+    show_df = input_df.set_index("艇番")
 
     st.dataframe(
         show_df.style.format("{:.2f}"),
         use_container_width=True
     )
 
-    # -------------------------
-    # 補正タイム計算
-    # -------------------------
-    # 会場平均との差で補正（平均との差を引く）
-    adj_df = input_df.copy()
+    # ----------------------------
+    # 補正計算
+    # ----------------------------
+    result_df = pd.DataFrame()
+    result_df["艇番"] = input_df["艇番"]
 
-    for c in ["展示", "直線", "一周", "回り足"]:
-        adj_df[c] = adj_df[c] - mean_vals[c]
+    for c in base_cols:
 
-    # 見やすく補正後タイムを作る
-    result_df = pd.DataFrame({
-        "艇番": input_df["艇番"],
-        "展示(補正)": input_df["展示"] - mean_vals["展示"],
-        "直線(補正)": input_df["直線"] - mean_vals["直線"],
-        "一周(補正)": input_df["一周"] - mean_vals["一周"],
-        "回り足(補正)": input_df["回り足"] - mean_vals["回り足"],
-    })
+        if not np.isnan(mean_vals[c]):
+            # 会場平均との差
+            result_df[f"{c}_補正"] = input_df[c] - mean_vals[c]
+        else:
+            result_df[f"{c}_補正"] = np.nan
 
     result_df = result_df.set_index("艇番")
 
@@ -240,7 +257,7 @@ with tab_stat:
 
     st.markdown(f"### 🧮 {place} 会場平均との差による補正値")
 
-    st.caption("※ マイナスの数値ほど、その会場平均より良い数値です")
+    st.caption("※ マイナスほど、その会場の平均より良い数値です")
 
     st.dataframe(
         result_df.style.format("{:+.2f}"),
@@ -400,6 +417,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
