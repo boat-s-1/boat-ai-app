@@ -94,118 +94,135 @@ with tab3:
             if st.form_submit_button("メモ保存"):
                 ws_memo.append_row([m_p, m_t, str(datetime.date.today())])
                 st.success("メモを保存しました")
-# --- タブ：管理用データ入力 ---
+# --- タブ4：管理者入力 ---
 with tab4:
-    st.subheader("管理用データ登録")
 
-    # =========================
-    # 基本情報
-    # =========================
-    c_meta1, c_meta2, c_meta3 = st.columns(3)
-    with c_meta1:
-        race_date = st.date_input("レース日付", key="ad_race_date") # key追加
-    with c_meta2:
-        place = st.selectbox("会場", ["蒲郡","常滑","浜名湖","住之江","大村","徳山","唐津"], key="ad_place") # key追加
-    with c_meta3:
-        race_no = st.number_input("レース番号", 1, 12, 1, key="ad_race_no") # key追加
+    st.subheader("📝 管理者入力（展示 → 結果）")
 
-    c_meta4, c_meta5, c_meta6 = st.columns(3)
-    with c_meta4:
-        wind_dir = st.radio(
-    "風向き（方位）",
-    ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
-    horizontal=True
-)
-    with c_meta5:
-        wind_speed = st.number_input("風速（m）", 0, 20, 0, key="ad_wind_speed") # key追加
-    with c_meta6:
-        wave = st.number_input("波高（cm）", 0, 50, 0, key="ad_wave") # key追加
+    ws = sh.worksheet("管理用_NEW")
 
-    st.markdown("---")
-    
-    boat_data = {}
-    eval_list = ["◎","◯","△","×",""]
+    col1, col2, col3 = st.columns(3)
 
-    # =========================
-    # 1. 展示・足まわりデータ入力
-    # =========================
-    st.markdown("### 🚤 展示・足まわり")
-    for b in range(1, 7):
-        with st.expander(f"{b}号艇 - 展示データ", expanded=True):
-            c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                # key="ex_{b}" を "ad_ex_{b}" に変更
-                ex = st.number_input("展示", 0.0, 10.0, 6.50, 0.01, key=f"ad_ex_{b}")
-            with c2:
-                stt = st.number_input("直線", 0.0, 10.0, 5.00, 0.01, key=f"ad_st_{b}")
-            with c3:
-                lap = st.number_input("一周", 0.0, 80.0, 37.0, 0.01, key=f"ad_lp_{b}")
-            with c4:
-                turn = st.number_input("回り足", 0.0, 10.0, 5.0, 0.1, key=f"ad_tr_{b}")
-            
-            boat_data[b] = {"展示": ex, "直線": stt, "一周": lap, "回り足": turn}
+    with col1:
+        日付 = st.date_input("日付")
 
-    st.markdown("---")
+    with col2:
+        会場 = st.text_input("会場")
 
-    # =========================
-    # 2. レース結果入力（別枠）
-    # =========================
-    st.markdown("### 🏁 レース結果 (ST・評価・着順)")
-    
-    h1, h2, h3, h4 = st.columns([1, 2, 2, 2])
-    h1.write("**艇番**")
-    h2.write("**ST**")
-    h3.write("**スタート評価**")
-    h4.write("**着順**")
+    with col3:
+        レース番号 = st.number_input("レース番号", 1, 12, 1)
 
-    for b in range(1, 7):
-        c1, c2, c3, c4 = st.columns([1, 2, 2, 2])
+    st.divider()
+
+    # 風向き（レース共通）
+    wind_dir = st.radio(
+        "風向き（方位）",
+        ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
+        horizontal=True
+    )
+
+    st.divider()
+
+    boat_inputs = {}
+
+    for boat in range(1, 7):
+
+        st.markdown(f"### 🚤 {boat}号艇")
+
+        c1, c2, c3, c4 = st.columns(4)
+
         with c1:
-            st.markdown(f"**{b}**")
+            展示 = st.number_input(
+                f"{boat}号艇 展示",
+                step=0.01,
+                format="%.2f",
+                key=f"tenji_{boat}"
+            )
+
         with c2:
-            st_time = st.number_input("ST", -0.50, 1.00, 0.10, 0.01, key=f"ad_res_stt_{b}", label_visibility="collapsed")
+            直線 = st.number_input(
+                f"{boat}号艇 直線",
+                step=0.01,
+                format="%.2f",
+                key=f"choku_{boat}"
+            )
+
         with c3:
-            start_eval = st.selectbox("評価", eval_list, key=f"ad_res_eval_{b}", label_visibility="collapsed")
+            一周 = st.number_input(
+                f"{boat}号艇 一周",
+                step=0.01,
+                format="%.2f",
+                key=f"issyuu_{boat}"
+            )
+
         with c4:
-            rank = st.number_input("着順", 1, 6, b, key=f"ad_res_rank_{b}", label_visibility="collapsed")
-        
-        boat_data[b].update({"ST": st_time, "スタート評価": start_eval, "着順": rank})
+            回り足 = st.number_input(
+                f"{boat}号艇 回り足",
+                step=0.01,
+                format="%.2f",
+                key=f"mawari_{boat}"
+            )
 
-    # =========================
-    # 保存処理
-    # =========================
-    rows = []
-    now_ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    for b in range(1, 7):
-        rows.append({
-            "日付": race_date.strftime("%Y-%m-%d"),
-            "登録日時": now_ts,
-            "会場": place,
-            "レース番号": race_no,
-            "艇番": b,
-            "展示": boat_data[b]["展示"],
-            "直線": boat_data[b]["直線"],
-            "一周": boat_data[b]["一周"],
-            "回り足": boat_data[b]["回り足"],
-            "ST": boat_data[b]["ST"],
-            "風向き": wind_dir,
-            "風速": wind_speed,
-            "波高": wave,
-            "着順": boat_data[b]["着順"],
-            "スタート評価": boat_data[b]["スタート評価"]
-        })
+        r1, r2 = st.columns(2)
 
-    st.markdown("---")
-    if st.button("このレースを登録する", key="ad_final_save_button"):
-        try:
-            ws = sh.worksheet("管理用_NEW")
-            df_add = pd.DataFrame(rows)
-            ws.append_rows(df_add.values.tolist(), value_input_option="USER_ENTERED")
-            st.success("スプレッドシートに登録しました！")
-        except Exception as e:
-            st.error(f"エラーが発生しました: {e}")
+        with r1:
+            ST = st.number_input(
+                f"{boat}号艇 スタート（ST）",
+                step=0.01,
+                format="%.2f",
+                key=f"st_{boat}"
+            )
 
+        with r2:
+            着順 = st.number_input(
+                f"{boat}号艇 着順",
+                1, 6, 1,
+                key=f"rank_{boat}"
+            )
+
+        boat_inputs[boat] = {
+            "展示": 展示,
+            "直線": 直線,
+            "一周": 一周,
+            "回り足": 回り足,
+            "ST": ST,
+            "着順": 着順
+        }
+
+        st.divider()
+
+    if st.button("✅ このレースを保存"):
+
+        headers = ws.row_values(1)
+
+        for boat in range(1, 7):
+
+            row = [""] * len(headers)
+
+            row[headers.index("日付")] = str(日付)
+            row[headers.index("会場")] = 会場
+            row[headers.index("レース番号")] = int(レース番号)
+            row[headers.index("艇番")] = boat
+
+            row[headers.index("展示")] = boat_inputs[boat]["展示"]
+            row[headers.index("直線")] = boat_inputs[boat]["直線"]
+            row[headers.index("一周")] = boat_inputs[boat]["一周"]
+            row[headers.index("回り足")] = boat_inputs[boat]["回り足"]
+
+            row[headers.index("ST")] = boat_inputs[boat]["ST"]
+            row[headers.index("着順")] = boat_inputs[boat]["着順"]
+
+            row[headers.index("風向き")] = wind_dir
+
+            # 登録日時列がある場合のみ入れる
+            if "登録日時" in headers:
+                row[headers.index("登録日時")] = datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
+            ws.append_row(row)
+
+        st.success("保存しました！")
 
 
 
