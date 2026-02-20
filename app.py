@@ -99,16 +99,37 @@ with tab4:
 
     st.subheader("🛠 管理用データ入力")
 
+    ws_master = sh.worksheet("管理用_NEW")
+    master_df = pd.DataFrame(ws_master.get_all_records())
+
+    # 会場候補を既存データから取得
+    if "会場" in master_df.columns:
+        place_list = sorted(
+            [p for p in master_df["会場"].unique() if str(p).strip() != ""]
+        )
+    else:
+        place_list = []
+
     col1, col2, col3 = st.columns(3)
 
     with col1:
         date = st.date_input("日付", key="tab4_date")
 
     with col2:
-        place = st.text_input("会場", key="tab4_place")
+        if place_list:
+            place = st.selectbox(
+                "会場",
+                place_list,
+                key="tab4_place"
+            )
+        else:
+            place = st.text_input("会場", key="tab4_place")
 
     with col3:
-        race_no = st.number_input("レース番号", 1, 12, 1, key="tab4_race")
+        race_no = st.number_input(
+            "レース番号", 1, 12, 1,
+            key="tab4_race"
+        )
 
     st.divider()
 
@@ -121,17 +142,19 @@ with tab4:
 
     st.divider()
 
-    boats_data = []
+    # ------------------------
+    # 展示データ入力
+    # ------------------------
+    st.markdown("## 📊 展示データ入力")
 
     for boat in range(1, 7):
 
         st.markdown(f"### 🚤 {boat}号艇")
 
-        # ---------- 展示系 ----------
         c1, c2, c3, c4 = st.columns(4)
 
         with c1:
-            tenji = st.number_input(
+            st.number_input(
                 "展示",
                 step=0.01,
                 format="%.2f",
@@ -139,7 +162,7 @@ with tab4:
             )
 
         with c2:
-            choku = st.number_input(
+            st.number_input(
                 "直線",
                 step=0.01,
                 format="%.2f",
@@ -147,7 +170,7 @@ with tab4:
             )
 
         with c3:
-            isshu = st.number_input(
+            st.number_input(
                 "一周",
                 step=0.01,
                 format="%.2f",
@@ -155,18 +178,28 @@ with tab4:
             )
 
         with c4:
-            mawari = st.number_input(
+            st.number_input(
                 "回り足",
                 step=0.01,
                 format="%.2f",
                 key=f"tab4_mawari_{boat}"
             )
 
-        # ---------- 結果系 ----------
+    st.divider()
+
+    # ------------------------
+    # 結果入力
+    # ------------------------
+    st.markdown("## 🏁 結果入力（スタート・評価・着順）")
+
+    for boat in range(1, 7):
+
+        st.markdown(f"### 🚤 {boat}号艇")
+
         r1, r2, r3 = st.columns(3)
 
         with r1:
-            st_time = st.number_input(
+            st.number_input(
                 "スタート（ST）",
                 step=0.01,
                 format="%.2f",
@@ -174,40 +207,46 @@ with tab4:
             )
 
         with r2:
-            start_eval = st.selectbox(
+            st.selectbox(
                 "スタート評価",
                 ["", "◎", "◯", "△", "×"],
                 key=f"tab4_eval_{boat}"
             )
 
         with r3:
-            rank = st.number_input(
+            st.number_input(
                 "着順",
                 1, 6, 1,
                 key=f"tab4_rank_{boat}"
             )
 
-        boats_data.append({
-            "日付": str(date),
-            "会場": place,
-            "レース番号": race_no,
-            "風向き": wind_dir,
-            "艇番": boat,
-            "展示": tenji,
-            "直線": choku,
-            "一周": isshu,
-            "回り足": mawari,
-            "ST": st_time,
-            "スタート評価": start_eval,
-            "着順": rank
-        })
+    st.divider()
 
-        st.divider()
-
+    # ------------------------
+    # 登録処理
+    # ------------------------
     if st.button("このレースを登録する", key="tab4_save"):
 
-        df_add = pd.DataFrame(boats_data)
+        boats_data = []
 
+        for boat in range(1, 7):
+
+            boats_data.append({
+                "日付": str(date),
+                "会場": place,
+                "レース番号": race_no,
+                "風向き": wind_dir,
+                "艇番": boat,
+                "展示": st.session_state[f"tab4_tenji_{boat}"],
+                "直線": st.session_state[f"tab4_choku_{boat}"],
+                "一周": st.session_state[f"tab4_isshu_{boat}"],
+                "回り足": st.session_state[f"tab4_mawari_{boat}"],
+                "ST": st.session_state[f"tab4_st_{boat}"],
+                "スタート評価": st.session_state[f"tab4_eval_{boat}"],
+                "着順": st.session_state[f"tab4_rank_{boat}"],
+            })
+
+        df_add = pd.DataFrame(boats_data)
         df_add["登録日時"] = pd.Timestamp.now()
 
         ws = sh.worksheet("管理用_NEW")
