@@ -130,34 +130,122 @@ with tab_pre:
 
 # --- タブ2：統計解析 ---
 with tab_stat:
-    st.subheader("会場別 補正・総合順位")
-    if not df.empty:
-        place_list = sorted(df["会場"].dropna().unique())
-        place = st.selectbox("会場を選択", place_list, key="stat_place_select")
-        df_view = df[df["会場"] == place].copy()
 
-        # 数値化
-        for b in range(1, 7):
-            for c in ["展示", "直線", "一周", "回り足"]:
-                col = f"{c}{b}"
-                if col in df_view.columns:
-                    df_view[col] = pd.to_numeric(df_view[col], errors="coerce")
+    st.subheader("📊 会場別 補正タイム比較")
 
-        # 平均計算 & 入力
-        mean_each_boat = {}
-        cols = st.columns(6)
-        input_data = {}
-        for b in range(1, 7):
-            mean_each_boat[b] = {c: df_view[f"{c}{b}"].mean() if f"{c}{b}" in df_view.columns else 0 for c in ["展示", "直線", "一周", "回り足"]}
-            with cols[b - 1]:
-                st.markdown(f"**{b}号艇**")
-                tenji = st.number_input("展示", value=6.50, step=0.01, key=f"stat_tenji_{b}")
-                input_data[b] = {"展示": tenji, "直線": 6.90, "一周": 37.0, "回り足": 5.0} # 簡易化
-
-        # スコア計算表示
-        st.write("補正計算結果を表示します...")
-    else:
+    if df.empty:
         st.warning("データが読み込めていません")
+        st.stop()
+
+    # 会場選択
+    place_list = sorted(df["会場"].dropna().unique())
+    place = st.selectbox("会場を選択", place_list, key="stat_place_select")
+
+    df_view = df[df["会場"] == place].copy()
+
+    # 数値化
+    for c in ["展示", "直線", "一周", "回り足"]:
+        df_view[c] = pd.to_numeric(df_view[c], errors="coerce")
+
+    # 会場平均との差（補正基準）
+    mean_vals = {
+        "展示": df_view["展示"].mean(),
+        "直線": df_view["直線"].mean(),
+        "一周": df_view["一周"].mean(),
+        "回り足": df_view["回り足"].mean()
+    }
+
+    st.markdown("### 📝 当日展示データ入力")
+
+    input_rows = []
+
+    for b in range(1, 7):
+
+        st.markdown(f"#### 🚤 {b}号艇")
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        with c1:
+            tenji = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                key=f"stat_tenji_{b}"
+            )
+        with c2:
+            choku = st.number_input(
+                "直線",
+                step=0.01,
+                format="%.2f",
+                key=f"stat_choku_{b}"
+            )
+        with c3:
+            isshu = st.number_input(
+                "一周",
+                step=0.01,
+                format="%.2f",
+                key=f"stat_isshu_{b}"
+            )
+        with c4:
+            mawari = st.number_input(
+                "回り足",
+                step=0.01,
+                format="%.2f",
+                key=f"stat_mawari_{b}"
+            )
+
+        input_rows.append({
+            "艇番": b,
+            "展示": tenji,
+            "直線": choku,
+            "一周": isshu,
+            "回り足": mawari
+        })
+
+    input_df = pd.DataFrame(input_rows)
+
+    st.divider()
+
+    st.markdown("### 📋 展示タイム一覧（公式風）")
+
+    show_df = input_df.copy()
+    show_df = show_df.set_index("艇番")
+
+    st.dataframe(
+        show_df.style.format("{:.2f}"),
+        use_container_width=True
+    )
+
+    # -------------------------
+    # 補正タイム計算
+    # -------------------------
+    # 会場平均との差で補正（平均との差を引く）
+    adj_df = input_df.copy()
+
+    for c in ["展示", "直線", "一周", "回り足"]:
+        adj_df[c] = adj_df[c] - mean_vals[c]
+
+    # 見やすく補正後タイムを作る
+    result_df = pd.DataFrame({
+        "艇番": input_df["艇番"],
+        "展示(補正)": input_df["展示"] - mean_vals["展示"],
+        "直線(補正)": input_df["直線"] - mean_vals["直線"],
+        "一周(補正)": input_df["一周"] - mean_vals["一周"],
+        "回り足(補正)": input_df["回り足"] - mean_vals["回り足"],
+    })
+
+    result_df = result_df.set_index("艇番")
+
+    st.divider()
+
+    st.markdown(f"### 🧮 {place} 会場平均との差による補正値")
+
+    st.caption("※ マイナスの数値ほど、その会場平均より良い数値です")
+
+    st.dataframe(
+        result_df.style.format("{:+.2f}"),
+        use_container_width=True
+    )
 
 # --- タブ3：過去ログ ---
 with tab_log:
@@ -312,6 +400,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
