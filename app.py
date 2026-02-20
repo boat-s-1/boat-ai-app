@@ -19,6 +19,7 @@ def scrape_original_tenji(url):
     soup = BeautifulSoup(r.text, "html.parser")
 
     tables = soup.find_all("table")
+    st.write(len(tables))
 
     target_table = None
 
@@ -400,6 +401,7 @@ with tab_admin:
 
         except Exception as e:
             st.error(e)
+
 
 
 
