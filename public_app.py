@@ -170,144 +170,80 @@ with tab_memo:
 # --- タブ5：スタート予想 ---
 with tab5:
 
-    st.subheader("🚀 スタート予想（場別補正＋展示＋1周）")
+    st.subheader("🚀 スタート予想（展示気配＋ST）")
 
-    ws_new = sh.worksheet("管理用_NEW")
-    df_new = pd.DataFrame(ws_new.get_all_records())
+    ws = sh.worksheet("管理用_NEW")
 
-    if df_new.empty:
+    data = ws.get_all_records()
+    df_place = pd.DataFrame(data)
+
+    if df_place.empty:
         st.info("データがありません")
         st.stop()
 
-    # 数値化
-    for c in ["展示","一周","ST"]:
-        df_new[c] = pd.to_numeric(df_new[c], errors="coerce")
+    # 型をそろえる（超重要）
+    df_place["レース番号"] = df_place["レース番号"].astype(str)
 
-    # -----------------------
-    # 会場選択
-    # -----------------------
-    place_list = sorted(df_new["会場"].dropna().unique())
+    # 登録日時を日時型に
+    df_place["登録日時"] = pd.to_datetime(df_place["登録日時"], errors="coerce")
 
-    place = st.selectbox(
-        "会場を選択",
-        place_list,
-        key="tab5_place"
+    # 直近レースキーを取得
+    latest_key = (
+        df_place.sort_values("登録日時")
+        .iloc[-1][["日付", "会場", "レース番号"]]
     )
 
-    df_place = df_new[df_new["会場"] == place].copy()
+    latest_key["レース番号"] = str(latest_key["レース番号"])
 
-    # -----------------------
-    # 当日展示入力
-    # -----------------------
-    st.markdown("### 🧮 当日の展示タイム入力")
-
-    input_tenji = {}
-    input_isshu = {}
-
-    cols = st.columns(6)
-
-    for b in range(1, 7):
-        with cols[b-1]:
-            st.markdown(f"**{b}号艇**")
-            input_tenji[b] = st.number_input(
-                "展示",
-                step=0.01,
-                format="%.2f",
-                key=f"tab5_tenji_{b}"
-            )
-            input_isshu[b] = st.number_input(
-                "1周",
-                step=0.01,
-                format="%.2f",
-                key=f"tab5_isshu_{b}"
-            )
-
-    st.divider()
-
-    # -----------------------
-    # 直近レース（ST＋評価用）
-    # -----------------------
-# その会場の最新レースだけ取得
-latest_key = (
-    df_place.sort_values("登録日時")
-    .iloc[-1][["日付", "会場", "レース番号"]]
-)
-
-base = df_place[
-    (df_place["日付"] == latest_key["日付"]) &
-    (df_place["会場"] == latest_key["会場"]) &
-    (df_place["レース番号"] == latest_key["レース番号"])
-].copy()
-
-# ← ここからもインデントをずらさない
-if len(base) < 6:
-    st.warning("このレースのデータが6艇そろっていません")
-    st.stop()
+    # 対象レース6艇だけ抽出
+    base = df_place[
+        (df_place["日付"] == latest_key["日付"]) &
+        (df_place["会場"] == latest_key["会場"]) &
+        (df_place["レース番号"] == latest_key["レース番号"])
+    ].copy()
 
     if len(base) < 6:
-        st.warning("この会場のデータがまだ少ないです")
+        st.warning("このレースのデータが6艇そろっていません")
+        st.write(base)
+        st.stop()
 
+    # 表示用
+    st.caption(
+        f'{latest_key["日付"]} '
+        f'{latest_key["会場"]} '
+        f'{latest_key["レース番号"]}R'
+    )
+
+    # 数値化
+    base["ST"] = pd.to_numeric(base["ST"], errors="coerce")
+
+    # スタート評価を数値化
     eval_map = {
         "◎": 2.0,
         "◯": 1.0,
         "△": 0.5,
-        "×": -1.0,
-        "": 0.0
+        "×": -1.0
     }
 
     base["評価補正"] = base["スタート評価"].map(eval_map).fillna(0)
 
-    # -----------------------
-    # 会場平均との差
-    # -----------------------
-    tenji_mean = df_place.groupby("艇番")["展示"].mean()
-    isshu_mean = df_place.groupby("艇番")["一周"].mean()
+    # スタートスコア
+    base["start_score"] = -base["ST"] + base["評価補正"]
 
-    rows = []
-
-    for _, r in base.iterrows():
-
-        b = int(r["艇番"])
-
-        tenji_diff = 0
-        isshu_diff = 0
-
-        if b in tenji_mean and input_tenji[b] > 0:
-            tenji_diff = tenji_mean[b] - input_tenji[b]
-
-        if b in isshu_mean and input_isshu[b] > 0:
-            isshu_diff = isshu_mean[b] - input_isshu[b]
-
-        # -----------------------
-        # 最終スコア
-        # -----------------------
-        score = (
-            - r["ST"]
-            + r["評価補正"]
-            + tenji_diff * 2.0
-            + isshu_diff * 0.3
-        )
-
-        rows.append({
-            "艇番": b,
-            "ST": r["ST"],
-            "スタート評価": r["スタート評価"],
-            "score": score
-        })
-
-    result = pd.DataFrame(rows)
-    result = result.sort_values("艇番")
+    # 艇番順で表示
+    base = base.sort_values("艇番")
 
     st.markdown("### 🟦 スリット予想イメージ")
 
     st.markdown('<div class="slit-area">', unsafe_allow_html=True)
     st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
 
-    for _, r in result.iterrows():
+    for _, r in base.iterrows():
 
         boat_no = int(r["艇番"])
-        score   = float(r["score"])
+        score = float(r["start_score"])
 
+        # 前に出る量
         offset = max(0, min(160, (score + 0.5) * 120))
 
         img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
@@ -317,8 +253,10 @@ if len(base) < 6:
         <div class="slit-row">
             <div class="slit-boat" style="margin-left:{offset}px;">
                 <img src="data:image/png;base64,{img_base64}" height="48">
-                <div style="margin-left:8px;font-size:13px;">
+                <div style="margin-left:10px;font-size:13px;line-height:1.4;">
                     <b>{boat_no}号艇</b><br>
+                    ST {r["ST"]:.2f}　
+                    {r["スタート評価"]}　
                     score {score:.2f}
                 </div>
             </div>
