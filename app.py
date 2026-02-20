@@ -3,7 +3,87 @@ import pandas as pd
 import datetime
 import gspread
 from google.oauth2.service_account import Credentials
+import requests
+from bs4 import BeautifulSoup
 
+def scrape_original_tenji(url):
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    r = requests.get(url, headers=headers, timeout=10)
+    r.raise_for_status()
+
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    # テーブルを全部探す（構造が変わっても壊れにくくするため）
+    tables = soup.find_all("table")
+
+    target_table = None
+
+    # 「艇番」「展示」などが含まれる表を探す
+    for table in tables:
+        text = table.get_text()
+        if "展示" in text and "艇" in text:
+            target_table = table
+            break
+
+    if target_table is None:
+        raise Exception("展示データのテーブルが見つかりません")
+
+    rows = target_table.find_all("tr")
+
+    header = [th.get_text(strip=True) for th in rows[0].find_all(["th","td"])]
+
+    # 列位置を自動取得
+    def find_col(name):
+        for i, h in enumerate(header):
+            if name in h:
+                return i
+        return None
+
+    idx_boat  = find_col("艇")
+    idx_tenji = find_col("展示")
+    idx_choku = find_col("直線")
+    idx_isshu = find_col("一周")
+    idx_mawari = find_col("回")
+
+    if None in [idx_boat, idx_tenji, idx_choku, idx_isshu, idx_mawari]:
+        raise Exception("必要な列が見つかりません")
+
+    data = []
+
+    for tr in rows[1:]:
+
+        tds = tr.find_all("td")
+
+        if len(tds) <= max(idx_boat, idx_mawari):
+            continue
+
+        try:
+            boat = int(tds[idx_boat].get_text(strip=True))
+        except:
+            continue
+
+        def to_float(x):
+            x = x.replace("―", "").replace("-", "").strip()
+            try:
+                return float(x)
+            except:
+                return None
+
+        data.append({
+            "艇番": boat,
+            "展示": to_float(tds[idx_tenji].get_text(strip=True)),
+            "直線": to_float(tds[idx_choku].get_text(strip=True)),
+            "一周": to_float(tds[idx_isshu].get_text(strip=True)),
+            "回り足": to_float(tds[idx_mawari].get_text(strip=True)),
+        })
+
+    df = pd.DataFrame(data).set_index("艇番").sort_index()
+
+    return df
 # --- 1. 認証 & 接続設定 ---
 def get_gsheet_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -322,6 +402,7 @@ with tab_admin:
 
         except Exception as e:
             st.error(e)
+
 
 
 
