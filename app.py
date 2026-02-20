@@ -356,38 +356,68 @@ with tab4:
         )
 
         st.success("登録しました！")
+# --- タブ5：公式展示取得 ---
 with tab5:
 
-    st.subheader("📋 展示データ コピペ取込")
+    st.subheader("🌐 公式ページから展示タイム取得")
 
-    st.info("公式サイトの展示表をそのままコピーして貼り付けてください")
+    st.markdown("※ boatrace.jp の展示ページURLを貼ってください")
 
-    raw = st.text_area(
-        "展示表を貼り付け",
-        height=200
+    url = st.text_input(
+        "展示ページURL（boatrace.jp）",
+        placeholder="https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno=1&jcd=07&hd=20260131"
     )
 
-    if st.button("展示データに変換"):
+    def scrape_boatrace_tenji(url):
 
-        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
+
+        r = requests.get(url, headers=headers, timeout=15)
+        r.raise_for_status()
+
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        table = soup.find("table")
+
+        if table is None:
+            raise Exception("展示テーブルが見つかりません")
+
+        rows = table.find_all("tr")
+
+        header = [th.get_text(strip=True) for th in rows[0].find_all(["th","td"])]
+
+        def find_col(keywords):
+            for i, h in enumerate(header):
+                for k in keywords:
+                    if k in h:
+                        return i
+            return None
+
+        idx_boat  = find_col(["艇"])
+        idx_tenji = find_col(["展示"])
+        idx_choku = find_col(["直線"])
+        idx_isshu = find_col(["一周"])
+        idx_mawari = find_col(["回"])
+
+        if None in [idx_boat, idx_tenji, idx_choku, idx_isshu, idx_mawari]:
+            raise Exception("必要な列が見つかりません")
 
         data = []
 
-        for line in lines:
-
-            # タブ or スペース区切りを両対応
-            parts = line.replace("　", " ").split()
-
-            # 最低5項目（艇番 展示 直線 一周 回り足）を想定
-            if len(parts) < 5:
+        for tr in rows[1:]:
+            tds = tr.find_all("td")
+            if len(tds) <= max(idx_boat, idx_mawari):
                 continue
 
             try:
-                boat = int(parts[0])
+                boat = int(tds[idx_boat].get_text(strip=True))
             except:
                 continue
 
-            def f(x):
+            def to_float(x):
+                x = x.replace("―", "").replace("-", "").strip()
                 try:
                     return float(x)
                 except:
@@ -395,23 +425,44 @@ with tab5:
 
             data.append({
                 "艇番": boat,
-                "展示": f(parts[1]),
-                "直線": f(parts[2]),
-                "一周": f(parts[3]),
-                "回り足": f(parts[4])
+                "展示": to_float(tds[idx_tenji].get_text(strip=True)),
+                "直線": to_float(tds[idx_choku].get_text(strip=True)),
+                "一周": to_float(tds[idx_isshu].get_text(strip=True)),
+                "回り足": to_float(tds[idx_mawari].get_text(strip=True)),
             })
 
-        if len(data) == 0:
-            st.error("データが読み取れませんでした")
+        df = pd.DataFrame(data).set_index("艇番").sort_index()
+        return df
+
+
+    if st.button("展示データを取得"):
+
+        if not url:
+            st.warning("URLを入力してください")
             st.stop()
 
-        df = pd.DataFrame(data).sort_values("艇番")
+        try:
+            df = scrape_boatrace_tenji(url)
+            st.success("取得しました")
 
-        st.success("変換しました")
+            st.dataframe(df, use_container_width=True)
 
-        st.dataframe(df, use_container_width=True)
+            st.markdown("### タイム入力タブへ反映")
 
-        st.session_state["copied_tenji_df"] = df
+            if st.button("タブ1の入力欄へ反映する"):
+
+                for boat in df.index:
+
+                    st.session_state[f"ex_{boat}"] = df.loc[boat, "展示"]
+                    st.session_state[f"st_{boat}"] = df.loc[boat, "直線"]
+                    st.session_state[f"lp_{boat}"] = df.loc[boat, "一周"]
+                    st.session_state[f"tn_{boat}"] = df.loc[boat, "回り足"]
+
+                st.success("タブ1へ反映しました")
+
+        except Exception as e:
+            st.error(str(e))
+
 
 
 
