@@ -263,7 +263,70 @@ with tab_stat:
         result_df.style.format("{:+.2f}"),
         use_container_width=True
     )
+    # ----------------------------
+    # 艇番ごとの補正（イン有利補正）
+    # ----------------------------
 
+    st.divider()
+    st.markdown("### 🚤 艇番補正込み（イン有利補正後）")
+
+    # 会場 × 艇番 別 平均
+    lane_mean = {}
+
+    for b in range(1, 7):
+
+        df_lane = df_view[df_view["艇番"] == b]
+
+        lane_mean[b] = {}
+
+        for c in base_cols:
+            if c in df_lane.columns:
+                lane_mean[b][c] = df_lane[c].mean()
+            else:
+                lane_mean[b][c] = np.nan
+
+    # 艇番補正値（会場平均との差）
+    lane_bias = {}
+
+    for b in range(1, 7):
+        lane_bias[b] = {}
+        for c in base_cols:
+            if not np.isnan(mean_vals[c]) and not np.isnan(lane_mean[b][c]):
+                lane_bias[b][c] = lane_mean[b][c] - mean_vals[c]
+            else:
+                lane_bias[b][c] = np.nan
+
+    # ----------------------------
+    # 最終補正値（会場補正＋艇番補正）
+    # ----------------------------
+    final_df = []
+
+    for _, row in input_df.iterrows():
+
+        b = int(row["艇番"])
+        out = {"艇番": b}
+
+        for c in base_cols:
+
+            if np.isnan(lane_bias[b][c]) or np.isnan(mean_vals[c]):
+                out[c] = np.nan
+            else:
+                out[c] = (
+                    row[c]
+                    - mean_vals[c]
+                    - lane_bias[b][c]
+                )
+
+        final_df.append(out)
+
+    final_df = pd.DataFrame(final_df).set_index("艇番")
+
+    st.caption("※ 会場平均との差 ＋ 艇番（イン有利）補正を差し引いた値です")
+
+    st.dataframe(
+        final_df.style.format("{:.2f}"),
+        use_container_width=True
+    )
 # --- タブ3：過去ログ ---
 with tab_log:
     st.dataframe(df)
@@ -417,6 +480,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
