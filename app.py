@@ -29,7 +29,7 @@ ws_memo = sh.worksheet("攻略メモ") if sh else None
 
 st.title("🚤 競艇予想 Pro (管理者用)")
 
-tab1, tab2, tab3,tab4 = st.tabs(["🕒 タイム入力", "🏁 的中データ登録", "📝 攻略メモ","詳細入力"])
+tab1, tab2, tab3,tab4,tab_admin = st.tabs(["🕒 タイム入力", "🏁 的中データ登録", "📝 攻略メモ","詳細入力,スクレイプ"])
 
 # --- Tab 1: タイム入力 ---
 with tab1:
@@ -277,6 +277,51 @@ with tab4:
         )
 
         st.success("登録しました！")
+with tab_admin:
+
+    st.subheader("管理用｜オリジナル展示 取込")
+
+    url = st.text_input(
+        "boaters-boatrace 展示URL",
+        key="admin_scrape_url"
+    )
+
+    if st.button("展示データ取得（管理用）"):
+
+        try:
+            df = scrape_original_tenji(url)
+
+            st.dataframe(df)
+
+            st.markdown("### 反映先")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                target = st.selectbox(
+                    "反映するタブ",
+                    ["タブ2（統計）", "タブ4（管理）"],
+                    key="admin_target_tab"
+                )
+
+            if st.button("選択したタブへ反映"):
+
+                prefix = "tab2" if target == "タブ2（統計）" else "tab4"
+
+                for b in range(1, 7):
+
+                    if b not in df.index:
+                        continue
+
+                    st.session_state[f"{prefix}_in_tenji_{b}"]  = float(df.loc[b, "展示"])
+                    st.session_state[f"{prefix}_in_choku_{b}"]  = float(df.loc[b, "直線"])
+                    st.session_state[f"{prefix}_in_isshu_{b}"]  = float(df.loc[b, "一周"])
+                    st.session_state[f"{prefix}_in_mawari_{b}"] = float(df.loc[b, "回り足"])
+
+                st.success("反映しました")
+
+        except Exception as e:
+            st.error(e)
 
 
 
