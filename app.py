@@ -111,7 +111,11 @@ with tab4:
 
     c_meta4, c_meta5, c_meta6 = st.columns(3)
     with c_meta4:
-        wind_dir = st.selectbox("風向き", ["追い風","向かい風","左横風","右横風","無風"], key="ad_wind_dir") # key追加
+        wind_dir = st.radio(
+    "風向き（方位）",
+    ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
+    horizontal=True
+)
     with c_meta5:
         wind_speed = st.number_input("風速（m）", 0, 20, 0, key="ad_wind_speed") # key追加
     with c_meta6:
@@ -201,6 +205,7 @@ with tab4:
             st.success("スプレッドシートに登録しました！")
         except Exception as e:
             st.error(f"エラーが発生しました: {e}")
+
 
 
 
