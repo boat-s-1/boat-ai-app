@@ -245,29 +245,84 @@ with tab4:
 
     st.divider()
 
-    # -----------------------------
-    # 結果入力（まとめて）
-    # -----------------------------
-    st.markdown("## 🏁 結果入力")
+   # ------------------------
+# 結果入力（元の形）
+# ------------------------
+st.markdown("## 🏁 結果入力")
 
-    if "tab4_result_df" not in st.session_state:
-        st.session_state["tab4_result_df"] = pd.DataFrame({
-            "艇番": [1, 2, 3, 4, 5, 6],
-            "ST": [0.15]*6,
-            "スタート評価": [""]*6,
-            "着順": [1, 2, 3, 4, 5, 6]
-        }).set_index("艇番")
+# 先頭に風向き・風速・波高
+w1, w2, w3 = st.columns(3)
 
-    result_df = st.data_editor(
-        st.session_state["tab4_result_df"],
-        num_rows="fixed",
-        use_container_width=True
+with w1:
+    wind_dir = st.radio(
+        "風向き（方位）",
+        ["無風","北","北東","東","南東","南","南西","西","北西"],
+        horizontal=True,
+        key="tab4_wind"
     )
 
-    st.session_state["tab4_result_df"] = result_df
+with w2:
+    wind_speed = st.number_input(
+        "風速（m）",
+        min_value=0.0,
+        step=0.1,
+        format="%.1f",
+        key="tab4_wind_speed"
+    )
 
-    st.divider()
+with w3:
+    wave_height = st.number_input(
+        "波高（cm）",
+        min_value=0.0,
+        step=1.0,
+        format="%.0f",
+        key="tab4_wave"
+    )
 
+st.divider()
+
+# ------------------------
+# ST
+# ------------------------
+st.markdown("### スタート（ST）")
+
+cols = st.columns(6)
+for boat in range(1, 7):
+    with cols[boat-1]:
+        st.number_input(
+            f"{boat}号艇",
+            step=0.01,
+            format="%.2f",
+            key=f"tab4_st_{boat}"
+        )
+
+# ------------------------
+# スタート評価
+# ------------------------
+st.markdown("### スタート評価")
+
+cols = st.columns(6)
+for boat in range(1, 7):
+    with cols[boat-1]:
+        st.selectbox(
+            f"{boat}号艇",
+            ["", "◎", "◯", "△", "×"],
+            key=f"tab4_eval_{boat}"
+        )
+
+# ------------------------
+# 着順
+# ------------------------
+st.markdown("### 着順")
+
+cols = st.columns(6)
+for boat in range(1, 7):
+    with cols[boat-1]:
+        st.number_input(
+            f"{boat}号艇",
+            1, 6, 1,
+            key=f"tab4_rank_{boat}"
+        )
     # -----------------------------
     # 登録処理
     # -----------------------------
@@ -294,7 +349,7 @@ with tab4:
                 tenji_df.loc[boat, "回り足"],           # 回り足
                 result_df.loc[boat, "ST"],               # ST
                 wind_dir,                               # 風向き
-                wind_speed,                             # 風速
+                st.session_state["tab4_wind_speed"],            # 風速
                 wave_height,                            # 波高
                 result_df.loc[boat, "着順"],             # 着順
                 result_df.loc[boat, "スタート評価"],     # スタート評価
@@ -305,6 +360,7 @@ with tab4:
         )
 
         st.success("登録しました！")
+
 
 
 
