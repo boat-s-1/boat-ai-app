@@ -213,10 +213,10 @@ input_rows.append({
 
 input_df = pd.DataFrame(input_rows).set_index("艇番")
 
-    st.divider()
-    st.markdown("### 公式展示タイム表")
+st.divider()
+st.markdown("### 公式展示タイム表")
 
-    st.dataframe(
+st.dataframe(
         highlight_rank(input_df),
         use_container_width=True
     )
@@ -436,6 +436,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
