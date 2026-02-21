@@ -181,25 +181,25 @@ with tab_stat:
     st.divider()
 
     # ------------------------
-    # 表の色付け関数
+    # 色付け（1位：赤、2位：黄）
     # ------------------------
     def highlight_rank(df):
 
         def color_col(s):
-            s_num = pd.to_numeric(s, errors="coerce")
-            order = s_num.rank(method="min")
+            s2 = pd.to_numeric(s, errors="coerce")
+            rank = s2.rank(method="min")
 
-            colors = []
-            for v, r in zip(s_num, order):
+            out = []
+            for v, r in zip(s2, rank):
                 if pd.isna(v):
-                    colors.append("")
+                    out.append("")
                 elif r == 1:
-                    colors.append("background-color:#ff6b6b")   # 赤
+                    out.append("background-color:#ff6b6b")
                 elif r == 2:
-                    colors.append("background-color:#ffd43b")   # 黄
+                    out.append("background-color:#ffd43b")
                 else:
-                    colors.append("")
-            return colors
+                    out.append("")
+            return out
 
         return df.style.apply(color_col, axis=0)
 
@@ -209,7 +209,6 @@ with tab_stat:
     st.markdown("### 展示タイム入力（当日データ）")
 
     input_rows = []
-
     cols = st.columns(6)
 
     for b in range(1, 7):
@@ -222,7 +221,7 @@ with tab_stat:
                 "展示",
                 step=0.01,
                 format="%.2f",
-                value=0.00,     # ← 初期値はここで変更できます
+                value=6.50,
                 key=f"tab2_in_tenji_{b}"
             )
 
@@ -230,7 +229,7 @@ with tab_stat:
                 "直線",
                 step=0.01,
                 format="%.2f",
-                value=0.00,
+                value=6.90,
                 key=f"tab2_in_choku_{b}"
             )
 
@@ -238,7 +237,7 @@ with tab_stat:
                 "一周",
                 step=0.01,
                 format="%.2f",
-                value=0.00,
+                value=37.00,
                 key=f"tab2_in_isshu_{b}"
             )
 
@@ -246,7 +245,7 @@ with tab_stat:
                 "回り足",
                 step=0.01,
                 format="%.2f",
-                value=0.00,
+                value=5.00,
                 key=f"tab2_in_mawari_{b}"
             )
 
@@ -263,7 +262,7 @@ with tab_stat:
     st.divider()
 
     # ------------------------
-    # 公式展示タイム表
+    # 入力値（公式展示風）
     # ------------------------
     st.markdown("### 公式展示タイム表（入力値）")
 
@@ -273,7 +272,7 @@ with tab_stat:
     )
 
     # ------------------------
-    # 会場平均との差補正（場平均補正）
+    # 場平均補正（会場平均との差）
     # ------------------------
     st.divider()
     st.markdown("### 場平均補正タイム（会場平均との差補正）")
@@ -484,6 +483,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
