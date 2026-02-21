@@ -330,14 +330,6 @@ with tab_stat:
         highlight_rank(final_df),
         use_container_width=True
     )
-# --- タブ3：過去ログ ---
-with tab_log:
-    st.dataframe(df)
-
-# --- タブ4：攻略メモ ---
-with tab_memo:
-    st.write("攻略メモ機能")
-
 # --- タブ5：スタート予想 ---
 with tab5:
 
@@ -591,6 +583,7 @@ with tab_cond:
     st.dataframe(diff_df, use_container_width=True)
 
     st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
