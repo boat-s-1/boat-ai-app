@@ -186,10 +186,22 @@ with tab_stat:
 
             st.markdown(f"#### {b}号艇")
 
-            tenji  = st.number_input("展示",   step=0.01, format="%.2f", key=f"tab2_in_tenji_{b}")
-            choku  = st.number_input("直線",   step=0.01, format="%.2f", key=f"tab2_in_choku_{b}")
-            isshu  = st.number_input("一周",   step=0.01, format="%.2f", key=f"tab2_in_isshu_{b}")
-            mawari = st.number_input("回り足", step=0.01, format="%.2f", key=f"tab2_in_mawari_{b}")
+            tenji  = st.number_input(
+    "展示", value=6.70, step=0.01, format="%.2f",
+    key=f"tab2_in_tenji_{b}"
+)
+choku  = st.number_input(
+    "直線", value=7.00, step=0.01, format="%.2f",
+    key=f"tab2_in_choku_{b}"
+)
+isshu  = st.number_input(
+    "一周", value=37.00, step=0.01, format="%.2f",
+    key=f"tab2_in_isshu_{b}"
+)
+mawari = st.number_input(
+    "回り足", value=5.00, step=0.01, format="%.2f",
+    key=f"tab2_in_mawari_{b}"
+)
 
         input_rows.append({
             "艇番": b,
@@ -424,6 +436,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
