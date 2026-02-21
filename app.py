@@ -368,100 +368,65 @@ with tab5:
         placeholder="https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno=1&jcd=07&hd=20260131"
     )
 
-    def scrape_boatrace_tenji(url):
+   def scrape_boatrace_tenji(url):
 
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
-        r = requests.get(url, headers=headers, timeout=15)
-        r.raise_for_status()
+    r = requests.get(url, headers=headers, timeout=15)
+    r.raise_for_status()
 
-        soup = BeautifulSoup(r.text, "html.parser")
+    soup = BeautifulSoup(r.text, "html.parser")
 
-        table = soup.find("table")
+    table = soup.find("table")
 
-        if table is None:
-            raise Exception("展示テーブルが見つかりません")
+    if table is None:
+        raise Exception("展示テーブルが見つかりません")
 
-        rows = table.find_all("tr")
+    rows = table.find_all("tr")
 
-        header = [th.get_text(strip=True) for th in rows[0].find_all(["th","td"])]
+    header = [th.get_text(strip=True) for th in rows[0].find_all(["th","td"])]
 
-        def find_col(keywords):
-            for i, h in enumerate(header):
-                for k in keywords:
-                    if k in h:
-                        return i
-            return None
+    def find_col(keywords):
+        for i, h in enumerate(header):
+            for k in keywords:
+                if k in h:
+                    return i
+        return None
 
-        idx_boat  = find_col(["艇"])
-        idx_tenji = find_col(["展示"])
-        idx_choku = find_col(["直線"])
-        idx_isshu = find_col(["一周"])
-        idx_mawari = find_col(["回"])
+    idx_boat  = find_col(["艇", "枠"])
+    idx_tenji = find_col(["展示"])
 
-        if None in [idx_boat, idx_tenji, idx_choku, idx_isshu, idx_mawari]:
-            raise Exception("必要な列が見つかりません")
+    if None in [idx_boat, idx_tenji]:
+        raise Exception("艇番または展示列が見つかりません")
 
-        data = []
+    data = []
 
-        for tr in rows[1:]:
-            tds = tr.find_all("td")
-            if len(tds) <= max(idx_boat, idx_mawari):
-                continue
-
-            try:
-                boat = int(tds[idx_boat].get_text(strip=True))
-            except:
-                continue
-
-            def to_float(x):
-                x = x.replace("―", "").replace("-", "").strip()
-                try:
-                    return float(x)
-                except:
-                    return None
-
-            data.append({
-                "艇番": boat,
-                "展示": to_float(tds[idx_tenji].get_text(strip=True)),
-                "直線": to_float(tds[idx_choku].get_text(strip=True)),
-                "一周": to_float(tds[idx_isshu].get_text(strip=True)),
-                "回り足": to_float(tds[idx_mawari].get_text(strip=True)),
-            })
-
-        df = pd.DataFrame(data).set_index("艇番").sort_index()
-        return df
-
-
-    if st.button("展示データを取得"):
-
-        if not url:
-            st.warning("URLを入力してください")
-            st.stop()
+    for tr in rows[1:]:
+        tds = tr.find_all("td")
+        if len(tds) <= max(idx_boat, idx_tenji):
+            continue
 
         try:
-            df = scrape_boatrace_tenji(url)
-            st.success("取得しました")
+            boat = int(tds[idx_boat].get_text(strip=True))
+        except:
+            continue
 
-            st.dataframe(df, use_container_width=True)
+        def to_float(x):
+            x = x.replace("―", "").replace("-", "").strip()
+            try:
+                return float(x)
+            except:
+                return None
 
-            st.markdown("### タイム入力タブへ反映")
+        data.append({
+            "艇番": boat,
+            "展示": to_float(tds[idx_tenji].get_text(strip=True)),
+        })
 
-            if st.button("タブ1の入力欄へ反映する"):
-
-                for boat in df.index:
-
-                    st.session_state[f"ex_{boat}"] = df.loc[boat, "展示"]
-                    st.session_state[f"st_{boat}"] = df.loc[boat, "直線"]
-                    st.session_state[f"lp_{boat}"] = df.loc[boat, "一周"]
-                    st.session_state[f"tn_{boat}"] = df.loc[boat, "回り足"]
-
-                st.success("タブ1へ反映しました")
-
-        except Exception as e:
-            st.error(str(e))
+    df = pd.DataFrame(data).set_index("艇番").sort_index()
+    return df
 
 
 
