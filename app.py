@@ -7,57 +7,45 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd   # ←これを追加
 
-def scrape_original_tenji(url):
+def scrape_boatrace_tenji(url):
 
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
-    r = requests.get(url, headers=headers, timeout=10)
+    r = requests.get(url, headers=headers, timeout=15)
     r.raise_for_status()
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-    tables = soup.find_all("table")
-    st.write(len(tables))
+    table = soup.find("table")
 
-    target_table = None
+    if table is None:
+        raise Exception("展示テーブルが見つかりません")
 
-    for table in tables:
-        text = table.get_text()
-        if "展示" in text and "艇" in text:
-            target_table = table
-            break
+    rows = table.find_all("tr")
 
-    if target_table is None:
-        raise Exception("展示データのテーブルが見つかりません")
+    header = [th.get_text(strip=True) for th in rows[0].find_all(["th", "td"])]
 
-    rows = target_table.find_all("tr")
-
-    header = [th.get_text(strip=True) for th in rows[0].find_all(["th","td"])]
-
-    def find_col(name):
+    def find_col(keywords):
         for i, h in enumerate(header):
-            if name in h:
-                return i
+            for k in keywords:
+                if k in h:
+                    return i
         return None
 
-    idx_boat   = find_col("艇")
-    idx_tenji  = find_col("展示")
-    idx_choku  = find_col("直線")
-    idx_isshu  = find_col("一周")
-    idx_mawari = find_col("回")
+    idx_boat = find_col(["艇", "枠"])
+    idx_tenji = find_col(["展示"])
 
-    if None in [idx_boat, idx_tenji, idx_choku, idx_isshu, idx_mawari]:
-        raise Exception("必要な列が見つかりません")
+    if idx_boat is None or idx_tenji is None:
+        raise Exception("艇番または展示列が見つかりません")
 
     data = []
 
     for tr in rows[1:]:
-
         tds = tr.find_all("td")
 
-        if len(tds) <= max(idx_boat, idx_mawari):
+        if len(tds) <= max(idx_boat, idx_tenji):
             continue
 
         try:
@@ -75,13 +63,9 @@ def scrape_original_tenji(url):
         data.append({
             "艇番": boat,
             "展示": to_float(tds[idx_tenji].get_text(strip=True)),
-            "直線": to_float(tds[idx_choku].get_text(strip=True)),
-            "一周": to_float(tds[idx_isshu].get_text(strip=True)),
-            "回り足": to_float(tds[idx_mawari].get_text(strip=True)),
         })
 
     df = pd.DataFrame(data).set_index("艇番").sort_index()
-
     return df
 # --- 1. 認証 & 接続設定 ---
 def get_gsheet_client():
@@ -360,6 +344,7 @@ File "/mount/src/boat-ai-app/app.py", line 371
      def scrape_boatrace_tenji(url):
                                     ^
 IndentationError: unindent does not match any outer indentation level
+
 
 
 
