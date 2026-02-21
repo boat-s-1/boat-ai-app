@@ -113,14 +113,14 @@ if gc:
             df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
     except: pass
 
-st.title("🚤 競艇 Pro ハイブリッド解析システム")
+st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat, tab_log, tab_memo, tab5 = st.tabs(["⭐ 事前簡易予想", "📊 統計解析", "📜 過去ログ", "📝 攻略メモ","スタート予想"])
+tab_pre, tab_stat, tab_log, tab_memo, tab5 = st.tabs(["⭐ 簡易予想", "📊 統計解析", "📜 過去ログ", "📝 攻略メモ","スタート予想"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
-    st.subheader("各艇の4項目・記号評価")
+    st.subheader("各艇評価")
     SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
     WEIGHTS = {"モーター": 0.25, "当地勝率": 0.2, "枠番勝率": 0.3, "枠番スタート": 0.25}
 
@@ -424,6 +424,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
