@@ -340,10 +340,47 @@ with tab4:
         )
 
         st.success("登録しました！")
-File "/mount/src/boat-ai-app/app.py", line 371
-     def scrape_boatrace_tenji(url):
-                                    ^
-IndentationError: unindent does not match any outer indentation level
+# --- タブ5：公式サイト展示取得 ---
+with tab5:
+
+    st.subheader("🌐 公式サイト 展示データ取得")
+
+    url = st.text_input(
+        "展示ページのURLを貼ってください",
+        value="https://boaters-boatrace.com/race/gamagori/2026-01-31/2R/last-minute?last-minute-content=original-tenji"
+    )
+
+    if st.button("展示データを取得する", key="fetch_tenji"):
+
+        if url.strip() == "":
+            st.warning("URLを入力してください")
+        else:
+            try:
+                df_tenji = scrape_boatrace_tenji(url)
+
+                if df_tenji.empty:
+                    st.warning("データが取得できませんでした")
+                else:
+                    st.success("展示データを取得しました")
+
+                    st.markdown("### 取得した展示データ")
+                    st.dataframe(df_tenji, use_container_width=True)
+
+                    st.markdown("### 管理用入力（tab4）へ反映")
+
+                    for boat in range(1, 7):
+                        if boat in df_tenji.index:
+
+                            if "展示" in df_tenji.columns:
+                                st.session_state[f"tab4_tenji_{boat}"] = float(
+                                    df_tenji.loc[boat, "展示"]
+                                )
+
+                    st.info("展示タイムを tab4 の展示欄に自動反映しました")
+
+            except Exception as e:
+                st.error(str(e))
+
 
 
 
