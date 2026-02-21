@@ -203,7 +203,7 @@ mawari = st.number_input(
     key=f"tab2_in_mawari_{b}"
 )
 
-        input_rows.append({
+input_rows.append({
             "艇番": b,
             "展示": tenji,
             "直線": choku,
@@ -436,6 +436,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
