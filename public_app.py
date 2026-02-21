@@ -153,7 +153,9 @@ with tab_stat:
 
     st.subheader("会場別 補正・総合比較")
 
-    # 管理用_NEW を使う
+    # ------------------------
+    # データ読み込み
+    # ------------------------
     ws2 = sh.worksheet("管理用_NEW")
     base_df = pd.DataFrame(ws2.get_all_records())
 
@@ -162,9 +164,13 @@ with tab_stat:
         st.stop()
 
     # 数値化
-    for c in ["展示","直線","一周","回り足","艇番"]:
+    for c in ["展示", "直線", "一周", "回り足", "艇番"]:
         if c in base_df.columns:
             base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
+
+    if "会場" not in base_df.columns:
+        st.error("管理用_NEW に『会場』列がありません")
+        st.stop()
 
     place_list = sorted(base_df["会場"].dropna().unique())
 
@@ -174,7 +180,33 @@ with tab_stat:
 
     st.divider()
 
-    st.markdown("### 展示タイム入力")
+    # ------------------------
+    # 表の色付け関数
+    # ------------------------
+    def highlight_rank(df):
+
+        def color_col(s):
+            s_num = pd.to_numeric(s, errors="coerce")
+            order = s_num.rank(method="min")
+
+            colors = []
+            for v, r in zip(s_num, order):
+                if pd.isna(v):
+                    colors.append("")
+                elif r == 1:
+                    colors.append("background-color:#ff6b6b")   # 赤
+                elif r == 2:
+                    colors.append("background-color:#ffd43b")   # 黄
+                else:
+                    colors.append("")
+            return colors
+
+        return df.style.apply(color_col, axis=0)
+
+    # ------------------------
+    # 入力
+    # ------------------------
+    st.markdown("### 展示タイム入力（当日データ）")
 
     input_rows = []
 
@@ -182,28 +214,43 @@ with tab_stat:
 
     for b in range(1, 7):
 
-        with cols[b-1]:
+        with cols[b - 1]:
 
             st.markdown(f"#### {b}号艇")
 
-            tenji  = st.number_input(
-    "展示", value=6.70, step=0.01, format="%.2f",
-    key=f"tab2_in_tenji_{b}"
-)
-choku  = st.number_input(
-    "直線", value=7.00, step=0.01, format="%.2f",
-    key=f"tab2_in_choku_{b}"
-)
-isshu  = st.number_input(
-    "一周", value=37.00, step=0.01, format="%.2f",
-    key=f"tab2_in_isshu_{b}"
-)
-mawari = st.number_input(
-    "回り足", value=5.00, step=0.01, format="%.2f",
-    key=f"tab2_in_mawari_{b}"
-)
+            tenji = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                value=0.00,     # ← 初期値はここで変更できます
+                key=f"tab2_in_tenji_{b}"
+            )
 
-input_rows.append({
+            choku = st.number_input(
+                "直線",
+                step=0.01,
+                format="%.2f",
+                value=0.00,
+                key=f"tab2_in_choku_{b}"
+            )
+
+            isshu = st.number_input(
+                "一周",
+                step=0.01,
+                format="%.2f",
+                value=0.00,
+                key=f"tab2_in_isshu_{b}"
+            )
+
+            mawari = st.number_input(
+                "回り足",
+                step=0.01,
+                format="%.2f",
+                value=0.00,
+                key=f"tab2_in_mawari_{b}"
+            )
+
+        input_rows.append({
             "艇番": b,
             "展示": tenji,
             "直線": choku,
@@ -211,73 +258,74 @@ input_rows.append({
             "回り足": mawari
         })
 
-input_df = pd.DataFrame(input_rows).set_index("艇番")
+    input_df = pd.DataFrame(input_rows).set_index("艇番")
 
-st.divider()
-st.markdown("### 公式展示タイム表")
+    st.divider()
 
-st.dataframe(
+    # ------------------------
+    # 公式展示タイム表
+    # ------------------------
+    st.markdown("### 公式展示タイム表（入力値）")
+
+    st.dataframe(
         highlight_rank(input_df),
         use_container_width=True
     )
 
-    # -------------------------
-    # 会場平均との差（補正）
-    # -------------------------
-
+    # ------------------------
+    # 会場平均との差補正（場平均補正）
+    # ------------------------
     st.divider()
-    st.markdown("### 会場補正後タイム")
+    st.markdown("### 場平均補正タイム（会場平均との差補正）")
 
     place_mean = (
         place_df
-        .groupby("艇番")[["展示","直線","一周","回り足"]]
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
         .mean()
     )
 
-    overall_mean = (
-        place_df[["展示","直線","一周","回り足"]]
-        .mean()
-    )
+    overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
 
     adj_df = input_df.copy()
 
-    for b in range(1,7):
+    for b in range(1, 7):
         if b in place_mean.index:
-            for col in ["展示","直線","一周","回り足"]:
-                adj_df.loc[b, col] = (
-                    input_df.loc[b, col]
-                    - place_mean.loc[b, col]
-                    + overall_mean[col]
-                )
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if pd.notna(input_df.loc[b, col]) and pd.notna(place_mean.loc[b, col]):
+                    adj_df.loc[b, col] = (
+                        input_df.loc[b, col]
+                        - place_mean.loc[b, col]
+                        + overall_mean[col]
+                    )
 
     st.dataframe(
         highlight_rank(adj_df),
         use_container_width=True
     )
 
-    # -------------------------
-    # 艇番補正（イン有利）
-    # -------------------------
-
+    # ------------------------
+    # 枠番補正（イン有利補正）
+    # ------------------------
     st.divider()
-    st.markdown("### 艇番（枠）補正込みタイム")
+    st.markdown("### 枠番補正込みタイム（イン有利補正）")
 
     lane_bias = (
         place_df
-        .groupby("艇番")[["展示","直線","一周","回り足"]]
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
         .mean()
         - overall_mean
     )
 
     final_df = adj_df.copy()
 
-    for b in range(1,7):
+    for b in range(1, 7):
         if b in lane_bias.index:
-            for col in ["展示","直線","一周","回り足"]:
-                final_df.loc[b, col] = (
-                    adj_df.loc[b, col]
-                    - lane_bias.loc[b, col]
-                )
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if pd.notna(adj_df.loc[b, col]) and pd.notna(lane_bias.loc[b, col]):
+                    final_df.loc[b, col] = (
+                        adj_df.loc[b, col]
+                        - lane_bias.loc[b, col]
+                    )
 
     st.dataframe(
         highlight_rank(final_df),
@@ -436,6 +484,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
