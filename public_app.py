@@ -153,9 +153,6 @@ with tab_stat:
 
     st.subheader("会場別 補正・総合比較")
 
-    # ------------------------
-    # データ読み込み
-    # ------------------------
     ws2 = sh.worksheet("管理用_NEW")
     base_df = pd.DataFrame(ws2.get_all_records())
 
@@ -163,7 +160,6 @@ with tab_stat:
         st.warning("管理用_NEW にデータがありません")
         st.stop()
 
-    # 数値化
     for c in ["展示", "直線", "一周", "回り足", "艇番"]:
         if c in base_df.columns:
             base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
@@ -173,7 +169,6 @@ with tab_stat:
         st.stop()
 
     place_list = sorted(base_df["会場"].dropna().unique())
-
     place = st.selectbox("会場を選択", place_list, key="tab2_place")
 
     place_df = base_df[base_df["会場"] == place].copy()
@@ -181,7 +176,7 @@ with tab_stat:
     st.divider()
 
     # ------------------------
-    # 色付け（1位：赤、2位：黄）
+    # 色付け
     # ------------------------
     def highlight_rank(df):
 
@@ -217,21 +212,7 @@ with tab_stat:
 
             st.markdown(f"#### {b}号艇")
 
-            tenji = st.number_input(
-                "展示",
-                step=0.01,
-                format="%.2f",
-                value=6.50,
-                key=f"tab2_in_tenji_{b}"
-            )
-
-            choku = st.number_input(
-                "直線",
-                step=0.01,
-                format="%.2f",
-                value=6.90,
-                key=f"tab2_in_choku_{b}"
-            )
+            # ★ 入力順：1周 → 回り足 → 直線 → 展示
 
             isshu = st.number_input(
                 "一周",
@@ -249,6 +230,22 @@ with tab_stat:
                 key=f"tab2_in_mawari_{b}"
             )
 
+            choku = st.number_input(
+                "直線",
+                step=0.01,
+                format="%.2f",
+                value=6.90,
+                key=f"tab2_in_choku_{b}"
+            )
+
+            tenji = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                value=6.50,
+                key=f"tab2_in_tenji_{b}"
+            )
+
         input_rows.append({
             "艇番": b,
             "展示": tenji,
@@ -259,10 +256,13 @@ with tab_stat:
 
     input_df = pd.DataFrame(input_rows).set_index("艇番")
 
+    # ★ Tab5 連動用
+    st.session_state["tab2_input_df"] = input_df.copy()
+
     st.divider()
 
     # ------------------------
-    # 入力値（公式展示風）
+    # 入力値表示
     # ------------------------
     st.markdown("### 公式展示タイム表（入力値）")
 
@@ -272,7 +272,7 @@ with tab_stat:
     )
 
     # ------------------------
-    # 場平均補正（会場平均との差）
+    # 場平均との差補正
     # ------------------------
     st.divider()
     st.markdown("### 場平均補正タイム（会場平均との差補正）")
@@ -303,7 +303,7 @@ with tab_stat:
     )
 
     # ------------------------
-    # 枠番補正（イン有利補正）
+    # 枠番補正
     # ------------------------
     st.divider()
     st.markdown("### 枠番補正込みタイム（イン有利補正）")
@@ -336,8 +336,7 @@ with tab5:
     st.subheader("🚀 スタート予想（展示＋1周＋ST 補正）")
 
     ws = sh.worksheet("管理用_NEW")
-    data = ws.get_all_records()
-    df_place = pd.DataFrame(data)
+    df_place = pd.DataFrame(ws.get_all_records())
 
     if df_place.empty:
         st.info("データがありません")
@@ -365,7 +364,7 @@ with tab5:
     st.caption(f"{race_date} {race_place} {race_no}R")
 
     # -----------------------
-    # 会場平均との差を出すための平均
+    # 会場平均との差用
     # -----------------------
     place_df = df_place[df_place["会場"] == race_place].copy()
 
@@ -375,7 +374,17 @@ with tab5:
     mean_tenji = place_df["展示"].mean()
     mean_isshu = place_df["一周"].mean()
 
-    st.markdown("### 📝 今回レースの展示・1周入力（補正用）")
+    # -----------------------
+    # Tab2 連動用
+    # -----------------------
+    tab2_df = st.session_state.get("tab2_input_df")
+
+    # Tab2を触ったあとも反映させるためリセット
+    for b in range(1, 7):
+        st.session_state.pop(f"tab5_tenji_{b}", None)
+        st.session_state.pop(f"tab5_isshu_{b}", None)
+
+    st.markdown("### 📝 今回レースの展示・1周（Tab2連動）")
 
     input_cols = st.columns(6)
 
@@ -385,20 +394,34 @@ with tab5:
     base = base.sort_values("艇番")
 
     for i, (_, r) in enumerate(base.iterrows()):
+
         boat = int(r["艇番"])
 
         with input_cols[i]:
+
             st.markdown(f"**{boat}号艇**")
+
+            if tab2_df is not None and boat in tab2_df.index:
+                tenji_default = float(tab2_df.loc[boat, "展示"])
+            else:
+                tenji_default = float(r["展示"]) if pd.notna(r["展示"]) else 0.0
+
             tenji_input[boat] = st.number_input(
                 "展示",
                 step=0.01,
-                value=float(r["展示"]) if pd.notna(r["展示"]) else 0.0,
+                value=tenji_default,
                 key=f"tab5_tenji_{boat}"
             )
+
+            if tab2_df is not None and boat in tab2_df.index:
+                isshu_default = float(tab2_df.loc[boat, "一周"])
+            else:
+                isshu_default = float(r["一周"]) if pd.notna(r["一周"]) else 0.0
+
             isshu_input[boat] = st.number_input(
                 "一周",
                 step=0.01,
-                value=float(r["一周"]) if pd.notna(r["一周"]) else 0.0,
+                value=isshu_default,
                 key=f"tab5_isshu_{boat}"
             )
 
@@ -424,10 +447,7 @@ with tab5:
 
         st_score = -r["ST"] + r["評価補正"]
 
-        # 展示補正（速いほどプラス）
         tenji_diff = mean_tenji - tenji_input[boat]
-
-        # 1周補正（速いほどプラス）
         isshu_diff = mean_isshu - isshu_input[boat]
 
         total = (
@@ -583,6 +603,7 @@ with tab_cond:
     st.dataframe(diff_df, use_container_width=True)
 
     st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
