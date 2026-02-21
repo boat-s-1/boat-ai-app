@@ -356,78 +356,10 @@ with tab4:
         )
 
         st.success("登録しました！")
-# --- タブ5：公式展示取得 ---
-with tab5:
-
-    st.subheader("🌐 公式ページから展示タイム取得")
-
-    st.markdown("※ boatrace.jp の展示ページURLを貼ってください")
-
-    url = st.text_input(
-        "展示ページURL（boatrace.jp）",
-        placeholder="https://www.boatrace.jp/owpc/pc/race/beforeinfo?rno=1&jcd=07&hd=20260131"
-    )
-
-   def scrape_boatrace_tenji(url):
-
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    r = requests.get(url, headers=headers, timeout=15)
-    r.raise_for_status()
-
-    soup = BeautifulSoup(r.text, "html.parser")
-
-    table = soup.find("table")
-
-    if table is None:
-        raise Exception("展示テーブルが見つかりません")
-
-    rows = table.find_all("tr")
-
-    header = [th.get_text(strip=True) for th in rows[0].find_all(["th","td"])]
-
-    def find_col(keywords):
-        for i, h in enumerate(header):
-            for k in keywords:
-                if k in h:
-                    return i
-        return None
-
-    idx_boat  = find_col(["艇", "枠"])
-    idx_tenji = find_col(["展示"])
-
-    if None in [idx_boat, idx_tenji]:
-        raise Exception("艇番または展示列が見つかりません")
-
-    data = []
-
-    for tr in rows[1:]:
-        tds = tr.find_all("td")
-        if len(tds) <= max(idx_boat, idx_tenji):
-            continue
-
-        try:
-            boat = int(tds[idx_boat].get_text(strip=True))
-        except:
-            continue
-
-        def to_float(x):
-            x = x.replace("―", "").replace("-", "").strip()
-            try:
-                return float(x)
-            except:
-                return None
-
-        data.append({
-            "艇番": boat,
-            "展示": to_float(tds[idx_tenji].get_text(strip=True)),
-        })
-
-    df = pd.DataFrame(data).set_index("艇番").sort_index()
-    return df
-
+File "/mount/src/boat-ai-app/app.py", line 371
+     def scrape_boatrace_tenji(url):
+                                    ^
+IndentationError: unindent does not match any outer indentation level
 
 
 
