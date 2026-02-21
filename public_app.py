@@ -174,7 +174,7 @@ with tab_stat:
 
     st.divider()
 
-    st.markdown("### 展示タイム入力（当日データ）")
+    st.markdown("### 展示タイム入力")
 
     input_rows = []
 
@@ -424,6 +424,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
