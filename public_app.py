@@ -203,65 +203,57 @@ with tab_stat:
     # ------------------------
     st.markdown("### 展示タイム入力（当日データ）")
 
-input_rows = []
+    input_rows = []
+    cols = st.columns(6)
 
-# 見出し行
-h = st.columns([1,2,2,2,2])
-h[0].markdown("**艇番**")
-h[1].markdown("**一周**")
-h[2].markdown("**回り足**")
-h[3].markdown("**直線**")
-h[4].markdown("**展示**")
+    for b in range(1, 7):
 
-for b in range(1, 7):
+        with cols[b - 1]:
 
-    cols = st.columns([1,2,2,2,2])
+            st.markdown(f"#### {b}号艇")
 
-    cols[0].markdown(f"**{b}号艇**")
+            # ★ 入力順：1周 → 回り足 → 直線 → 展示
 
-    isshu = cols[1].number_input(
-        "",
-        step=0.01,
-        format="%.2f",
-        value=37.00,
-        key=f"tab2_in_isshu_{b}",
-        label_visibility="collapsed"
-    )
+            isshu = st.number_input(
+                "一周",
+                step=0.01,
+                format="%.2f",
+                value=37.00,
+                key=f"tab2_in_isshu_{b}"
+            )
 
-    mawari = cols[2].number_input(
-        "",
-        step=0.01,
-        format="%.2f",
-        value=5.00,
-        key=f"tab2_in_mawari_{b}",
-        label_visibility="collapsed"
-    )
+            mawari = st.number_input(
+                "回り足",
+                step=0.01,
+                format="%.2f",
+                value=5.00,
+                key=f"tab2_in_mawari_{b}"
+            )
 
-    choku = cols[3].number_input(
-        "",
-        step=0.01,
-        format="%.2f",
-        value=6.90,
-        key=f"tab2_in_choku_{b}",
-        label_visibility="collapsed"
-    )
+            choku = st.number_input(
+                "直線",
+                step=0.01,
+                format="%.2f",
+                value=6.90,
+                key=f"tab2_in_choku_{b}"
+            )
 
-    tenji = cols[4].number_input(
-        "",
-        step=0.01,
-        format="%.2f",
-        value=6.50,
-        key=f"tab2_in_tenji_{b}",
-        label_visibility="collapsed"
-    )
+            tenji = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                value=6.50,
+                key=f"tab2_in_tenji_{b}"
+            )
 
-    input_rows.append({
-        "艇番": b,
-        "展示": tenji,
-        "直線": choku,
-        "一周": isshu,
-        "回り足": mawari
-    })
+        input_rows.append({
+            "艇番": b,
+            "展示": tenji,
+            "直線": choku,
+            "一周": isshu,
+            "回り足": mawari
+        })
+
     input_df = pd.DataFrame(input_rows).set_index("艇番")
 
     # ★ Tab5 連動用
@@ -611,7 +603,6 @@ with tab_cond:
     st.dataframe(diff_df, use_container_width=True)
 
     st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
-
 
 
 
