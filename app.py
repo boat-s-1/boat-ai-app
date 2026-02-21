@@ -191,14 +191,13 @@ with tab4:
     # -----------------------------
     st.markdown("## 📊 展示データ入力")
 
-    if "tab4_tenji_df" not in st.session_state:
-        st.session_state["tab4_tenji_df"] = pd.DataFrame({
-            "艇番": [1, 2, 3, 4, 5, 6],
-            "展示":  [6.70]*6,
-            "直線":  [6.90]*6,
-            "一周":  [37.00]*6,
-            "回り足":[5.00]*6
-        }).set_index("艇番")
+    st.session_state["tab4_tenji_df"] = pd.DataFrame({
+    "艇番": [1, 2, 3, 4, 5, 6],
+    "一周":   [37.00]*6,
+    "回り足": [5.00]*6,
+    "直線":   [6.90]*6,
+    "展示":   [6.70]*6
+}).set_index("艇番")
 
     tenji_df = st.data_editor(
         st.session_state["tab4_tenji_df"],
@@ -306,6 +305,7 @@ with tab4:
         )
 
         st.success("登録しました！")
+
 
 
 
