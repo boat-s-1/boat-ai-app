@@ -116,7 +116,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat, tab_log, tab_memo, tab5 = st.tabs(["⭐ 簡易予想", "📊 統計解析", "📜 過去ログ", "📝 攻略メモ","スタート予想"])
+tab_pre, tab_stat, tab_log, tab_memo, tab5,tab_cond = st.tabs(["⭐ 簡易予想", "📊 統計解析", "📜 過去ログ", "📝 攻略メモ","スタート予想","補正"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
@@ -483,6 +483,114 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+# --- タブ：条件補正 ---
+with tab_cond:
+
+    st.subheader("🌊 条件別 補正データ（風・波・会場）")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.warning("管理用_NEW にデータがありません")
+        st.stop()
+
+    # 数値化
+    for c in ["展示","直線","一周","回り足","艇番","風速","波高"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # -----------------------
+    # 条件入力
+    # -----------------------
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        place = st.selectbox(
+            "会場",
+            sorted(df["会場"].dropna().unique()),
+            key="cond_place"
+        )
+
+    with col2:
+        wind = st.selectbox(
+            "風向き",
+            sorted(df["風向き"].dropna().unique()),
+            key="cond_wind"
+        )
+
+    with col3:
+        wind_range = st.slider(
+            "風速範囲(m)",
+            0.0, 15.0, (0.0, 5.0),
+            step=0.5,
+            key="cond_wind_spd"
+        )
+
+    with col4:
+        wave_range = st.slider(
+            "波高範囲(cm)",
+            0.0, 50.0, (0.0, 10.0),
+            step=1.0,
+            key="cond_wave"
+        )
+
+    # -----------------------
+    # 条件抽出
+    # -----------------------
+
+    cond_df = df[
+        (df["会場"] == place) &
+        (df["風向き"] == wind) &
+        (df["風速"] >= wind_range[0]) &
+        (df["風速"] <= wind_range[1]) &
+        (df["波高"] >= wave_range[0]) &
+        (df["波高"] <= wave_range[1])
+    ].copy()
+
+    st.caption(f"抽出レース数：{len(cond_df)} 件")
+
+    if cond_df.empty:
+        st.warning("条件に一致するデータがありません")
+        st.stop()
+
+    # -----------------------
+    # 艇番別 平均タイム
+    # -----------------------
+
+    st.divider()
+    st.markdown("### 🚤 艇番別・条件一致 平均タイム")
+
+    mean_df = (
+        cond_df
+        .groupby("艇番")[["展示","直線","一周","回り足"]]
+        .mean()
+        .round(3)
+        .sort_index()
+    )
+
+    st.dataframe(mean_df, use_container_width=True)
+
+    # -----------------------
+    # 全体平均との差（条件補正値）
+    # -----------------------
+
+    st.divider()
+    st.markdown("### 🧠 条件平均との差（＝条件補正の正体）")
+
+    overall = cond_df[["展示","直線","一周","回り足"]].mean()
+
+    diff_df = mean_df.copy()
+
+    for c in ["展示","直線","一周","回り足"]:
+        diff_df[c] = mean_df[c] - overall[c]
+
+    diff_df = diff_df.round(3)
+
+    st.dataframe(diff_df, use_container_width=True)
+
+    st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
 
 
 
