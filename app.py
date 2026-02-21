@@ -160,11 +160,11 @@ with tab3:
 # --- タブ4：管理用入力 ---
 with tab4:
 
-    st.subheader("🛠 管理用データ入力（簡単入力版）")
+    st.subheader("🛠 管理用データ入力")
 
     ws_master = sh.worksheet("管理用_NEW")
 
-    # 会場
+    # 全ボートレース場
     place_list = [
         "桐生","戸田","江戸川","平和島","多摩川",
         "浜名湖","蒲郡","常滑","津","三国",
@@ -173,53 +173,86 @@ with tab4:
         "芦屋","福岡","唐津","大村"
     ]
 
-    c1, c2, c3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    with c1:
+    with col1:
         date = st.date_input("日付", key="tab4_date")
 
-    with c2:
-        place = st.selectbox("会場", place_list, key="tab4_place")
+    with col2:
+        place = st.selectbox(
+            "会場",
+            place_list,
+            key="tab4_place"
+        )
 
-    with c3:
-        race_no = st.number_input("レース番号", 1, 12, 1, key="tab4_race")
+    with col3:
+        race_no = st.number_input(
+            "レース番号",
+            1, 12, 1,
+            key="tab4_race"
+        )
 
     st.divider()
 
-    # -----------------------------
-    # 展示データ（まとめて入力）
-    # -----------------------------
+    # ------------------------
+    # 展示データ入力
+    #（1周・回り足・直線・展示 の順）
+    # ------------------------
     st.markdown("## 📊 展示データ入力")
 
-    st.session_state["tab4_tenji_df"] = pd.DataFrame({
-    "艇番": [1, 2, 3, 4, 5, 6],
-    "一周":   [37.00]*6,
-    "回り足": [5.00]*6,
-    "直線":   [6.90]*6,
-    "展示":   [6.70]*6
-}).set_index("艇番")
+    for boat in range(1, 7):
 
-    tenji_df = st.data_editor(
-        st.session_state["tab4_tenji_df"],
-        num_rows="fixed",
-        use_container_width=True
-    )
+        st.markdown(f"### 🚤 {boat}号艇")
 
-    st.session_state["tab4_tenji_df"] = tenji_df
+        c1, c2, c3, c4 = st.columns(4)
+
+        with c1:
+            st.number_input(
+                "一周",
+                step=0.01,
+                format="%.2f",
+                key=f"tab4_isshu_{boat}"
+            )
+
+        with c2:
+            st.number_input(
+                "回り足",
+                step=0.01,
+                format="%.2f",
+                key=f"tab4_mawari_{boat}"
+            )
+
+        with c3:
+            st.number_input(
+                "直線",
+                step=0.01,
+                format="%.2f",
+                key=f"tab4_choku_{boat}"
+            )
+
+        with c4:
+            st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                key=f"tab4_tenji_{boat}"
+            )
 
     st.divider()
 
-    # -----------------------------
-    # 風向・風速・波高
-    # -----------------------------
-    st.markdown("## 🌬 レース条件")
+    # ------------------------
+    # 結果入力（元の横並び形式）
+    # ------------------------
+    st.markdown("## 🏁 結果入力")
 
+    # 先頭：風向・風速・波高
     w1, w2, w3 = st.columns(3)
 
     with w1:
-        wind_dir = st.selectbox(
-            "風向き",
-            ["北","北東","東","南東","南","南西","西","北西","無風"],
+        wind_dir = st.radio(
+            "風向き（方位）",
+            ["無風","北","北東","東","南東","南","南西","西","北西"],
+            horizontal=True,
             key="tab4_wind"
         )
 
@@ -227,7 +260,6 @@ with tab4:
         wind_speed = st.number_input(
             "風速（m）",
             min_value=0.0,
-            max_value=30.0,
             step=0.1,
             format="%.1f",
             key="tab4_wind_speed"
@@ -237,7 +269,6 @@ with tab4:
         wave_height = st.number_input(
             "波高（cm）",
             min_value=0.0,
-            max_value=100.0,
             step=1.0,
             format="%.0f",
             key="tab4_wave"
@@ -245,114 +276,72 @@ with tab4:
 
     st.divider()
 
-   # ------------------------
-# 結果入力（元の形）
-# ------------------------
-st.markdown("## 🏁 結果入力")
+    # ---- ST ----
+    st.markdown("### スタート（ST）")
 
-# 先頭に風向き・風速・波高
-w1, w2, w3 = st.columns(3)
+    cols = st.columns(6)
+    for boat in range(1, 7):
+        with cols[boat - 1]:
+            st.number_input(
+                f"{boat}号艇",
+                step=0.01,
+                format="%.2f",
+                key=f"tab4_st_{boat}"
+            )
 
-with w1:
-    wind_dir = st.radio(
-        "風向き（方位）",
-        ["無風","北","北東","東","南東","南","南西","西","北西"],
-        horizontal=True,
-        key="tab4_wind"
-    )
+    # ---- スタート評価 ----
+    st.markdown("### スタート評価")
 
-with w2:
-    wind_speed = st.number_input(
-        "風速（m）",
-        min_value=0.0,
-        step=0.1,
-        format="%.1f",
-        key="tab4_wind_speed"
-    )
+    cols = st.columns(6)
+    for boat in range(1, 7):
+        with cols[boat - 1]:
+            st.selectbox(
+                f"{boat}号艇",
+                ["", "◎", "◯", "△", "×"],
+                key=f"tab4_eval_{boat}"
+            )
 
-with w3:
-    wave_height = st.number_input(
-        "波高（cm）",
-        min_value=0.0,
-        step=1.0,
-        format="%.0f",
-        key="tab4_wave"
-    )
+    # ---- 着順 ----
+    st.markdown("### 着順")
 
-st.divider()
+    cols = st.columns(6)
+    for boat in range(1, 7):
+        with cols[boat - 1]:
+            st.number_input(
+                f"{boat}号艇",
+                1, 6, 1,
+                key=f"tab4_rank_{boat}"
+            )
 
-# ------------------------
-# ST
-# ------------------------
-st.markdown("### スタート（ST）")
+    st.divider()
 
-cols = st.columns(6)
-for boat in range(1, 7):
-    with cols[boat-1]:
-        st.number_input(
-            f"{boat}号艇",
-            step=0.01,
-            format="%.2f",
-            key=f"tab4_st_{boat}"
-        )
-
-# ------------------------
-# スタート評価
-# ------------------------
-st.markdown("### スタート評価")
-
-cols = st.columns(6)
-for boat in range(1, 7):
-    with cols[boat-1]:
-        st.selectbox(
-            f"{boat}号艇",
-            ["", "◎", "◯", "△", "×"],
-            key=f"tab4_eval_{boat}"
-        )
-
-# ------------------------
-# 着順
-# ------------------------
-st.markdown("### 着順")
-
-cols = st.columns(6)
-for boat in range(1, 7):
-    with cols[boat-1]:
-        st.number_input(
-            f"{boat}号艇",
-            1, 6, 1,
-            key=f"tab4_rank_{boat}"
-        )
-    # -----------------------------
+    # ------------------------
     # 登録処理
-    # -----------------------------
+    # ------------------------
     if st.button("このレースを登録する", key="tab4_save"):
 
         now = pd.Timestamp.now()
-
-        tenji_df  = st.session_state["tab4_tenji_df"]
-        result_df = st.session_state["tab4_result_df"]
 
         rows = []
 
         for boat in range(1, 7):
 
             rows.append([
-                str(date),                              # 日付
-                now,                                    # 登録日時
-                place,                                  # 会場
-                race_no,                                # レース番号
-                boat,                                   # 艇番
-                tenji_df.loc[boat, "展示"],             # 展示
-                tenji_df.loc[boat, "直線"],             # 直線
-                tenji_df.loc[boat, "一周"],             # 一周
-                tenji_df.loc[boat, "回り足"],           # 回り足
-                result_df.loc[boat, "ST"],               # ST
-                wind_dir,                               # 風向き
+                str(date),                                      # 日付
+                now,                                            # 登録日時
+                place,                                          # 会場
+                race_no,                                        # レース番号
+                boat,                                           # 艇番
+                st.session_state[f"tab4_tenji_{boat}"],         # 展示
+                st.session_state[f"tab4_choku_{boat}"],         # 直線
+                st.session_state[f"tab4_isshu_{boat}"],         # 一周
+                st.session_state[f"tab4_mawari_{boat}"],        # 回り足
+                st.session_state[f"tab4_st_{boat}"],            # ST
+                wind_dir,                                       # 風向き
                 st.session_state["tab4_wind_speed"],            # 風速
-                wave_height,                            # 波高
-                result_df.loc[boat, "着順"],             # 着順
-                result_df.loc[boat, "スタート評価"],     # スタート評価
+                st.session_state["tab4_wave"],                  # 波高
+                st.session_state[f"tab4_rank_{boat}"],          # 着順
+                st.session_state[f"tab4_eval_{boat}"],          # スタート評価
             ])
 
         ws_master.append_rows(
@@ -360,6 +349,7 @@ for boat in range(1, 7):
         )
 
         st.success("登録しました！")
+
 
 
 
