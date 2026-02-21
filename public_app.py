@@ -201,7 +201,7 @@ with tab_stat:
     # ------------------------
     # 入力
     # ------------------------
-   st.markdown("### 展示タイム入力（当日データ）")
+    st.markdown("### 展示タイム入力（当日データ）")
 
 input_rows = []
 
@@ -611,6 +611,7 @@ with tab_cond:
     st.dataframe(diff_df, use_container_width=True)
 
     st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
