@@ -379,7 +379,10 @@ with tab5:
     # -----------------------
     tab2_df = st.session_state.get("tab2_input_df")
 
-  
+    # Tab2を触ったあとも反映させるためリセット
+    for b in range(1, 7):
+        st.session_state.pop(f"tab5_tenji_{b}", None)
+        st.session_state.pop(f"tab5_isshu_{b}", None)
 
     st.markdown("### 📝 今回レースの展示・1周（Tab2連動）")
 
@@ -600,6 +603,7 @@ with tab_cond:
     st.dataframe(diff_df, use_container_width=True)
 
     st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
