@@ -116,7 +116,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_women_stat,tab_women_input = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正閲覧","女子戦補正入力"])
+tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_women_stat,tab_women_input,tab_women_start = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正閲覧","女子戦補正入力","女子戦スタート,])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
@@ -952,6 +952,164 @@ with tab_women_input:
         use_container_width=True
     )
 
+# -----------------------------
+# 👩 女子戦専用 スタート予想
+# -----------------------------
+with tab_women_start:
+
+    st.subheader("👩 女子戦｜スタート予想（展示＋1周＋ST補正）")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    need_cols = ["女子戦","日付","会場","レース番号","艇番","展示","一周","ST","スタート評価","登録日時"]
+    for c in need_cols:
+        if c not in df.columns:
+            st.error(f"{c} 列が見つかりません")
+            st.stop()
+
+    # 型変換
+    for c in ["艇番","展示","一周","ST"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    df["登録日時"] = pd.to_datetime(df["登録日時"], errors="coerce")
+
+    # -------------------------
+    # 女子戦だけに絞る
+    # -------------------------
+    women_df = df[
+        df["女子戦"].astype(str).str.lower().isin(
+            ["true","1","yes","y","○"]
+        )
+    ].copy()
+
+    if women_df.empty:
+        st.info("女子戦データがまだありません")
+        st.stop()
+
+    # -------------------------
+    # 会場・日付・レース選択
+    # -------------------------
+    place_list = sorted(women_df["会場"].dropna().unique())
+    place = st.selectbox("会場", place_list, key="women_start_place")
+
+    tmp = women_df[women_df["会場"] == place]
+
+    date_list = sorted(tmp["日付"].dropna().unique(), reverse=True)
+    race_date = st.selectbox("日付", date_list, key="women_start_date")
+
+    tmp2 = tmp[tmp["日付"] == race_date]
+
+    race_list = sorted(tmp2["レース番号"].dropna().unique())
+    race_no = st.selectbox("レース番号", race_list, key="women_start_race")
+
+    base = tmp2[tmp2["レース番号"] == race_no].copy()
+    base = base.sort_values("艇番")
+
+    if len(base) < 6:
+        st.warning("このレースの6艇データが揃っていません")
+        st.stop()
+
+    st.caption(f"{race_date} {place} {race_no}R（女子戦）")
+
+    # -------------------------
+    # 女子戦・会場平均との差用
+    # -------------------------
+    place_df = women_df[women_df["会場"] == place].copy()
+
+    mean_tenji = place_df["展示"].mean()
+    mean_isshu = place_df["一周"].mean()
+
+    # -------------------------
+    # 入力（初期値＝そのレースの展示）
+    # -------------------------
+    st.divider()
+    st.markdown("### 📝 今回レースの展示・1周入力（女子戦）")
+
+    input_cols = st.columns(6)
+
+    tenji_input = {}
+    isshu_input = {}
+
+    for i, (_, r) in enumerate(base.iterrows()):
+
+        boat = int(r["艇番"])
+
+        with input_cols[i]:
+
+            st.markdown(f"**{boat}号艇**")
+
+            tenji_input[boat] = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                value=float(r["展示"]) if pd.notna(r["展示"]) else 0.0,
+                key=f"women_start_tenji_{boat}"
+            )
+
+            isshu_input[boat] = st.number_input(
+                "一周",
+                step=0.01,
+                format="%.2f",
+                value=float(r["一周"]) if pd.notna(r["一周"]) else 0.0,
+                key=f"women_start_isshu_{boat}"
+            )
+
+    # -------------------------
+    # スコア計算
+    # -------------------------
+    eval_map = {
+        "◎": 2.0,
+        "◯": 1.0,
+        "△": 0.5,
+        "×": -1.0
+    }
+
+    base["評価補正"] = base["スタート評価"].map(eval_map).fillna(0)
+
+    scores = []
+
+    for _, r in base.iterrows():
+
+        boat = int(r["艇番"])
+
+        st_score = 0
+        if pd.notna(r["ST"]):
+            st_score = -r["ST"] + r["評価補正"]
+
+        tenji_diff = mean_tenji - tenji_input[boat]
+        isshu_diff = mean_isshu - isshu_input[boat]
+
+        total = (
+            st_score
+            + tenji_diff * 2.0
+            + isshu_diff * 0.3
+        )
+
+        scores.append(total)
+
+    base["女子戦スタート指数"] = scores
+
+    # -------------------------
+    # 表で確認
+    # -------------------------
+    st.divider()
+    st.markdown("### 📊 女子戦スタート指数")
+
+    view_df = base[[
+        "艇番","展示","一周","ST","スタート評価","女子戦スタート指数"
+    ]].copy()
+
+    view_df = view_df.set_index("艇番")
+
+    st.dataframe(
+        view_df.sort_values("女子戦スタート指数", ascending=False),
+        use_container_width=True
+    )
 
 
 
