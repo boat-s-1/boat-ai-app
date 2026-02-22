@@ -970,7 +970,7 @@ with tab_women_start:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
     # 女子戦のみ
-    df = df[df["女子戦"] == "TRUE"].copy()
+    df = df[df["女子戦"] == "True"].copy()
 
     if df.empty:
         st.warning("女子戦データがありません")
@@ -1244,6 +1244,7 @@ with tab_women_result:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
