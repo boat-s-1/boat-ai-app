@@ -116,7 +116,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_women_stat = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正"])
+tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_women_stat,tab_women_input = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正閲覧","女子戦補正入力"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
@@ -753,6 +753,204 @@ with tab_women_stat:
         use_container_width=True
     )
 
+# -----------------------------
+# 👩 女子戦専用 補正入力・閲覧
+# -----------------------------
+with tab_women_input:
+
+    st.subheader("👩 女子戦｜展示入力 → 場平均補正")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    need_cols = ["女子戦","会場","艇番","展示","直線","一周","回り足"]
+    for c in need_cols:
+        if c not in df.columns:
+            st.error(f"{c} 列が見つかりません")
+            st.stop()
+
+    for c in ["艇番","展示","直線","一周","回り足"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # 女子戦だけ
+    women_df = df[
+        df["女子戦"].astype(str).str.lower().isin(
+            ["true","1","yes","y","○"]
+        )
+    ].copy()
+
+    if women_df.empty:
+        st.info("女子戦データがまだありません")
+        st.stop()
+
+    # 会場選択
+    place_list = sorted(women_df["会場"].dropna().unique())
+    place = st.selectbox("会場を選択", place_list, key="women_input_place")
+
+    place_df = women_df[women_df["会場"] == place].copy()
+
+    st.caption(f"{place}｜女子戦データ件数：{len(place_df)} 件")
+
+    st.divider()
+
+    # ------------------------
+    # 色付け（1位 赤 / 2位 黄）
+    # ------------------------
+    def highlight_rank(df):
+
+        def color_col(s):
+            s2 = pd.to_numeric(s, errors="coerce")
+            rank = s2.rank(method="min")
+
+            out = []
+            for v, r in zip(s2, rank):
+                if pd.isna(v):
+                    out.append("")
+                elif r == 1:
+                    out.append("background-color:#ff6b6b")
+                elif r == 2:
+                    out.append("background-color:#ffd43b")
+                else:
+                    out.append("")
+            return out
+
+        return df.style.apply(color_col, axis=0)
+
+    # ------------------------
+    # 入力（横並び）
+    # ------------------------
+    st.markdown("### 展示入力（女子戦・当日データ）")
+
+    input_rows = []
+
+    header_cols = st.columns(6)
+    for i in range(6):
+        header_cols[i].markdown(f"**{i+1}号艇**")
+
+    row1 = st.columns(6)  # 展示
+    row2 = st.columns(6)  # 直線
+    row3 = st.columns(6)  # 一周
+    row4 = st.columns(6)  # 回り足
+
+    tenji_vals = {}
+    choku_vals = {}
+    isshu_vals = {}
+    mawari_vals = {}
+
+    for b in range(1, 7):
+
+        tenji_vals[b] = row1[b-1].number_input(
+            "展示",
+            step=0.01,
+            format="%.2f",
+            value=6.50,
+            key=f"women_tenji_{b}"
+        )
+
+        choku_vals[b] = row2[b-1].number_input(
+            "直線",
+            step=0.01,
+            format="%.2f",
+            value=6.90,
+            key=f"women_choku_{b}"
+        )
+
+        isshu_vals[b] = row3[b-1].number_input(
+            "一周",
+            step=0.01,
+            format="%.2f",
+            value=37.00,
+            key=f"women_isshu_{b}"
+        )
+
+        mawari_vals[b] = row4[b-1].number_input(
+            "回り足",
+            step=0.01,
+            format="%.2f",
+            value=5.00,
+            key=f"women_mawari_{b}"
+        )
+
+        input_rows.append({
+            "艇番": b,
+            "展示": tenji_vals[b],
+            "直線": choku_vals[b],
+            "一周": isshu_vals[b],
+            "回り足": mawari_vals[b]
+        })
+
+    input_df = pd.DataFrame(input_rows).set_index("艇番")
+
+    st.divider()
+
+    # ------------------------
+    # 入力値
+    # ------------------------
+    st.markdown("### 入力値（女子戦）")
+
+    st.dataframe(
+        highlight_rank(input_df),
+        use_container_width=True
+    )
+
+    # ------------------------
+    # 女子戦・場平均補正
+    # ------------------------
+    st.divider()
+    st.markdown("### 女子戦・場平均補正タイム")
+
+    lane_mean = (
+        place_df
+        .groupby("艇番")[["展示","直線","一周","回り足"]]
+        .mean()
+    )
+
+    overall_mean = place_df[["展示","直線","一周","回り足"]].mean()
+
+    adj_df = input_df.copy()
+
+    for b in range(1, 7):
+        if b in lane_mean.index:
+            for col in ["展示","直線","一周","回り足"]:
+                if pd.notna(input_df.loc[b, col]) and pd.notna(lane_mean.loc[b, col]):
+                    adj_df.loc[b, col] = (
+                        input_df.loc[b, col]
+                        - lane_mean.loc[b, col]
+                        + overall_mean[col]
+                    )
+
+    st.dataframe(
+        highlight_rank(adj_df),
+        use_container_width=True
+    )
+
+    # ------------------------
+    # 女子戦・枠番補正込み
+    # ------------------------
+    st.divider()
+    st.markdown("### 女子戦・枠番補正込みタイム")
+
+    lane_bias = lane_mean - overall_mean
+
+    final_df = adj_df.copy()
+
+    for b in range(1, 7):
+        if b in lane_bias.index:
+            for col in ["展示","直線","一周","回り足"]:
+                if pd.notna(adj_df.loc[b, col]) and pd.notna(lane_bias.loc[b, col]):
+                    final_df.loc[b, col] = (
+                        adj_df.loc[b, col]
+                        - lane_bias.loc[b, col]
+                    )
+
+    st.dataframe(
+        highlight_rank(final_df),
+        use_container_width=True
+    )
 
 
 
