@@ -979,7 +979,7 @@ with tab_women_start:
         st.error("女子戦 列がスプレッドシートにありません")
         st.stop()
 
-    women_df = df_all[df_all["女子戦"] == "TRUE"].copy()
+    women_df = df_all[df_all["女子戦"] == "True"].copy()
 
     if women_df.empty:
         st.warning("女子戦データがありません")
@@ -1255,6 +1255,7 @@ with tab_women_result:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
