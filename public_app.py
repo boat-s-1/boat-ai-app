@@ -341,10 +341,10 @@ with tab_stat:
         highlight_rank(final_df),
         use_container_width=True
     )
-# --- タブ5：スタート予想 ---
+# --- タブ5：スタート予想（混合戦） ---
 with tab5:
 
-    st.subheader("🚀 スタート予想（展示＋1周＋ST 補正）")
+    st.subheader("🚀 スタート予想（展示＋1周＋ST 補正｜混合戦）")
 
     ws = sh.worksheet("管理用_NEW")
     data = ws.get_all_records()
@@ -354,9 +354,12 @@ with tab5:
         st.info("データがありません")
         st.stop()
 
+    # 型調整
     df_place["登録日時"] = pd.to_datetime(df_place["登録日時"], errors="coerce")
     df_place["レース番号"] = df_place["レース番号"].astype(str)
+    df_place["艇番"] = pd.to_numeric(df_place["艇番"], errors="coerce")
 
+    # 最新登録レースを使う
     latest_row = df_place.sort_values("登録日時").iloc[-1]
 
     race_date  = latest_row["日付"]
@@ -373,8 +376,13 @@ with tab5:
         st.warning("このレースの6艇データが揃っていません")
         st.stop()
 
-    st.caption(f"{race_date} {race_place} {race_no}R")
+    base = base.sort_values("艇番")
 
+    st.caption(f"{race_date}　{race_place}　{race_no}R")
+
+    # -----------------------
+    # 会場平均との差用データ
+    # -----------------------
     place_df = df_place[df_place["会場"] == race_place].copy()
 
     for c in ["展示", "一周", "ST"]:
@@ -383,6 +391,9 @@ with tab5:
     mean_tenji = place_df["展示"].mean()
     mean_isshu = place_df["一周"].mean()
 
+    # -----------------------
+    # 入力欄（タブ2と連動）
+    # -----------------------
     st.markdown("### 📝 今回レースの展示・1周入力（補正用）")
 
     input_cols = st.columns(6)
@@ -390,9 +401,6 @@ with tab5:
     tenji_input = {}
     isshu_input = {}
 
-    base = base.sort_values("艇番")
-
-    # ★タブ2入力取得
     tab2_df = st.session_state.get("tab2_input_df")
 
     for i, (_, r) in enumerate(base.iterrows()):
@@ -411,8 +419,9 @@ with tab5:
             tenji_input[boat] = st.number_input(
                 "展示",
                 step=0.01,
+                format="%.2f",
                 value=tenji_default,
-                key=f"tab5_tenji_{boat}"
+                key=f"mix_tab5_tenji_{boat}"
             )
 
             if tab2_df is not None and boat in tab2_df.index:
@@ -423,8 +432,9 @@ with tab5:
             isshu_input[boat] = st.number_input(
                 "一周",
                 step=0.01,
+                format="%.2f",
                 value=isshu_default,
-                key=f"tab5_isshu_{boat}"
+                key=f"mix_tab5_isshu_{boat}"
             )
 
     # -----------------------
@@ -447,7 +457,7 @@ with tab5:
 
         boat = int(r["艇番"])
 
-        st_score = -r["ST"] + r["評価補正"]
+        st_score = -float(r["ST"]) + r["評価補正"]
 
         tenji_diff = mean_tenji - tenji_input[boat]
         isshu_diff = mean_isshu - isshu_input[boat]
@@ -463,9 +473,26 @@ with tab5:
     base["start_score"] = scores
 
     # -----------------------
-    # スリット表示
+    # 表示用テーブル
     # -----------------------
+    st.divider()
+    st.markdown("### 📊 スタート指数")
+
+    show_df = base[[
+        "艇番", "展示", "一周", "ST", "スタート評価", "start_score"
+    ]].copy()
+
+    show_df = show_df.sort_values("start_score", ascending=False)
+
+    st.dataframe(show_df, use_container_width=True)
+
+    # -----------------------
+    # スリット表示（指数順）
+    # -----------------------
+    st.divider()
     st.markdown("### 🟦 スリット予想イメージ")
+
+    base = base.sort_values("start_score", ascending=False)
 
     st.markdown('<div class="slit-area">', unsafe_allow_html=True)
     st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
@@ -488,7 +515,7 @@ with tab5:
                     <b>{boat_no}号艇</b><br>
                     展示 {tenji_input[boat_no]:.2f}
                     一周 {isshu_input[boat_no]:.2f}<br>
-                    ST {r["ST"]:.2f} {r["スタート評価"]}
+                    ST {float(r["ST"]):.2f} {r["スタート評価"]}
                 </div>
             </div>
         </div>
@@ -1260,6 +1287,7 @@ with tab_women_result:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
