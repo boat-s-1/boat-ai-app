@@ -116,8 +116,8 @@ with tab4:
     with w2:
         wind_speed = st.number_input(
             "風速（m）",
-            min_value=0,
-            step=0,
+            min_value=0.0,
+            step=1.0,
             format="%.1f",
             key="tab4_wind_speed"
         )
@@ -207,4 +207,5 @@ with tab4:
         )
 
         st.success("登録しました！")
+
 
