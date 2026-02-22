@@ -953,7 +953,7 @@ with tab_women_input:
     )
 
 # --- 女子戦スタート予想（会場だけ・入力式＋スリット） ---
-with tab_women:
+with tab_women_start:
 
     st.subheader("👩 女子戦スタート予想（会場補正・入力式）")
 
@@ -1260,6 +1260,7 @@ with tab_women_result:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
