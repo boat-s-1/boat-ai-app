@@ -116,7 +116,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_woman_stat = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正"])
+tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_women_stat = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
@@ -752,6 +752,7 @@ with tab_women_stat:
         diff_df.round(3),
         use_container_width=True
     )
+
 
 
 
