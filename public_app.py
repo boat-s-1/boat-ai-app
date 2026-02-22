@@ -116,7 +116,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat,tab5,tab_cond = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正"])
+tab_pre, tab_stat,tab5,tab_cond,tab_view = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
@@ -606,6 +606,78 @@ with tab_cond:
 
     st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
 
+# -----------------------------
+# 閲覧用：女子戦データ
+# -----------------------------
+with tab_view:
+
+    st.subheader("👩 女子戦データ閲覧")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    # 列チェック
+    if "女子戦" not in df.columns:
+        st.error("女子戦 列が見つかりません")
+        st.stop()
+
+    # 日付を日付型に
+    df["日付"] = pd.to_datetime(df["日付"], errors="coerce")
+
+    # 女子戦のみ
+    df = df[df["女子戦"].astype(str).str.lower().isin(["true", "1", "yes", "y", "○"])]
+
+    if df.empty:
+        st.info("女子戦データがまだありません")
+        st.stop()
+
+    # 絞り込みUI
+    col1, col2 = st.columns(2)
+
+    with col1:
+        place_list = ["すべて"] + sorted(df["会場"].dropna().unique().tolist())
+        sel_place = st.selectbox("会場", place_list)
+
+    with col2:
+        date_list = ["すべて"] + sorted(
+            df["日付"].dropna().dt.strftime("%Y-%m-%d").unique().tolist()
+        )
+        sel_date = st.selectbox("日付", date_list)
+
+    view_df = df.copy()
+
+    if sel_place != "すべて":
+        view_df = view_df[view_df["会場"] == sel_place]
+
+    if sel_date != "すべて":
+        view_df = view_df[
+            view_df["日付"].dt.strftime("%Y-%m-%d") == sel_date
+        ]
+
+    view_df = view_df.sort_values(
+        ["日付", "会場", "レース番号", "艇番"]
+    )
+
+    st.caption(f"表示件数：{len(view_df)} 件")
+
+    show_cols = [
+        "日付","会場","レース番号","艇番",
+        "展示","直線","一周","回り足",
+        "ST","風向き","風速","波高",
+        "着順","スタート評価"
+    ]
+
+    exist_cols = [c for c in show_cols if c in view_df.columns]
+
+    st.dataframe(
+        view_df[exist_cols],
+        use_container_width=True,
+        hide_index=True
+    )
 
 
 
