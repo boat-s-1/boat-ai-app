@@ -116,7 +116,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat,tab5,tab_cond,tab_view = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦"])
+tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_woman_stat = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
@@ -679,6 +679,79 @@ with tab_view:
         hide_index=True
     )
 
+# -----------------------------
+# 閲覧用：女子戦 × 場平均補正
+# -----------------------------
+with tab_women_stat:
+
+    st.subheader("👩 女子戦｜場平均補正タイム")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    # 必須列チェック
+    need_cols = ["女子戦","会場","艇番","展示","直線","一周","回り足"]
+    for c in need_cols:
+        if c not in df.columns:
+            st.error(f"{c} 列が見つかりません")
+            st.stop()
+
+    # 数値化
+    for c in ["艇番","展示","直線","一周","回り足"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # 女子戦だけ
+    women_df = df[
+        df["女子戦"].astype(str).str.lower().isin(["true","1","yes","y","○"])
+    ].copy()
+
+    if women_df.empty:
+        st.info("女子戦データがまだありません")
+        st.stop()
+
+    # 会場選択
+    place_list = sorted(women_df["会場"].dropna().unique().tolist())
+    place = st.selectbox("会場を選択", place_list, key="women_stat_place")
+
+    place_df = women_df[women_df["会場"] == place].copy()
+
+    st.caption(f"{place}｜女子戦データ件数：{len(place_df)} 件")
+
+    # ------------------------
+    # 艇番別平均との差
+    # ------------------------
+    lane_mean = (
+        place_df
+        .groupby("艇番")[["展示","直線","一周","回り足"]]
+        .mean()
+    )
+
+    overall_mean = place_df[["展示","直線","一周","回り足"]].mean()
+
+    # 補正量（＝平均との差）
+    diff_df = lane_mean.copy()
+
+    for col in ["展示","直線","一周","回り足"]:
+        diff_df[col] = lane_mean[col] - overall_mean[col]
+
+    st.markdown("### 艇番別 平均タイム（女子戦）")
+    st.dataframe(
+        lane_mean.round(3),
+        use_container_width=True
+    )
+
+    st.markdown("### 場平均との差（女子戦・補正量）")
+
+    st.caption("※ プラス＝遅い / マイナス＝速い")
+
+    st.dataframe(
+        diff_df.round(3),
+        use_container_width=True
+    )
 
 
 
