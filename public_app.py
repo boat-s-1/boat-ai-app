@@ -116,7 +116,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat,tab5,tab_cond,tab_view,tab_women_stat,tab_women_input,tab_women_start,tab_women_result = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","風・波補正","女子戦","女子戦補正閲覧","女子戦補正入力","女子戦スタート","女子戦スタート精度"])
+tab_pre, tab_stat,tab5,tab_mix_check,tab_cond,tab_view,tab_women_stat,tab_women_input,tab_women_start,tab_women_result = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想","混合戦スタート精度","風・波補正","女子戦","女子戦補正閲覧","女子戦補正入力","女子戦スタート予想","女子戦スタート精度"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
@@ -1274,6 +1274,166 @@ with tab_women_result:
 
     st.dataframe(res_df, use_container_width=True)
 
+# --- 混合戦：スタート指数 精度検証 ---
+with tab_mix_check:
+
+    st.subheader("📊 混合戦 スタート指数 精度検証")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    # 数値変換
+    for c in ["展示","一周","ST","艇番","着順"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # --------------------
+    # 混合戦のみ（女子戦を除外）
+    # --------------------
+    if "女子戦" in df.columns:
+        df = df[
+            (df["女子戦"] == "") |
+            (df["女子戦"] == "FALSE") |
+            (df["女子戦"] == False)
+        ]
+
+    if df.empty:
+        st.warning("混合戦データがありません")
+        st.stop()
+
+    # --------------------
+    # 会場選択
+    # --------------------
+    place_list = sorted(df["会場"].dropna().unique())
+
+    place = st.selectbox(
+        "会場を選択",
+        place_list,
+        key="mix_check_place"
+    )
+
+    place_df = df[df["会場"] == place].copy()
+
+    if place_df.empty:
+        st.warning("この会場のデータがありません")
+        st.stop()
+
+    # --------------------
+    # 会場平均との差
+    # --------------------
+    mean_tenji = place_df["展示"].mean()
+    mean_isshu = place_df["一周"].mean()
+
+    eval_map = {
+        "◎": 2.0,
+        "◯": 1.0,
+        "△": 0.5,
+        "×": -1.0
+    }
+
+    # --------------------
+    # レース単位で検証
+    # --------------------
+    results = []
+
+    group_cols = ["日付", "会場", "レース番号"]
+
+    for (d, p, rno), g in place_df.groupby(group_cols):
+
+        if len(g) != 6:
+            continue
+
+        if g["ST"].isna().any():
+            continue
+
+        scores = []
+
+        for _, row in g.iterrows():
+
+            st_score = -row["ST"] + eval_map.get(row["スタート評価"], 0)
+
+            tenji_diff = mean_tenji - row["展示"]
+            isshu_diff = mean_isshu - row["一周"]
+
+            total = (
+                st_score
+                + tenji_diff * 2.0
+                + isshu_diff * 0.3
+            )
+
+            scores.append(total)
+
+        g = g.copy()
+        g["start_score"] = scores
+
+        # 予想順位
+        g["予想順位"] = g["start_score"].rank(ascending=False, method="min")
+
+        # 実順位
+        g = g.dropna(subset=["着順"])
+
+        if len(g) != 6:
+            continue
+
+        # 的中判定
+        top1_hit = int(
+            g.loc[g["予想順位"] == 1, "着順"].min() == 1
+        )
+
+        top3_pred = set(
+            g.sort_values("start_score", ascending=False)["艇番"].head(3)
+        )
+        top3_real = set(
+            g[g["着順"] <= 3]["艇番"]
+        )
+
+        top3_hit = len(top3_pred & top3_real)
+
+        results.append({
+            "日付": d,
+            "レース番号": rno,
+            "1着的中": top1_hit,
+            "3連対的中数": top3_hit
+        })
+
+    if not results:
+        st.warning("検証できるレースがありません")
+        st.stop()
+
+    res_df = pd.DataFrame(results)
+
+    st.markdown("### ✅ 検証結果（混合戦）")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "検証レース数",
+            len(res_df)
+        )
+
+    with col2:
+        st.metric(
+            "1着的中率",
+            f"{res_df['1着的中'].mean()*100:.1f}%"
+        )
+
+    with col3:
+        st.metric(
+            "3連対平均的中数",
+            f"{res_df['3連対的中数'].mean():.2f}艇"
+        )
+
+    st.markdown("### 📄 レース別 内訳")
+
+    st.dataframe(
+        res_df.sort_values(["日付","レース番号"]),
+        use_container_width=True
+    )
 
 
 
