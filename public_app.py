@@ -1270,8 +1270,8 @@ with tab_mix_check:
     df = pd.DataFrame(ws.get_all_records())
 
     if df.empty:
-        st.info("データがありません")
-        st.stop()
+    st.info(...)
+    else:
 
     need_cols = [
         "女子戦","日付","会場","レース番号",
@@ -1399,6 +1399,7 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
