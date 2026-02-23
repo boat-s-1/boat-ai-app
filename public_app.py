@@ -150,43 +150,197 @@ with tab_pre:
 
 # --- タブ2：統計解析 ---
 with tab_stat:
-    st.subheader("📊 会場別 補正・総合比較")
 
-    # --- データの安全な読み込み ---
-    base_df = pd.DataFrame() # 読み込み失敗時のための空箱
-    
-    try:
-        # スプレッドシートの取得
-        ws2 = sh.worksheet("管理用_NEW")
-        base_df = pd.DataFrame(ws2.get_all_records())
-        
-        if base_df.empty:
-            st.warning("⚠️ 管理用_NEW にデータがありません")
-        else:
-            # 正常に読み込めた場合の処理
-            for c in ["展示", "直線", "一周", "回り足", "艇番"]:
-                if c in base_df.columns:
-                    base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
-    except Exception as e:
-        # エラーが起きてもここで食い止める！
-        st.error(f"❌ スプレッドシートの読み込みエラー: {e}")
-        st.info("シート名『管理用_NEW』が存在するか、共有権限があるか確認してください。")
+    st.subheader("会場別 補正・総合比較")
 
-    # base_df が空でない場合のみ、解析画面を表示する
-    if not base_df.empty:
-        if "会場" not in base_df.columns:
-            st.error("管理用_NEW に『会場』列がありません")
-        else:
-            place_list = sorted(base_df["会場"].dropna().unique())
-            place = st.selectbox("会場を選択", place_list, key="tab2_place")
-            
-            # --- 以下、従来の解析ロジック（place_dfの作成など） ---
-            place_df = base_df[base_df["会場"] == place].copy()
-            
-            # (中略) 入力フォームや表の表示処理...
-            st.success(f"{place}のデータを表示しています。")
-    else:
-        st.write("データが読み込めないため、解析画面を表示できません。")
+    # ------------------------
+    # データ読み込み
+    # ------------------------
+    ws2 = sh.worksheet("管理用_NEW")
+    base_df = pd.DataFrame(ws2.get_all_records())
+
+    if base_df.empty:
+        st.warning("管理用_NEW にデータがありません")
+        st.stop()
+
+    for c in ["展示", "直線", "一周", "回り足", "艇番"]:
+        if c in base_df.columns:
+            base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
+
+    if "会場" not in base_df.columns:
+        st.error("管理用_NEW に『会場』列がありません")
+        st.stop()
+
+    place_list = sorted(base_df["会場"].dropna().unique())
+    place = st.selectbox("会場を選択", place_list, key="tab2_place")
+
+    place_df = base_df[base_df["会場"] == place].copy()
+
+    st.divider()
+
+    # ------------------------
+    # 色付け
+    # ------------------------
+    def highlight_rank(df):
+
+        def color_col(s):
+            s2 = pd.to_numeric(s, errors="coerce")
+            rank = s2.rank(method="min")
+
+            out = []
+            for v, r in zip(s2, rank):
+                if pd.isna(v):
+                    out.append("")
+                elif r == 1:
+                    out.append("background-color:#ff6b6b")
+                elif r == 2:
+                    out.append("background-color:#ffd43b")
+                else:
+                    out.append("")
+            return out
+
+        return df.style.apply(color_col, axis=0)
+
+    # ------------------------
+    # 入力（横並び）
+    # ------------------------
+    st.markdown("### 展示タイム入力（当日データ）")
+
+    input_rows = []
+
+    head = st.columns([1, 2, 2, 2, 2])
+    head[0].markdown("**艇番**")
+    head[1].markdown("**一周**")
+    head[2].markdown("**回り足**")
+    head[3].markdown("**直線**")
+    head[4].markdown("**展示**")
+
+    for b in range(1, 7):
+
+        cols = st.columns([1, 2, 2, 2, 2])
+
+        cols[0].markdown(f"**{b}号艇**")
+
+        isshu = cols[1].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            value=37.00,
+            key=f"tab2_in_isshu_{b}",
+            label_visibility="collapsed"
+        )
+
+        mawari = cols[2].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            value=5.00,
+            key=f"tab2_in_mawari_{b}",
+            label_visibility="collapsed"
+        )
+
+        choku = cols[3].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            value=6.90,
+            key=f"tab2_in_choku_{b}",
+            label_visibility="collapsed"
+        )
+
+        tenji = cols[4].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            value=6.50,
+            key=f"tab2_in_tenji_{b}",
+            label_visibility="collapsed"
+        )
+
+        input_rows.append({
+            "艇番": b,
+            "展示": tenji,
+            "直線": choku,
+            "一周": isshu,
+            "回り足": mawari
+        })
+
+    input_df = pd.DataFrame(input_rows).set_index("艇番")
+
+    # ★タブ5連動用に保存
+    st.session_state["tab2_input_df"] = input_df.copy()
+
+    st.divider()
+
+    # ------------------------
+    # 入力値表示
+    # ------------------------
+    st.markdown("### 公式展示タイム表（入力値）")
+
+    st.dataframe(
+        highlight_rank(input_df),
+        use_container_width=True
+    )
+
+    # ------------------------
+    # 場平均補正
+    # ------------------------
+    st.divider()
+    st.markdown("### 場平均補正タイム（会場平均との差補正）")
+
+    place_mean = (
+        place_df
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
+        .mean()
+    )
+
+    overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
+
+    adj_df = input_df.copy()
+
+    for b in range(1, 7):
+        if b in place_mean.index:
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if pd.notna(input_df.loc[b, col]) and pd.notna(place_mean.loc[b, col]):
+                    adj_df.loc[b, col] = (
+                        input_df.loc[b, col]
+                        - place_mean.loc[b, col]
+                        + overall_mean[col]
+                    )
+
+    st.dataframe(
+        highlight_rank(adj_df),
+        use_container_width=True
+    )
+
+    # ------------------------
+    # 枠番補正
+    # ------------------------
+    st.divider()
+    st.markdown("### 枠番補正込みタイム（イン有利補正）")
+
+    lane_bias = (
+        place_df
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
+        .mean()
+        - overall_mean
+    )
+
+    final_df = adj_df.copy()
+
+    for b in range(1, 7):
+        if b in lane_bias.index:
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if pd.notna(adj_df.loc[b, col]) and pd.notna(lane_bias.loc[b, col]):
+                    final_df.loc[b, col] = (
+                        adj_df.loc[b, col]
+                        - lane_bias.loc[b, col]
+                    )
+
+    st.dataframe(
+        highlight_rank(final_df),
+        use_container_width=True
+    )
 # --- タブ5：スタート予想（混合戦・入力型） ---
 with tab5:
 
@@ -1260,7 +1414,6 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
-
 
 
 
