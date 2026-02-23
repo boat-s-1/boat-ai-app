@@ -624,73 +624,25 @@ with tab_cond:
 # -----------------------------
 with tab_view:
 
-    st.subheader("👩 女子戦データ閲覧")
+    st.subheader("👩 女子戦 補正データ閲覧")
 
     ws = sh.worksheet("管理用_NEW")
     df = pd.DataFrame(ws.get_all_records())
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
+    else:
 
-    # 列チェック
-    if "女子戦" not in df.columns:
-        st.error("女子戦 列が見つかりません")
-        st.stop()
+        if "種別" not in df.columns:
+            st.warning("種別 列が無いため女子戦抽出ができません")
+        else:
 
-    # 日付を日付型に
-    df["日付"] = pd.to_datetime(df["日付"], errors="coerce")
+            women_df = df[df["種別"].astype(str).str.contains("女子")].copy()
 
-    # 女子戦のみ
-    df = df[df["女子戦"].astype(str).str.lower().isin(["true", "1", "yes", "y", "○"])]
-
-    if df.empty:
-        st.info("女子戦データがまだありません")
-        st.stop()
-
-    # 絞り込みUI
-    col1, col2 = st.columns(2)
-
-    with col1:
-        place_list = ["すべて"] + sorted(df["会場"].dropna().unique().tolist())
-        sel_place = st.selectbox("会場", place_list)
-
-    with col2:
-        date_list = ["すべて"] + sorted(
-            df["日付"].dropna().dt.strftime("%Y-%m-%d").unique().tolist()
-        )
-        sel_date = st.selectbox("日付", date_list)
-
-    view_df = df.copy()
-
-    if sel_place != "すべて":
-        view_df = view_df[view_df["会場"] == sel_place]
-
-    if sel_date != "すべて":
-        view_df = view_df[
-            view_df["日付"].dt.strftime("%Y-%m-%d") == sel_date
-        ]
-
-    view_df = view_df.sort_values(
-        ["日付", "会場", "レース番号", "艇番"]
-    )
-
-    st.caption(f"表示件数：{len(view_df)} 件")
-
-    show_cols = [
-        "日付","会場","レース番号","艇番",
-        "展示","直線","一周","回り足",
-        "ST","風向き","風速","波高",
-        "着順","スタート評価"
-    ]
-
-    exist_cols = [c for c in show_cols if c in view_df.columns]
-
-    st.dataframe(
-        view_df[exist_cols],
-        use_container_width=True,
-        hide_index=True
-    )
+            if women_df.empty:
+                st.info("女子戦データがありません")
+            else:
+                st.dataframe(women_df, use_container_width=True)
 
 # -----------------------------
 # 閲覧用：女子戦 × 場平均補正
@@ -771,376 +723,104 @@ with tab_women_stat:
 # -----------------------------
 with tab_women_input:
 
-    st.subheader("👩 女子戦｜展示入力 → 場平均補正")
+    st.subheader("👩 女子戦 補正用入力")
 
-    ws = sh.worksheet("管理用_NEW")
-    df = pd.DataFrame(ws.get_all_records())
+    rows = []
 
-    if df.empty:
-        st.info("データがありません")
-        st.stop()
+    head = st.columns([1,2,2,2,2])
+    head[0].markdown("艇番")
+    head[1].markdown("展示")
+    head[2].markdown("直線")
+    head[3].markdown("一周")
+    head[4].markdown("回り足")
 
-    need_cols = ["女子戦","会場","艇番","展示","直線","一周","回り足"]
-    for c in need_cols:
-        if c not in df.columns:
-            st.error(f"{c} 列が見つかりません")
-            st.stop()
+    for b in range(1,7):
 
-    for c in ["艇番","展示","直線","一周","回り足"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+        cols = st.columns([1,2,2,2,2])
 
-    # 女子戦だけ
-    women_df = df[
-        df["女子戦"].astype(str).str.lower().isin(
-            ["true","1","yes","y","○"]
-        )
-    ].copy()
+        cols[0].markdown(f"{b}")
 
-    if women_df.empty:
-        st.info("女子戦データがまだありません")
-        st.stop()
+        tenji = cols[1].number_input("", step=0.01, format="%.2f",
+                                     key=f"w_in_tenji_{b}", label_visibility="collapsed")
 
-    # 会場選択
-    place_list = sorted(women_df["会場"].dropna().unique())
-    place = st.selectbox("会場を選択", place_list, key="women_input_place")
+        choku = cols[2].number_input("", step=0.01, format="%.2f",
+                                     key=f"w_in_choku_{b}", label_visibility="collapsed")
 
-    place_df = women_df[women_df["会場"] == place].copy()
+        isshu = cols[3].number_input("", step=0.01, format="%.2f",
+                                     key=f"w_in_isshu_{b}", label_visibility="collapsed")
 
-    st.caption(f"{place}｜女子戦データ件数：{len(place_df)} 件")
+        mawari = cols[4].number_input("", step=0.01, format="%.2f",
+                                      key=f"w_in_mawari_{b}", label_visibility="collapsed")
 
-    st.divider()
-
-    # ------------------------
-    # 色付け（1位 赤 / 2位 黄）
-    # ------------------------
-    def highlight_rank(df):
-
-        def color_col(s):
-            s2 = pd.to_numeric(s, errors="coerce")
-            rank = s2.rank(method="min")
-
-            out = []
-            for v, r in zip(s2, rank):
-                if pd.isna(v):
-                    out.append("")
-                elif r == 1:
-                    out.append("background-color:#ff6b6b")
-                elif r == 2:
-                    out.append("background-color:#ffd43b")
-                else:
-                    out.append("")
-            return out
-
-        return df.style.apply(color_col, axis=0)
-
-    # ------------------------
-    # 入力（横並び）
-    # ------------------------
-    st.markdown("### 展示入力（女子戦・当日データ）")
-
-    input_rows = []
-
-    header_cols = st.columns(6)
-    for i in range(6):
-        header_cols[i].markdown(f"**{i+1}号艇**")
-
-    row1 = st.columns(6)  # 展示
-    row2 = st.columns(6)  # 直線
-    row3 = st.columns(6)  # 一周
-    row4 = st.columns(6)  # 回り足
-
-    tenji_vals = {}
-    choku_vals = {}
-    isshu_vals = {}
-    mawari_vals = {}
-
-    for b in range(1, 7):
-
-        tenji_vals[b] = row1[b-1].number_input(
-            "展示",
-            step=0.01,
-            format="%.2f",
-            value=6.50,
-            key=f"women_tenji_{b}"
-        )
-
-        choku_vals[b] = row2[b-1].number_input(
-            "直線",
-            step=0.01,
-            format="%.2f",
-            value=6.90,
-            key=f"women_choku_{b}"
-        )
-
-        isshu_vals[b] = row3[b-1].number_input(
-            "一周",
-            step=0.01,
-            format="%.2f",
-            value=37.00,
-            key=f"women_isshu_{b}"
-        )
-
-        mawari_vals[b] = row4[b-1].number_input(
-            "回り足",
-            step=0.01,
-            format="%.2f",
-            value=5.00,
-            key=f"women_mawari_{b}"
-        )
-
-        input_rows.append({
+        rows.append({
             "艇番": b,
-            "展示": tenji_vals[b],
-            "直線": choku_vals[b],
-            "一周": isshu_vals[b],
-            "回り足": mawari_vals[b]
+            "展示": tenji,
+            "直線": choku,
+            "一周": isshu,
+            "回り足": mawari
         })
 
-    input_df = pd.DataFrame(input_rows).set_index("艇番")
+    women_input_df = pd.DataFrame(rows).set_index("艇番")
 
-    st.divider()
+    st.session_state["women_input_df"] = women_input_df.copy()
 
-    # ------------------------
-    # 入力値
-    # ------------------------
-    st.markdown("### 入力値（女子戦）")
-
-    st.dataframe(
-        highlight_rank(input_df),
-        use_container_width=True
-    )
-
-    # ------------------------
-    # 女子戦・場平均補正
-    # ------------------------
-    st.divider()
-    st.markdown("### 女子戦・場平均補正タイム")
-
-    lane_mean = (
-        place_df
-        .groupby("艇番")[["展示","直線","一周","回り足"]]
-        .mean()
-    )
-
-    overall_mean = place_df[["展示","直線","一周","回り足"]].mean()
-
-    adj_df = input_df.copy()
-
-    for b in range(1, 7):
-        if b in lane_mean.index:
-            for col in ["展示","直線","一周","回り足"]:
-                if pd.notna(input_df.loc[b, col]) and pd.notna(lane_mean.loc[b, col]):
-                    adj_df.loc[b, col] = (
-                        input_df.loc[b, col]
-                        - lane_mean.loc[b, col]
-                        + overall_mean[col]
-                    )
-
-    st.dataframe(
-        highlight_rank(adj_df),
-        use_container_width=True
-    )
-
-    # ------------------------
-    # 女子戦・枠番補正込み
-    # ------------------------
-    st.divider()
-    st.markdown("### 女子戦・枠番補正込みタイム")
-
-    lane_bias = lane_mean - overall_mean
-
-    final_df = adj_df.copy()
-
-    for b in range(1, 7):
-        if b in lane_bias.index:
-            for col in ["展示","直線","一周","回り足"]:
-                if pd.notna(adj_df.loc[b, col]) and pd.notna(lane_bias.loc[b, col]):
-                    final_df.loc[b, col] = (
-                        adj_df.loc[b, col]
-                        - lane_bias.loc[b, col]
-                    )
-
-    st.dataframe(
-        highlight_rank(final_df),
-        use_container_width=True
-    )
-
+    st.dataframe(women_input_df, use_container_width=True)
 # --- 女子戦スタート予想（会場だけ・入力式＋スリット） ---
 with tab_women_start:
 
-    st.subheader("👩 女子戦スタート予想（会場補正・入力式）")
+    st.subheader("👩 女子戦 スタート予想（入力型）")
 
-    if women_df.empty:
-        st.warning("女子戦データがありません")
-        st.stop()
+    if "women_input_df" not in st.session_state:
+        st.info("先に女子戦補正入力をしてください")
+    else:
 
-    use_cols = ["展示", "一周", "ST"]
-    for c in use_cols:
-        women_df[c] = pd.to_numeric(women_df[c], errors="coerce")
+        df = st.session_state["women_input_df"].copy()
 
-    # ------------------------
-    # 会場だけ選択
-    # ------------------------
-    sel_place = st.selectbox(
-        "会場を選択（女子戦）",
-        sorted(women_df["会場"].dropna().unique()),
-        key="women_place_select"
-    )
+        base = df.copy()
 
-    place_women = women_df[women_df["会場"] == sel_place].copy()
-
-    if place_women.empty:
-        st.warning("この会場の女子戦データがありません")
-        st.stop()
-
-    # ------------------------
-    # 女子戦・会場平均
-    # ------------------------
-    mean_tenji = place_women["展示"].mean()
-    mean_isshu = place_women["一周"].mean()
-
-    st.caption(
-        f"女子戦平均（{sel_place}）  展示={mean_tenji:.2f}  一周={mean_isshu:.2f}"
-    )
-
-    st.divider()
-
-    # ------------------------
-    # 入力（横並び）
-    # ------------------------
-    st.markdown("### 📝 当日入力")
-
-    input_cols = st.columns(6)
-
-    tenji_input = {}
-    isshu_input = {}
-    st_input    = {}
-
-    for boat in range(1, 7):
-
-        with input_cols[boat - 1]:
-
-            st.markdown(f"**{boat}号艇**")
-
-            tenji_input[boat] = st.number_input(
-                "展示",
-                step=0.01,
-                format="%.2f",
-                key=f"women_tenji_in_{boat}"
-            )
-
-            isshu_input[boat] = st.number_input(
-                "一周",
-                step=0.01,
-                format="%.2f",
-                key=f"women_isshu_in_{boat}"
-            )
-
-            st_input[boat] = st.number_input(
-                "ST",
-                step=0.01,
-                format="%.2f",
-                key=f"women_st_in_{boat}"
-            )
-
-    # ------------------------
-    # 表用データ
-    # ------------------------
-    table_rows = []
-
-    for boat in range(1, 7):
-
-        tenji_diff = mean_tenji - tenji_input[boat]
-        isshu_diff = mean_isshu - isshu_input[boat]
-
-        start_score = (
-            -st_input[boat]
-            + tenji_diff * 2.0
-            + isshu_diff * 0.3
+        base["指数"] = (
+            -base["展示"]
+            - base["一周"] * 0.3
+            + base["回り足"] * 0.5
+            - base["直線"] * 0.2
         )
 
-        table_rows.append({
-            "艇番": boat,
-            "展示": tenji_input[boat],
-            "一周": isshu_input[boat],
-            "ST": st_input[boat],
-            "女子戦スタート指数": start_score
-        })
+        st.dataframe(
+            base.sort_values("指数", ascending=False),
+            use_container_width=True
+        )
 
-    result_df = pd.DataFrame(table_rows).set_index("艇番")
+        # --- スリット表示 ---
+        st.markdown("### スリットイメージ")
 
-    st.divider()
+        max_i = base["指数"].max()
+        min_i = base["指数"].min()
 
-    # ------------------------
-    # 表
-    # ------------------------
-    st.markdown("### 📊 女子戦スタート指数")
+        def pos(v):
+            if max_i == min_i:
+                return 120
+            return 120 + (v - min_i) / (max_i - min_i) * 300
 
-    def highlight_best(s):
-        s2 = pd.to_numeric(s, errors="coerce")
-        rank = s2.rank(ascending=False, method="min")
-        out = []
-        for r in rank:
-            if r == 1:
-                out.append("background-color:#ff6b6b")
-            elif r == 2:
-                out.append("background-color:#ffd43b")
-            else:
-                out.append("")
-        return out
+        html = '<div class="slit-area"><div class="slit-line"></div>'
 
-    st.dataframe(
-        result_df.style.apply(
-            highlight_best,
-            subset=["女子戦スタート指数"]
-        ),
-        use_container_width=True
-    )
-
-    # ------------------------
-    # スリット表示（表の下）
-    # ------------------------
-    st.divider()
-    st.markdown("### 🟦 女子戦スリット予想")
-
-    sorted_df = result_df.sort_values("女子戦スタート指数", ascending=False)
-
-    st.markdown('<div class="slit-area">', unsafe_allow_html=True)
-    st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
-
-    for boat, r in sorted_df.iterrows():
-
-        score = float(r["女子戦スタート指数"])
-
-        offset = max(0, min(160, (score + 0.5) * 120))
-
-        img_path = os.path.join(BASE_DIR, "images", f"boat{boat}.png")
-        img_base64 = encode_image(img_path)
-
-        html = f"""
-        <div class="slit-row">
-            <div class="slit-boat" style="margin-left:{offset}px;">
-                <img src="data:image/png;base64,{img_base64}" height="42">
-                <div style="margin-left:10px;font-size:13px;">
-                    <b>{boat}号艇</b><br>
-                    指数 {score:.2f}<br>
-                    展示 {r["展示"]:.2f}　
-                    一周 {r["一周"]:.2f}　
-                    ST {r["ST"]:.2f}
+        for b, r in base.sort_values("指数", ascending=False).iterrows():
+            html += f'''
+            <div class="slit-row">
+                <div class="slit-boat" style="margin-left:{pos(r["指数"])}px;">
+                    {b}号艇
                 </div>
             </div>
-        </div>
-        """
+            '''
+
+        html += "</div>"
 
         st.markdown(html, unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
 # -----------------------------
 # 👩 女子戦スタート指数｜検証タブ
 # -----------------------------
 with tab_women_result:
 
-    st.subheader("👩 女子戦｜スタート指数 精度検証")
+    st.subheader("👩 女子戦スタート精度（簡易検証）")
 
     ws = sh.worksheet("管理用_NEW")
     df = pd.DataFrame(ws.get_all_records())
@@ -1149,121 +829,47 @@ with tab_women_result:
         st.info("データがありません")
     else:
 
-        need_cols = [
-            "女子戦","日付","会場","レース番号",
-            "艇番","展示","一周","ST","スタート評価","着順"
-        ]
-
-        missing = [c for c in need_cols if c not in df.columns]
-
-        if missing:
-            st.error(f"次の列が見つかりません：{missing}")
+        if "種別" not in df.columns:
+            st.warning("種別 列が無いため女子戦抽出ができません")
         else:
 
-            for c in ["艇番","展示","一周","ST","着順"]:
-                df[c] = pd.to_numeric(df[c], errors="coerce")
+            wdf = df[df["種別"].astype(str).str.contains("女子")].copy()
 
-            women_df = df[
-                df["女子戦"].astype(str).str.lower().isin(
-                    ["true","1","yes","y","○"]
-                )
-            ].copy()
-
-            if women_df.empty:
-                st.info("女子戦データがまだありません")
+            if wdf.empty:
+                st.info("女子戦データがありません")
             else:
 
-                place_list = sorted(women_df["会場"].dropna().unique())
-                place = st.selectbox("会場", place_list, key="women_verify_place")
+                for c in ["展示", "一周", "ST"]:
+                    wdf[c] = pd.to_numeric(wdf[c], errors="coerce")
 
-                target = women_df[women_df["会場"] == place].copy()
+                mean_tenji = wdf["展示"].mean()
+                mean_isshu = wdf["一周"].mean()
 
-                eval_map = {
-                    "◎": 2.0,
-                    "◯": 1.0,
-                    "△": 0.5,
-                    "×": -1.0
-                }
-
-                target["評価補正"] = target["スタート評価"].map(eval_map).fillna(0)
-
-                place_df = women_df[women_df["会場"] == place]
-
-                mean_tenji = place_df["展示"].mean()
-                mean_isshu = place_df["一周"].mean()
-
-                target["指数"] = (
-                    -target["ST"].fillna(0)
-                    + target["評価補正"]
-                    + (mean_tenji - target["展示"]) * 2.0
-                    + (mean_isshu - target["一周"]) * 0.3
+                wdf["予想指数"] = (
+                    -wdf["ST"]
+                    + (mean_tenji - wdf["展示"]) * 2.0
+                    + (mean_isshu - wdf["一周"]) * 0.3
                 )
 
-                results = []
+                wdf["実ST順位"] = wdf["ST"].rank(method="min")
+                wdf["指数順位"] = wdf["予想指数"].rank(ascending=False, method="min")
 
-                for (d, r), g in target.groupby(["日付","レース番号"]):
+                wdf["一致"] = wdf["実ST順位"] == wdf["指数順位"]
 
-                    if len(g) < 6:
-                        continue
+                hit = wdf["一致"].mean() * 100
 
-                    g = g.sort_values("指数", ascending=False)
+                st.metric("順位一致率（簡易）", f"{hit:.1f} %")
 
-                    top1 = int(g.iloc[0]["艇番"])
-                    top2 = int(g.iloc[1]["艇番"])
-                    top3 = int(g.iloc[2]["艇番"])
-
-                    winner = g[g["着順"] == 1]["艇番"]
-                    second = g[g["着順"] == 2]["艇番"]
-                    third  = g[g["着順"] == 3]["艇番"]
-
-                    if len(winner) == 0:
-                        continue
-
-                    winner = int(winner.iloc[0])
-                    second = int(second.iloc[0]) if len(second) > 0 else None
-                    third  = int(third.iloc[0])  if len(third)  > 0 else None
-
-                    results.append({
-                        "日付": d,
-                        "R": r,
-                        "指数1位": top1,
-                        "指数2位": top2,
-                        "指数3位": top3,
-                        "1着": winner,
-                        "2着": second,
-                        "3着": third,
-                        "1位的中": top1 == winner,
-                        "連対的中": winner in [top1, top2],
-                        "3連対的中": winner in [top1, top2, top3]
-                    })
-
-                if len(results) == 0:
-                    st.info("検証できるレースがまだありません")
-                else:
-
-                    res_df = pd.DataFrame(results)
-
-                    total = len(res_df)
-
-                    hit1 = res_df["1位的中"].mean() * 100
-                    hit2 = res_df["連対的中"].mean() * 100
-                    hit3 = res_df["3連対的中"].mean() * 100
-
-                    c1, c2, c3, c4 = st.columns(4)
-
-                    c1.metric("検証レース数", total)
-                    c2.metric("指数1位 → 1着率", f"{hit1:.1f}%")
-                    c3.metric("指数上位2艇 連対率", f"{hit2:.1f}%")
-                    c4.metric("指数上位3艇 1着包含率", f"{hit3:.1f}%")
-
-                    st.divider()
-                    st.dataframe(res_df, use_container_width=True)
+                st.dataframe(
+                    wdf[["艇番","ST","展示","一周","予想指数","実ST順位","指数順位","一致"]],
+                    use_container_width=True
+                )
 # -----------------------------
 # 🧑‍🤝‍🧑 混合戦スタート指数｜検証タブ
 # -----------------------------
 with tab_mix_check:
 
-    st.subheader("🧑‍🤝‍🧑 混合戦｜スタート指数 精度検証")
+    st.subheader("📊 混合戦スタート指数 精度チェック（簡易）")
 
     ws = sh.worksheet("管理用_NEW")
     df = pd.DataFrame(ws.get_all_records())
@@ -1272,116 +878,52 @@ with tab_mix_check:
         st.info("データがありません")
     else:
 
-        need_cols = [
-            "女子戦","日付","会場","レース番号",
-            "艇番","展示","一周","ST","スタート評価","着順"
-        ]
+        need_cols = ["会場", "展示", "一周", "ST", "艇番"]
 
-        missing = [c for c in need_cols if c not in df.columns]
+        for c in need_cols:
+            if c not in df.columns:
+                st.error(f"{c} 列がありません")
+                st.stop()
 
-        if missing:
-            st.error(f"次の列が見つかりません：{missing}")
+        for c in ["展示", "一周", "ST", "艇番"]:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+        place_list = sorted(df["会場"].dropna().unique())
+
+        place = st.selectbox(
+            "会場を選択",
+            place_list,
+            key="mix_check_place"
+        )
+
+        place_df = df[df["会場"] == place].copy()
+
+        if place_df.empty:
+            st.info("この会場のデータがありません")
         else:
 
-            for c in ["艇番","展示","一周","ST","着順"]:
-                df[c] = pd.to_numeric(df[c], errors="coerce")
+            mean_tenji = place_df["展示"].mean()
+            mean_isshu = place_df["一周"].mean()
 
-            mix_df = df[
-                ~df["女子戦"].astype(str).str.lower().isin(
-                    ["true","1","yes","y","○"]
-                )
-            ].copy()
+            place_df["予想指数"] = (
+                -place_df["ST"]
+                + (mean_tenji - place_df["展示"]) * 2.0
+                + (mean_isshu - place_df["一周"]) * 0.3
+            )
 
-            if mix_df.empty:
-                st.info("混合戦データがまだありません")
-            else:
+            place_df["実ST順位"] = place_df["ST"].rank(method="min")
+            place_df["指数順位"] = place_df["予想指数"].rank(ascending=False, method="min")
 
-                place_list = sorted(mix_df["会場"].dropna().unique())
-                place = st.selectbox("会場", place_list, key="mix_verify_place")
+            place_df["的中"] = place_df["実ST順位"] == place_df["指数順位"]
 
-                target = mix_df[mix_df["会場"] == place].copy()
+            hit_rate = place_df["的中"].mean() * 100
 
-                eval_map = {
-                    "◎": 2.0,
-                    "◯": 1.0,
-                    "△": 0.5,
-                    "×": -1.0
-                }
+            st.metric("順位一致率（簡易）", f"{hit_rate:.1f} %")
 
-                target["評価補正"] = target["スタート評価"].map(eval_map).fillna(0)
-
-                place_df = mix_df[mix_df["会場"] == place]
-
-                mean_tenji = place_df["展示"].mean()
-                mean_isshu = place_df["一周"].mean()
-
-                target["指数"] = (
-                    -target["ST"].fillna(0)
-                    + target["評価補正"]
-                    + (mean_tenji - target["展示"]) * 2.0
-                    + (mean_isshu - target["一周"]) * 0.3
-                )
-
-                results = []
-
-                for (d, r), g in target.groupby(["日付","レース番号"]):
-
-                    if len(g) < 6:
-                        continue
-
-                    g = g.sort_values("指数", ascending=False)
-
-                    top1 = int(g.iloc[0]["艇番"])
-                    top2 = int(g.iloc[1]["艇番"])
-                    top3 = int(g.iloc[2]["艇番"])
-
-                    winner = g[g["着順"] == 1]["艇番"]
-                    second = g[g["着順"] == 2]["艇番"]
-                    third  = g[g["着順"] == 3]["艇番"]
-
-                    if len(winner) == 0:
-                        continue
-
-                    winner = int(winner.iloc[0])
-                    second = int(second.iloc[0]) if len(second) > 0 else None
-                    third  = int(third.iloc[0])  if len(third)  > 0 else None
-
-                    results.append({
-                        "日付": d,
-                        "R": r,
-                        "指数1位": top1,
-                        "指数2位": top2,
-                        "指数3位": top3,
-                        "1着": winner,
-                        "2着": second,
-                        "3着": third,
-                        "1位的中": top1 == winner,
-                        "連対的中": winner in [top1, top2],
-                        "3連対的中": winner in [top1, top2, top3]
-                    })
-
-                if len(results) == 0:
-                    st.info("検証できるレースがまだありません")
-                else:
-
-                    res_df = pd.DataFrame(results)
-
-                    total = len(res_df)
-
-                    hit1 = res_df["1位的中"].mean() * 100
-                    hit2 = res_df["連対的中"].mean() * 100
-                    hit3 = res_df["3連対的中"].mean() * 100
-
-                    c1, c2, c3, c4 = st.columns(4)
-
-                    c1.metric("検証レース数", total)
-                    c2.metric("指数1位 → 1着率", f"{hit1:.1f}%")
-                    c3.metric("指数上位2艇 連対率", f"{hit2:.1f}%")
-                    c4.metric("指数上位3艇 1着包含率", f"{hit3:.1f}%")
-
-                    st.divider()
-                    st.dataframe(res_df, use_container_width=True)
-
+            st.dataframe(
+                place_df[["艇番", "ST", "展示", "一周", "予想指数", "実ST順位", "指数順位", "的中"]],
+                use_container_width=True
+            )
 
 
 
