@@ -25,7 +25,7 @@ sh = gc.open_by_key(SPREADSHEET_KEY)
 
 st.title("🚤 BOAT AI（無料版）")
 
-tab1, tab2, tab3, ,tab5,tab_mix_check = st.tabs([
+tab1, tab2, tab3, tab5, tab_mix_check = st.tabs([
     "📊 基本予想",
     "🌊 条件補正",
     "🗂 データ状況",
@@ -372,6 +372,7 @@ place_df = (
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
