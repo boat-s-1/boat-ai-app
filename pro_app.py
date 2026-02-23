@@ -60,7 +60,13 @@ if not st.session_state["pwd_ok"]:
             st.session_state["pwd_ok"] = True
             st.rerun()
     st.stop()
+gc = get_gsheet_client()
 
+if gc is None:
+    st.error("Google認証に失敗しました")
+    st.stop()
+
+sh = gc.open("競艇予想学習データ")
 # --- 3. データ読み込み ---
 st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
 st.image("header.png", use_container_width=True)
@@ -1414,6 +1420,7 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
