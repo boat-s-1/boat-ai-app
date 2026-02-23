@@ -202,10 +202,12 @@ with tab5:
 
     if df.empty:
         st.info("データがありません")
+        st.stop()
 
     # 型変換
     for c in ["展示", "一周", "ST", "艇番"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
 
     # -----------------------
     # 会場選択のみ
@@ -219,20 +221,20 @@ with tab5:
     )
 
     place_df = df[df["会場"] == race_place].copy()
-# -----------------------
-# ✅ 無料版：直近30走制限
-# -----------------------
 
-# 日付が文字列なら日付化
-place_df["日付"] = pd.to_datetime(place_df["日付"], errors="coerce")
+    # -----------------------
+    # ✅ 無料版：直近30走制限
+    # -----------------------
+    place_df["日付"] = pd.to_datetime(place_df["日付"], errors="coerce")
 
-place_df = (
-    place_df
-    .sort_values("日付", ascending=False)
-    .groupby("艇番", as_index=False)
-    .head(30)
-)
-if place_df.empty:
+    place_df = (
+        place_df
+            .sort_values("日付", ascending=False)
+            .groupby("艇番", as_index=False)
+            .head(30)
+    )
+
+    if place_df.empty:
         st.warning("この会場のデータがありません")
         st.stop()
 
@@ -372,6 +374,7 @@ if place_df.empty:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
