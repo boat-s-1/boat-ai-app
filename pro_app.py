@@ -190,8 +190,9 @@ with tab_mix_check:
 
     st.dataframe(res_df, use_container_width=True)
     except Exception as e:
-        st.error("e")
+        st.error(e)
     
+
 
 
 
