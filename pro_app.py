@@ -25,7 +25,7 @@ sh = gc.open_by_key(SPREADSHEET_KEY)
 
 st.title("🚤 BOAT AI（無料版）")
 
-tab1, tab2, tab3,tab_mix_check = st.tabs([
+tab1, tab2, tab3, tab_mix_check = st.tabs([
     "📊 基本予想",
     "🌊 条件補正",
     "🗂 データ状況",
@@ -187,6 +187,7 @@ with tab_mix_check:
     except Exception as e:
         st.error("シートが読み込めません")
         st.exception(e)
+
 
 
 
