@@ -161,7 +161,6 @@ with tab_stat:
 
     if base_df.empty:
         st.warning("管理用_NEW にデータがありません")
-        st.stop()
 
     for c in ["展示", "直線", "一周", "回り足", "艇番"]:
         if c in base_df.columns:
@@ -351,7 +350,6 @@ with tab5:
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
 
     # 型変換
     for c in ["展示", "一周", "ST", "艇番"]:
@@ -520,7 +518,6 @@ with tab_cond:
 
     if df.empty:
         st.warning("管理用_NEW にデータがありません")
-        st.stop()
 
     # 数値化
     for c in ["展示","直線","一周","回り足","艇番","風速","波高"]:
@@ -631,7 +628,6 @@ with tab_view:
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
 
     # 列チェック
     if "女子戦" not in df.columns:
@@ -724,7 +720,6 @@ with tab_women_stat:
 
     if women_df.empty:
         st.info("女子戦データがまだありません")
-        st.stop()
 
     # 会場選択
     place_list = sorted(women_df["会場"].dropna().unique().tolist())
@@ -778,7 +773,6 @@ with tab_women_input:
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
 
     need_cols = ["女子戦","会場","艇番","展示","直線","一周","回り足"]
     for c in need_cols:
@@ -972,7 +966,6 @@ with tab_women_start:
 
     if women_df.empty:
         st.warning("女子戦データがありません")
-        st.stop()
 
     use_cols = ["展示", "一周", "ST"]
     for c in use_cols:
@@ -1147,7 +1140,6 @@ with tab_women_result:
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
 
     need_cols = [
         "女子戦","日付","会場","レース番号",
@@ -1414,6 +1406,7 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
