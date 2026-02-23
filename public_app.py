@@ -1270,7 +1270,7 @@ with tab_mix_check:
     df = pd.DataFrame(ws.get_all_records())
 
     if df.empty:
-    st.info(...)
+    st.info("データがありません")
     else:
 
     need_cols = [
@@ -1399,6 +1399,7 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
