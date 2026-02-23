@@ -351,7 +351,6 @@ with tab5:
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
 
     # 型変換
     for c in ["展示", "一周", "ST", "艇番"]:
@@ -924,6 +923,7 @@ with tab_mix_check:
                 place_df[["艇番", "ST", "展示", "一周", "予想指数", "実ST順位", "指数順位", "的中"]],
                 use_container_width=True
             )
+
 
 
 
