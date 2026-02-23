@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -374,6 +377,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
