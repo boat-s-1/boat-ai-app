@@ -1,9 +1,16 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
 import os
+import base64
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def encode_image(path):
+    try:
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except:
+        return ""
 st.set_page_config(page_title="BOAT AI（無料版）", layout="wide")
 
 # ------------------
@@ -375,6 +382,7 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
