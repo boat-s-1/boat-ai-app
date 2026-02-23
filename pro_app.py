@@ -232,7 +232,7 @@ place_df = (
     .groupby("艇番", as_index=False)
     .head(30)
 )
-    if place_df.empty:
+if place_df.empty:
         st.warning("この会場のデータがありません")
         st.stop()
 
@@ -372,6 +372,7 @@ place_df = (
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 
