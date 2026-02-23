@@ -350,8 +350,8 @@ with tab5:
     df = pd.DataFrame(ws.get_all_records())
 
     if df.empty:
-        st.info("データがありません")
-        st.stop()
+            st.info("データがありません")
+    else:
 
     # 型変換
     for c in ["展示", "一周", "ST", "艇番"]:
@@ -519,8 +519,8 @@ with tab_cond:
     df = pd.DataFrame(ws.get_all_records())
 
     if df.empty:
-        st.warning("管理用_NEW にデータがありません")
-        st.stop()
+            st.info("データがありません")
+    else:
 
     # 数値化
     for c in ["展示","直線","一周","回り足","艇番","風速","波高"]:
@@ -777,8 +777,8 @@ with tab_women_input:
     df = pd.DataFrame(ws.get_all_records())
 
     if df.empty:
-        st.info("データがありません")
-        st.stop()
+            st.info("データがありません")
+    else:
 
     need_cols = ["女子戦","会場","艇番","展示","直線","一周","回り足"]
     for c in need_cols:
@@ -1399,6 +1399,7 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
