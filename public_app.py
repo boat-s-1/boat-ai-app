@@ -1147,132 +1147,117 @@ with tab_women_result:
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
+    else:
 
-    need_cols = [
-        "女子戦","日付","会場","レース番号",
-        "艇番","展示","一周","ST","スタート評価","着順"
-    ]
+        need_cols = [
+            "女子戦","日付","会場","レース番号",
+            "艇番","展示","一周","ST","スタート評価","着順"
+        ]
 
-    for c in need_cols:
-        if c not in df.columns:
-            st.error(f"{c} 列が見つかりません")
-            st.stop()
+        missing = [c for c in need_cols if c not in df.columns]
 
-    # 型変換
-    for c in ["艇番","展示","一周","ST","着順"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+        if missing:
+            st.error(f"次の列が見つかりません：{missing}")
+        else:
 
-    # 女子戦だけ
-    women_df = df[
-        df["女子戦"].astype(str).str.lower().isin(
-            ["true","1","yes","y","○"]
-        )
-    ].copy()
+            # 型変換
+            for c in ["艇番","展示","一周","ST","着順"]:
+                df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    if women_df.empty:
-        st.info("女子戦データがまだありません")
-        st.stop()
+            women_df = df[
+                df["女子戦"].astype(str).str.lower().isin(
+                    ["true","1","yes","y","○"]
+                )
+            ].copy()
 
-    # -------------------------
-    # 会場選択
-    # -------------------------
-    place_list = sorted(women_df["会場"].dropna().unique())
-    place = st.selectbox("会場", place_list, key="women_verify_place")
+            if women_df.empty:
+                st.info("女子戦データがまだありません")
+            else:
 
-    target = women_df[women_df["会場"] == place].copy()
+                place_list = sorted(women_df["会場"].dropna().unique())
+                place = st.selectbox("会場", place_list, key="women_verify_place")
 
-    # -------------------------
-    # スタート指数を再計算
-    # （女子戦タブと同じロジック）
-    # -------------------------
-    eval_map = {
-        "◎": 2.0,
-        "◯": 1.0,
-        "△": 0.5,
-        "×": -1.0
-    }
+                target = women_df[women_df["会場"] == place].copy()
 
-    target["評価補正"] = target["スタート評価"].map(eval_map).fillna(0)
+                eval_map = {
+                    "◎": 2.0,
+                    "◯": 1.0,
+                    "△": 0.5,
+                    "×": -1.0
+                }
 
-    place_df = women_df[women_df["会場"] == place]
+                target["評価補正"] = target["スタート評価"].map(eval_map).fillna(0)
 
-    mean_tenji = place_df["展示"].mean()
-    mean_isshu = place_df["一周"].mean()
+                place_df = women_df[women_df["会場"] == place]
 
-    target["指数"] = (
-        -target["ST"].fillna(0)
-        + target["評価補正"]
-        + (mean_tenji - target["展示"]) * 2.0
-        + (mean_isshu - target["一周"]) * 0.3
-    )
+                mean_tenji = place_df["展示"].mean()
+                mean_isshu = place_df["一周"].mean()
 
-    # -------------------------
-    # レース単位で集計
-    # -------------------------
-    results = []
+                target["指数"] = (
+                    -target["ST"].fillna(0)
+                    + target["評価補正"]
+                    + (mean_tenji - target["展示"]) * 2.0
+                    + (mean_isshu - target["一周"]) * 0.3
+                )
 
-    for (d, r), g in target.groupby(["日付","レース番号"]):
+                results = []
 
-        if len(g) < 6:
-            continue
+                for (d, r), g in target.groupby(["日付","レース番号"]):
 
-        g = g.sort_values("指数", ascending=False)
+                    if len(g) < 6:
+                        continue
 
-        top1 = int(g.iloc[0]["艇番"])
-        top2 = int(g.iloc[1]["艇番"])
-        top3 = int(g.iloc[2]["艇番"])
+                    g = g.sort_values("指数", ascending=False)
 
-        winner = g[g["着順"] == 1]["艇番"]
-        second = g[g["着順"] == 2]["艇番"]
-        third = g[g["着順"] == 3]["艇番"]
+                    top1 = int(g.iloc[0]["艇番"])
+                    top2 = int(g.iloc[1]["艇番"])
+                    top3 = int(g.iloc[2]["艇番"])
 
-        if len(winner)==0:
-            continue
+                    winner = g[g["着順"] == 1]["艇番"]
+                    second = g[g["着順"] == 2]["艇番"]
+                    third  = g[g["着順"] == 3]["艇番"]
 
-        winner = int(winner.iloc[0])
-        second = int(second.iloc[0]) if len(second)>0 else None
-        third  = int(third.iloc[0])  if len(third)>0 else None
+                    if len(winner) == 0:
+                        continue
 
-        results.append({
-            "日付": d,
-            "R": r,
-            "指数1位": top1,
-            "指数2位": top2,
-            "指数3位": top3,
-            "1着": winner,
-            "2着": second,
-            "3着": third,
-            "1位的中": top1 == winner,
-            "連対的中": winner in [top1,top2],
-            "3連対的中": winner in [top1,top2,top3]
-        })
+                    winner = int(winner.iloc[0])
+                    second = int(second.iloc[0]) if len(second) > 0 else None
+                    third  = int(third.iloc[0]) if len(third) > 0 else None
 
-    if len(results) == 0:
-        st.info("検証できるレースがまだありません")
-        st.stop()
+                    results.append({
+                        "日付": d,
+                        "R": r,
+                        "指数1位": top1,
+                        "指数2位": top2,
+                        "指数3位": top3,
+                        "1着": winner,
+                        "2着": second,
+                        "3着": third,
+                        "1位的中": top1 == winner,
+                        "連対的中": winner in [top1, top2],
+                        "3連対的中": winner in [top1, top2, top3]
+                    })
 
-    res_df = pd.DataFrame(results)
+                if len(results) == 0:
+                    st.info("検証できるレースがまだありません")
+                else:
 
-    total = len(res_df)
+                    res_df = pd.DataFrame(results)
 
-    hit1 = res_df["1位的中"].mean() * 100
-    hit2 = res_df["連対的中"].mean() * 100
-    hit3 = res_df["3連対的中"].mean() * 100
+                    total = len(res_df)
+                    hit1 = res_df["1位的中"].mean() * 100
+                    hit2 = res_df["連対的中"].mean() * 100
+                    hit3 = res_df["3連対的中"].mean() * 100
 
-    # -------------------------
-    # サマリー表示
-    # -------------------------
-    c1, c2, c3, c4 = st.columns(4)
+                    c1, c2, c3, c4 = st.columns(4)
 
-    c1.metric("検証レース数", total)
-    c2.metric("指数1位 → 1着率", f"{hit1:.1f}%")
-    c3.metric("指数上位2艇 連対率", f"{hit2:.1f}%")
-    c4.metric("指数上位3艇 1着包含率", f"{hit3:.1f}%")
+                    c1.metric("検証レース数", total)
+                    c2.metric("指数1位 → 1着率", f"{hit1:.1f}%")
+                    c3.metric("指数上位2艇 連対率", f"{hit2:.1f}%")
+                    c4.metric("指数上位3艇 1着包含率", f"{hit3:.1f}%")
 
-    st.divider()
-
-    st.dataframe(res_df, use_container_width=True)
+                    st.divider()
+                    st.dataframe(res_df, use_container_width=True)
 
 # -----------------------------
 # 🧑‍🤝‍🧑 混合戦スタート指数｜検証タブ
@@ -1414,6 +1399,7 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True)
+
 
 
 
