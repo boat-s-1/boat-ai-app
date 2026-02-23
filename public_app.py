@@ -120,34 +120,112 @@ tab_pre, tab_stat,tab5,tab_mix_check,tab_cond,tab_view,tab_women_stat,tab_women_
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
+
     st.subheader("各艇評価")
-    SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
-    WEIGHTS = {"モーター": 0.25, "当地勝率": 0.2, "枠番勝率": 0.3, "枠番スタート": 0.25}
+
+    SYMBOL_VALUES = {
+        "◎": 100,
+        "○": 80,
+        "▲": 60,
+        "△": 40,
+        "×": 20,
+        "無": 0
+    }
+
+    WEIGHTS = {
+        "モーター": 0.25,
+        "当地勝率": 0.2,
+        "枠番勝率": 0.3,
+        "枠番スタート": 0.25
+    }
 
     with st.form("pre_eval_form"):
+
         boat_evals = {}
+
         for row in range(3):
             cols = st.columns(2)
+
             for col in range(2):
                 i = row * 2 + col + 1
+
                 with cols[col]:
+
                     st.markdown(f"#### {i}号艇")
-                    m = st.selectbox("モーター", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"m_{i}")
-                    t = st.selectbox("当地勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"t_{i}")
-                    w = st.selectbox("枠番勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"w_{i}")
-                    s = st.selectbox("枠番ST", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"s_{i}")
-                    score = (SYMBOL_VALUES[m] * WEIGHTS["モーター"] + SYMBOL_VALUES[t] * WEIGHTS["当地勝率"] +
-                             SYMBOL_VALUES[w] * WEIGHTS["枠番勝率"] + SYMBOL_VALUES[s] * WEIGHTS["枠番スタート"])
-                    boat_evals[i] = round(score, 1)
-        submitted = st.form_submit_button("予想カード生成", use_container_width=True, type="primary")
+
+                    m = st.selectbox(
+                        "モーター",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"m_{i}"
+                    )
+
+                    t = st.selectbox(
+                        "当地勝率",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"t_{i}"
+                    )
+
+                    w = st.selectbox(
+                        "枠番勝率",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"w_{i}"
+                    )
+
+                    s = st.selectbox(
+                        "枠番ST",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"s_{i}"
+                    )
+
+                    score = (
+                        SYMBOL_VALUES[m] * WEIGHTS["モーター"]
+                        + SYMBOL_VALUES[t] * WEIGHTS["当地勝率"]
+                        + SYMBOL_VALUES[w] * WEIGHTS["枠番勝率"]
+                        + SYMBOL_VALUES[s] * WEIGHTS["枠番スタート"]
+                    )
+
+                    boat_evals[i] = round(score, 3)
+
+        submitted = st.form_submit_button(
+            "予想カード生成",
+            use_container_width=True,
+            type="primary"
+        )
 
     if submitted:
-        sorted_boats = sorted(boat_evals.items(), key=lambda x: x[1], reverse=True)
-        res_cols = st.columns(3)
-        for idx, (boat_num, score) in enumerate(sorted_boats[:6]):
-            with res_cols[idx % 3]:
-                st.metric(f"{boat_num}号艇", f"{score}%")
 
+        # -------------------------
+        # ✅ スコア順
+        # -------------------------
+        sorted_boats = sorted(
+            boat_evals.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        # -------------------------
+        # ✅ 合計100％化
+        # -------------------------
+        total_score = sum(score for _, score in sorted_boats)
+
+        res_cols = st.columns(3)
+
+        for idx, (boat_num, score) in enumerate(sorted_boats):
+
+            if total_score > 0:
+                percent = score / total_score * 100
+            else:
+                percent = 0.0
+
+            with res_cols[idx % 3]:
+                st.metric(
+                    f"{boat_num}号艇",
+                    f"{percent:.1f}%"
+                )
 # --- タブ2：統計解析 ---
 with tab_stat:
 
@@ -1413,6 +1491,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
