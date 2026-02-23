@@ -39,8 +39,13 @@ with tab3:
     try:
         ws = sh.worksheet("管理用_NEW")
         df = pd.DataFrame(ws.get_all_records())
-except Exception as e:
+
+        st.write("総レコード数：", len(df))
+        st.dataframe(df.head(20))
+
+    except Exception as e:
         st.error(e)
+
 
 # -----------------------------
 # 🚤 混合戦スタート指数｜検証タブ（無料版）
@@ -187,6 +192,7 @@ with tab_mix_check:
     except Exception as e:
         st.error("シートが読み込めません")
         st.exception(e)
+
 
 
 
