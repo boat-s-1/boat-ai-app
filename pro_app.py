@@ -39,7 +39,8 @@ with tab3:
     try:
         ws = sh.worksheet("管理用_NEW")
         df = pd.DataFrame(ws.get_all_records())
-
+except Exception as e:
+    st.error(e)
         st.write("総レコード数：", len(df))
         st.dataframe(df.head(20))
 # -----------------------------
@@ -187,6 +188,7 @@ with tab_mix_check:
     except Exception as e:
         st.error("シートが読み込めません")
         st.exception(e)
+
 
 
 
