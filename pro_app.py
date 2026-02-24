@@ -417,10 +417,10 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
-# --- タブ1：事前簡易予想（会場補正つき・無料版） ---
+# --- タブ1：事前簡易予想（場補正ON/OFF切替・無料版） ---
 with tab_pre:
 
-    st.subheader("🧩 事前簡易予想（会場別データ補正つき・無料版）")
+    st.subheader("🧩 事前簡易予想（場補正 切り替え対応・無料版）")
 
     SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
     WEIGHTS = {
@@ -431,7 +431,15 @@ with tab_pre:
     }
 
     # -------------------------
-    # 会場選択（データ補正用）
+    # 会場補正ON / OFF
+    # -------------------------
+    use_place_corr = st.checkbox(
+        "会場データ補正を使う（無料版：直近30走）",
+        value=True
+    )
+
+    # -------------------------
+    # 会場選択（補正用）
     # -------------------------
     try:
         ws = sh.worksheet("管理用_NEW")
@@ -443,40 +451,46 @@ with tab_pre:
     place_list = sorted(base_df["会場"].dropna().unique())
 
     place = st.selectbox(
-        "会場（簡易データ補正用）",
+        "会場",
         place_list,
         key="pre_place"
     )
 
     # -------------------------
-    # 無料版：直近30走だけ使用
+    # 会場補正データ作成
     # -------------------------
-    corr_df = base_df[base_df["会場"] == place].copy()
-    corr_df["日付"] = pd.to_datetime(corr_df["日付"], errors="coerce")
-
-    corr_df = (
-        corr_df
-        .sort_values("日付", ascending=False)
-        .groupby("艇番", as_index=False)
-        .head(30)
-    )
-
-    # 補正値（簡易）
     boat_corr = {}
 
-    if not corr_df.empty and "ST" in corr_df.columns:
+    if use_place_corr:
 
+        corr_df = base_df[base_df["会場"] == place].copy()
+
+        corr_df["日付"] = pd.to_datetime(corr_df["日付"], errors="coerce")
+        corr_df["艇番"] = pd.to_numeric(corr_df["艇番"], errors="coerce")
         corr_df["ST"] = pd.to_numeric(corr_df["ST"], errors="coerce")
 
-        overall = corr_df["ST"].mean()
+        # 無料版：直近30走
+        corr_df = (
+            corr_df
+            .sort_values("日付", ascending=False)
+            .groupby("艇番", as_index=False)
+            .head(30)
+        )
 
-        tmp = corr_df.groupby("艇番")["ST"].mean()
+        if not corr_df.empty:
 
-        # STが良い艇ほどプラス補正
-        for k, v in tmp.items():
-            boat_corr[int(k)] = (overall - v) * 15
+            overall = corr_df["ST"].mean()
+            tmp = corr_df.groupby("艇番")["ST"].mean()
 
-    st.caption(f"※無料版は {place} の直近30走データで簡易補正しています")
+            # STが良い艇ほどプラス
+            for k, v in tmp.items():
+                if pd.notna(k) and pd.notna(v):
+                    boat_corr[int(k)] = (overall - v) * 15
+
+        st.caption(f"※{place} の直近30走スタート傾向で補正中（無料版）")
+
+    else:
+        st.caption("※会場補正なし（入力評価のみで計算）")
 
     st.divider()
 
@@ -488,9 +502,11 @@ with tab_pre:
         boat_evals = {}
 
         for row in range(3):
+
             cols = st.columns(2)
 
             for col in range(2):
+
                 i = row * 2 + col + 1
 
                 with cols[col]:
@@ -520,24 +536,28 @@ with tab_pre:
         )
 
     # -------------------------
-    # 結果表示
+    # 結果表示（100％化）
     # -------------------------
     if submitted:
 
         total_raw = sum(max(v, 0) for v in boat_evals.values())
 
         if total_raw == 0:
-            st.warning("スコアがすべて0です")
+            st.warning("すべてのスコアが0です")
             st.stop()
 
         percent = {
-            k: (max(v, 0) / total_raw) * 100
+            k: max(v, 0) / total_raw * 100
             for k, v in boat_evals.items()
         }
 
-        sorted_boats = sorted(percent.items(), key=lambda x: x[1], reverse=True)
+        sorted_boats = sorted(
+            percent.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
 
-        st.markdown("### 🏁 予想結果（合計100％）")
+        st.markdown("### 🏁 事前簡易予想（合計100％）")
 
         st.markdown("""
         <style>
@@ -545,7 +565,7 @@ with tab_pre:
             background:#ffffff;
             border-radius:14px;
             padding:14px;
-            margin-bottom:10px;
+            margin-bottom:12px;
             border:1px solid #eee;
         }
         .rank1{border:3px solid #ffd700;}
@@ -553,7 +573,7 @@ with tab_pre:
         .rank3{border:3px solid #cd7f32;}
         .rank-title{
             font-size:18px;
-            font-weight:bold;
+            font-weight:700;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -562,22 +582,26 @@ with tab_pre:
 
         for idx, (boat, p) in enumerate(sorted_boats):
 
-            if idx < 3:
-                cls = f"card rank{idx+1}"
-                rank_icon = ["🥇","🥈","🥉"][idx]
+            if idx == 0:
+                cls = "card rank1"
+                icon = "🥇"
+            elif idx == 1:
+                cls = "card rank2"
+                icon = "🥈"
+            elif idx == 2:
+                cls = "card rank3"
+                icon = "🥉"
             else:
                 cls = "card"
-                rank_icon = "🚤"
+                icon = "🚤"
 
             with cols[idx % 3]:
 
                 st.markdown(
                     f"""
                     <div class="{cls}">
-                        <div class="rank-title">
-                            {rank_icon} {boat}号艇
-                        </div>
-                        <div style="font-size:26px;font-weight:700;">
+                        <div class="rank-title">{icon} {boat}号艇</div>
+                        <div style="font-size:26px;font-weight:800;">
                             {p:.1f}%
                         </div>
                     </div>
@@ -585,5 +609,6 @@ with tab_pre:
                     unsafe_allow_html=True
                 )
 
-        st.caption("※会場別の直近30走スタート傾向を簡易補正に利用しています（無料版仕様）")
-        st.caption("※女子戦専用補正・全期間データ補正は有料版で開放予定です")
+        st.caption("※6艇の合計は必ず100％になります")
+        st.caption("※女子戦補正・全期間データ補正は有料版で開放予定です")
+
