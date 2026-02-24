@@ -321,7 +321,7 @@ with tab_stat:
         st.stop()
 
     st.divider()
-
+    st.write("この会場の管理用_NEW行数:", len(place_df))
     # ------------------------
     # 使用レース数表示
     # ------------------------
@@ -1573,6 +1573,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
