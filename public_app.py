@@ -195,8 +195,7 @@ with tab_pre:
             use_container_width=True,
             type="primary"
         )
-
- if submitted:
+    if submitted:
 
     sorted_boats = sorted(
         boat_evals.items(),
@@ -1513,6 +1512,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
