@@ -420,11 +420,32 @@ with tab5:
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
 
-    st.subheader("各艇評価")
+    st.subheader("各艇評価（簡易版）")
 
     SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
     WEIGHTS = {"モーター": 0.25, "当地勝率": 0.2, "枠番勝率": 0.3, "枠番スタート": 0.25}
 
+    # -------------------------
+    # 補正設定
+    # -------------------------
+    colA, colB = st.columns(2)
+
+    with colA:
+        place_list = sorted(df["会場"].dropna().unique())
+        race_place = st.selectbox(
+            "補正に使う会場（簡易版）",
+            place_list
+        )
+
+    with colB:
+        use_correction = st.checkbox(
+            "データ補正を使う（無料版は30走固定）",
+            value=True
+        )
+
+    # -------------------------
+    # 入力フォーム
+    # -------------------------
     with st.form("pre_eval_form"):
 
         boat_evals = {}
@@ -438,68 +459,153 @@ with tab_pre:
                 with cols[col]:
                     st.markdown(f"#### {i}号艇")
 
-                    m = st.selectbox("モーター", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"m_{i}")
-                    t = st.selectbox("当地勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"t_{i}")
-                    w = st.selectbox("枠番勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"w_{i}")
-                    s = st.selectbox("枠番ST", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"s_{i}")
+                    m = st.selectbox("モーター", ["◎","○","▲","△","×","無"], index=5, key=f"m_{i}")
+                    t = st.selectbox("当地勝率", ["◎","○","▲","△","×","無"], index=5, key=f"t_{i}")
+                    w = st.selectbox("枠番勝率", ["◎","○","▲","△","×","無"], index=5, key=f"w_{i}")
+                    s = st.selectbox("枠番ST", ["◎","○","▲","△","×","無"], index=5, key=f"s_{i}")
 
-                    score = (
+                    base_score = (
                         SYMBOL_VALUES[m] * WEIGHTS["モーター"]
                         + SYMBOL_VALUES[t] * WEIGHTS["当地勝率"]
                         + SYMBOL_VALUES[w] * WEIGHTS["枠番勝率"]
                         + SYMBOL_VALUES[s] * WEIGHTS["枠番スタート"]
                     )
 
-                    boat_evals[i] = round(score, 1)
+                    boat_evals[i] = base_score
 
-        submitted = st.form_submit_button("予想カード生成", use_container_width=True, type="primary")
-
-    # ここが重要
-    if submitted:
-
-        sorted_boats = sorted(
-            boat_evals.items(),
-            key=lambda x: x[1],
-            reverse=True
+        submitted = st.form_submit_button(
+            "予想カード生成",
+            use_container_width=True,
+            type="primary"
         )
 
-        total_score = sum(score for _, score in sorted_boats)
+    # -------------------------
+    # 結果表示
+    # -------------------------
+    if submitted:
 
-        st.markdown("### 🏁 予想結果（6艇合計100％）")
+        score_df = pd.DataFrame({
+            "艇番": list(boat_evals.keys()),
+            "base": list(boat_evals.values())
+        })
 
-        rank_colors = {
-            1: "#FFD700",
-            2: "#E5E5E5",
-            3: "#F5CBA7"
-        }
+        # -------------------------
+        # データ補正
+        # -------------------------
+        if use_correction:
 
-        for rank, (boat_num, score) in enumerate(sorted_boats, start=1):
+            work = df.copy()
 
-            if total_score > 0:
-                percent = score / total_score * 100
-            else:
-                percent = 0
+            work["日付"] = pd.to_datetime(work["日付"], errors="coerce")
 
-            bg = rank_colors.get(rank, "#f6f7fb")
+            # 会場
+            work = work[work["会場"] == race_place]
 
-            st.markdown(
-                f"""
-                <div style="
-                    background:{bg};
-                    padding:14px;
-                    border-radius:12px;
-                    margin-bottom:10px;
-                    box-shadow:0 2px 6px rgba(0,0,0,0.08);
-                ">
-                    <div style="font-size:16px;font-weight:700;">
-                        🏁 {rank}位　{boat_num}号艇
-                    </div>
-                    <div style="font-size:26px;font-weight:800;">
-                        {percent:.1f}%
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
+            # 直近30走（無料版固定）
+            work = (
+                work.sort_values("日付", ascending=False)
+                    .groupby("艇番", as_index=False)
+                    .head(30)
             )
 
-            st.progress(min(percent / 100, 1.0))
+            stat = (
+                work.groupby("艇番")
+                .agg(
+                    mean_tenji=("展示", "mean"),
+                    mean_st=("ST", "mean"),
+                    cnt=("展示", "count")
+                )
+                .reset_index()
+            )
+
+            if not stat.empty:
+
+                # 展示は小さいほど良い、STも小さいほど良い
+                stat["tenji_rank"] = stat["mean_tenji"].rank(ascending=True)
+                stat["st_rank"] = stat["mean_st"].rank(ascending=True)
+
+                # 簡易補正スコア
+                stat["corr"] = (
+                    (7 - stat["tenji_rank"])
+                    + (7 - stat["st_rank"])
+                )
+
+                stat["corr"] = stat["corr"].clip(lower=0)
+
+                score_df = score_df.merge(
+                    stat[["艇番", "corr"]],
+                    on="艇番",
+                    how="left"
+                )
+
+                score_df["corr"] = score_df["corr"].fillna(0)
+
+                # 補正は軽めに
+                score_df["score"] = score_df["base"] + score_df["corr"] * 2
+
+            else:
+                score_df["score"] = score_df["base"]
+
+        else:
+            score_df["score"] = score_df["base"]
+
+        # -------------------------
+        # ％化（6艇合計100％）
+        # -------------------------
+        total = score_df["score"].sum()
+
+        if total == 0:
+            score_df["rate"] = 0
+        else:
+            score_df["rate"] = score_df["score"] / total * 100
+
+        score_df = score_df.sort_values("rate", ascending=False)
+
+        st.divider()
+
+        st.caption(
+            f"補正会場：{race_place} ／ 無料版：直近30走固定"
+            if use_correction else
+            "補正なし（手入力評価のみ）"
+        )
+
+        # -------------------------
+        # 豪華め表示
+        # -------------------------
+        cols = st.columns(3)
+
+        for i, row in enumerate(score_df.itertuples()):
+            with cols[i % 3]:
+
+                st.markdown(
+                    f"""
+                    <div style="
+                        padding:14px;
+                        border-radius:12px;
+                        background:#0e1117;
+                        border:1px solid #333;
+                        text-align:center;">
+                        <div style="font-size:18px;font-weight:700;">
+                            🚤 {row.艇番}号艇
+                        </div>
+                        <div style="font-size:32px;font-weight:800;color:#ff4b4b;">
+                            {row.rate:.1f}%
+                        </div>
+                        <div style="font-size:12px;color:#aaa;">
+                            基礎:{row.base:.1f}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        st.divider()
+
+        show_df = score_df[["艇番","rate","base","score"]].copy()
+        show_df["rate"] = show_df["rate"].round(1)
+
+        st.dataframe(
+            show_df,
+            use_container_width=True
+        )
+
