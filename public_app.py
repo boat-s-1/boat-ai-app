@@ -207,11 +207,10 @@ with tab_pre:
 
     st.markdown("### 🏁 予想結果（勝率配分）")
 
-    # 順位カラー
     rank_colors = {
-        1: "#FFD700",   # 金
-        2: "#C0C0C0",   # 銀
-        3: "#CD7F32"    # 銅
+        1: "#FFD700",
+        2: "#C0C0C0",
+        3: "#CD7F32"
     }
 
     for rank, (boat_num, score) in enumerate(sorted_boats, start=1):
@@ -245,7 +244,6 @@ with tab_pre:
                 unsafe_allow_html=True
             )
 
-            # 視覚的バー（Streamlit標準）
             st.progress(min(percent / 100, 1.0))
 # --- タブ2：統計解析 ---
 with tab_stat:
@@ -1512,6 +1510,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
