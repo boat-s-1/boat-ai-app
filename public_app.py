@@ -196,36 +196,58 @@ with tab_pre:
             type="primary"
         )
 
-    if submitted:
+ if submitted:
 
-        # -------------------------
-        # ✅ スコア順
-        # -------------------------
-        sorted_boats = sorted(
-            boat_evals.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+    sorted_boats = sorted(
+        boat_evals.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
 
-        # -------------------------
-        # ✅ 合計100％化
-        # -------------------------
-        total_score = sum(score for _, score in sorted_boats)
+    total_score = sum(score for _, score in sorted_boats)
 
-        res_cols = st.columns(3)
+    st.markdown("### 🏁 予想結果（勝率配分）")
 
-        for idx, (boat_num, score) in enumerate(sorted_boats):
+    # 順位カラー
+    rank_colors = {
+        1: "#FFD700",   # 金
+        2: "#C0C0C0",   # 銀
+        3: "#CD7F32"    # 銅
+    }
 
-            if total_score > 0:
-                percent = score / total_score * 100
-            else:
-                percent = 0.0
+    for rank, (boat_num, score) in enumerate(sorted_boats, start=1):
 
-            with res_cols[idx % 3]:
-                st.metric(
-                    f"{boat_num}号艇",
-                    f"{percent:.1f}%"
-                )
+        if total_score > 0:
+            percent = score / total_score * 100
+        else:
+            percent = 0.0
+
+        bg = rank_colors.get(rank, "#f4f6fa")
+
+        with st.container():
+
+            st.markdown(
+                f"""
+                <div style="
+                    background:{bg};
+                    padding:14px 16px;
+                    border-radius:12px;
+                    margin-bottom:10px;
+                    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                ">
+                    <div style="font-size:18px;font-weight:700;">
+                        🏆 {rank}位　{boat_num}号艇
+                    </div>
+                    <div style="font-size:26px;font-weight:800;">
+                        {percent:.1f}%
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            # 視覚的バー（Streamlit標準）
+            st.progress(min(percent / 100, 1.0))
 # --- タブ2：統計解析 ---
 with tab_stat:
 
@@ -1491,6 +1513,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
