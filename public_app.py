@@ -123,21 +123,8 @@ with tab_pre:
 
     st.subheader("各艇評価")
 
-    SYMBOL_VALUES = {
-        "◎": 100,
-        "○": 80,
-        "▲": 60,
-        "△": 40,
-        "×": 20,
-        "無": 0
-    }
-
-    WEIGHTS = {
-        "モーター": 0.25,
-        "当地勝率": 0.2,
-        "枠番勝率": 0.3,
-        "枠番スタート": 0.25
-    }
+    SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
+    WEIGHTS = {"モーター": 0.25, "当地勝率": 0.2, "枠番勝率": 0.3, "枠番スタート": 0.25}
 
     with st.form("pre_eval_form"):
 
@@ -150,36 +137,12 @@ with tab_pre:
                 i = row * 2 + col + 1
 
                 with cols[col]:
-
                     st.markdown(f"#### {i}号艇")
 
-                    m = st.selectbox(
-                        "モーター",
-                        ["◎", "○", "▲", "△", "×", "無"],
-                        index=5,
-                        key=f"m_{i}"
-                    )
-
-                    t = st.selectbox(
-                        "当地勝率",
-                        ["◎", "○", "▲", "△", "×", "無"],
-                        index=5,
-                        key=f"t_{i}"
-                    )
-
-                    w = st.selectbox(
-                        "枠番勝率",
-                        ["◎", "○", "▲", "△", "×", "無"],
-                        index=5,
-                        key=f"w_{i}"
-                    )
-
-                    s = st.selectbox(
-                        "枠番ST",
-                        ["◎", "○", "▲", "△", "×", "無"],
-                        index=5,
-                        key=f"s_{i}"
-                    )
+                    m = st.selectbox("モーター", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"m_{i}")
+                    t = st.selectbox("当地勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"t_{i}")
+                    w = st.selectbox("枠番勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"w_{i}")
+                    s = st.selectbox("枠番ST", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"s_{i}")
 
                     score = (
                         SYMBOL_VALUES[m] * WEIGHTS["モーター"]
@@ -188,53 +151,49 @@ with tab_pre:
                         + SYMBOL_VALUES[s] * WEIGHTS["枠番スタート"]
                     )
 
-                    boat_evals[i] = round(score, 3)
+                    boat_evals[i] = round(score, 1)
 
-        submitted = st.form_submit_button(
-            "予想カード生成",
-            use_container_width=True,
-            type="primary"
-        )
+        submitted = st.form_submit_button("予想カード生成", use_container_width=True, type="primary")
+
+    # ここが重要
     if submitted:
 
-    sorted_boats = sorted(
-        boat_evals.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
+        sorted_boats = sorted(
+            boat_evals.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
 
-    total_score = sum(score for _, score in sorted_boats)
+        total_score = sum(score for _, score in sorted_boats)
 
-    st.markdown("### 🏁 予想結果（勝率配分）")
+        st.markdown("### 🏁 予想結果（6艇合計100％）")
 
-    rank_colors = {
-        1: "#FFD700",
-        2: "#C0C0C0",
-        3: "#CD7F32"
-    }
+        rank_colors = {
+            1: "#FFD700",
+            2: "#E5E5E5",
+            3: "#F5CBA7"
+        }
 
-    for rank, (boat_num, score) in enumerate(sorted_boats, start=1):
+        for rank, (boat_num, score) in enumerate(sorted_boats, start=1):
 
-        if total_score > 0:
-            percent = score / total_score * 100
-        else:
-            percent = 0.0
+            if total_score > 0:
+                percent = score / total_score * 100
+            else:
+                percent = 0
 
-        bg = rank_colors.get(rank, "#f4f6fa")
-
-        with st.container():
+            bg = rank_colors.get(rank, "#f6f7fb")
 
             st.markdown(
                 f"""
                 <div style="
                     background:{bg};
-                    padding:14px 16px;
+                    padding:14px;
                     border-radius:12px;
                     margin-bottom:10px;
                     box-shadow:0 2px 6px rgba(0,0,0,0.08);
                 ">
-                    <div style="font-size:18px;font-weight:700;">
-                        🏆 {rank}位　{boat_num}号艇
+                    <div style="font-size:16px;font-weight:700;">
+                        🏁 {rank}位　{boat_num}号艇
                     </div>
                     <div style="font-size:26px;font-weight:800;">
                         {percent:.1f}%
@@ -1510,6 +1469,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
