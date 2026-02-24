@@ -55,7 +55,7 @@ st.title("🚤 BOAT AI（無料版）")
 # ------------------
 # タブ
 # ------------------
-tab1, tab2, tab3, tab5, tab_mix_check = st.tabs([
+tab_pre, tab2, tab3, tab5, tab_mix_check = st.tabs([
     "📊 基本予想",
     "🌊 条件補正",
     "🗂 データ状況",
@@ -417,3 +417,89 @@ with tab5:
         st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+# --- タブ1：事前簡易予想 ---
+with tab_pre:
+
+    st.subheader("各艇評価")
+
+    SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
+    WEIGHTS = {"モーター": 0.25, "当地勝率": 0.2, "枠番勝率": 0.3, "枠番スタート": 0.25}
+
+    with st.form("pre_eval_form"):
+
+        boat_evals = {}
+
+        for row in range(3):
+            cols = st.columns(2)
+
+            for col in range(2):
+                i = row * 2 + col + 1
+
+                with cols[col]:
+                    st.markdown(f"#### {i}号艇")
+
+                    m = st.selectbox("モーター", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"m_{i}")
+                    t = st.selectbox("当地勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"t_{i}")
+                    w = st.selectbox("枠番勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"w_{i}")
+                    s = st.selectbox("枠番ST", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"s_{i}")
+
+                    score = (
+                        SYMBOL_VALUES[m] * WEIGHTS["モーター"]
+                        + SYMBOL_VALUES[t] * WEIGHTS["当地勝率"]
+                        + SYMBOL_VALUES[w] * WEIGHTS["枠番勝率"]
+                        + SYMBOL_VALUES[s] * WEIGHTS["枠番スタート"]
+                    )
+
+                    boat_evals[i] = round(score, 1)
+
+        submitted = st.form_submit_button("予想カード生成", use_container_width=True, type="primary")
+
+    # ここが重要
+    if submitted:
+
+        sorted_boats = sorted(
+            boat_evals.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        total_score = sum(score for _, score in sorted_boats)
+
+        st.markdown("### 🏁 予想結果（6艇合計100％）")
+
+        rank_colors = {
+            1: "#FFD700",
+            2: "#E5E5E5",
+            3: "#F5CBA7"
+        }
+
+        for rank, (boat_num, score) in enumerate(sorted_boats, start=1):
+
+            if total_score > 0:
+                percent = score / total_score * 100
+            else:
+                percent = 0
+
+            bg = rank_colors.get(rank, "#f6f7fb")
+
+            st.markdown(
+                f"""
+                <div style="
+                    background:{bg};
+                    padding:14px;
+                    border-radius:12px;
+                    margin-bottom:10px;
+                    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                ">
+                    <div style="font-size:16px;font-weight:700;">
+                        🏁 {rank}位　{boat_num}号艇
+                    </div>
+                    <div style="font-size:26px;font-weight:800;">
+                        {percent:.1f}%
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            st.progress(min(percent / 100, 1.0))
