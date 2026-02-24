@@ -290,20 +290,20 @@ with tab_stat:
     # ------------------------
     # データ読み込み
     # ------------------------
-    ws2 = sh.worksheet("管理用_NEW")
+    ws2 = sh.worksheet("統計シート")
     base_df = pd.DataFrame(ws2.get_all_records())
 
-    if base_df.empty:
-        st.warning("管理用_NEW にデータがありません")
+if base_df.empty:
+    st.warning("統計シート にデータがありません")
+    st.stop()
 
-    for c in ["展示", "直線", "一周", "回り足", "艇番"]:
-        if c in base_df.columns:
-            base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
+for c in ["展示", "直線", "一周", "回り足", "艇番"]:
+    if c in base_df.columns:
+        base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
 
-    if "会場" not in base_df.columns:
-        st.error("管理用_NEW に『会場』列がありません")
-        st.stop()
-
+if "会場" not in base_df.columns:
+    st.error("統計シート に『会場』列がありません")
+    st.stop()
     place_list = sorted(base_df["会場"].dropna().unique())
     place = st.selectbox("会場を選択", place_list, key="tab2_place")
 
@@ -1547,6 +1547,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
