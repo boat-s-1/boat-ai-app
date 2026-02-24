@@ -285,39 +285,52 @@ with tab_pre:
 # --- タブ2：統計解析 ---
 with tab_stat:
 
-    st.subheader("会場別 補正・総合比較")
+    st.subheader("会場別 補正・総合比較（統計シート）")
 
     # ------------------------
-    # データ読み込み
+    # データ読み込み（統計シート）
     # ------------------------
     ws2 = sh.worksheet("統計シート")
     base_df = pd.DataFrame(ws2.get_all_records())
 
-if base_df.empty:
-    st.warning("統計シート にデータがありません")
-    st.stop()
+    if base_df.empty:
+        st.warning("統計シート にデータがありません")
+        st.stop()
 
-for c in ["展示", "直線", "一周", "回り足", "艇番"]:
-    if c in base_df.columns:
-        base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
+    # 数値変換
+    for c in ["展示", "直線", "一周", "回り足", "艇番"]:
+        if c in base_df.columns:
+            base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
 
-if "会場" not in base_df.columns:
-    st.error("統計シート に『会場』列がありません")
-    st.stop()
+    if "会場" not in base_df.columns:
+        st.error("統計シート に『会場』列がありません")
+        st.stop()
+
     place_list = sorted(base_df["会場"].dropna().unique())
-    place = st.selectbox("会場を選択", place_list, key="tab2_place")
+
+    place = st.selectbox(
+        "会場を選択",
+        place_list,
+        key="tab2_place"
+    )
 
     place_df = base_df[base_df["会場"] == place].copy()
+
+    if place_df.empty:
+        st.warning("この会場のデータがありません")
+        st.stop()
 
     st.divider()
 
     # ------------------------
-    # 色付け
+    # 色付け関数
     # ------------------------
     def highlight_rank(df):
 
         def color_col(s):
             s2 = pd.to_numeric(s, errors="coerce")
+
+            # 小さいほうが良い（タイム系前提）
             rank = s2.rank(method="min")
 
             out = []
@@ -325,9 +338,9 @@ if "会場" not in base_df.columns:
                 if pd.isna(v):
                     out.append("")
                 elif r == 1:
-                    out.append("background-color:#ff6b6b")
+                    out.append("background-color:#ff6b6b;color:white;")
                 elif r == 2:
-                    out.append("background-color:#ffd43b")
+                    out.append("background-color:#ffd43b;")
                 else:
                     out.append("")
             return out
@@ -358,7 +371,6 @@ if "会場" not in base_df.columns:
             "",
             step=0.01,
             format="%.2f",
-            value=37.00,
             key=f"tab2_in_isshu_{b}",
             label_visibility="collapsed"
         )
@@ -367,7 +379,6 @@ if "会場" not in base_df.columns:
             "",
             step=0.01,
             format="%.2f",
-            value=5.00,
             key=f"tab2_in_mawari_{b}",
             label_visibility="collapsed"
         )
@@ -376,7 +387,6 @@ if "会場" not in base_df.columns:
             "",
             step=0.01,
             format="%.2f",
-            value=6.90,
             key=f"tab2_in_choku_{b}",
             label_visibility="collapsed"
         )
@@ -385,7 +395,6 @@ if "会場" not in base_df.columns:
             "",
             step=0.01,
             format="%.2f",
-            value=6.50,
             key=f"tab2_in_tenji_{b}",
             label_visibility="collapsed"
         )
@@ -400,7 +409,7 @@ if "会場" not in base_df.columns:
 
     input_df = pd.DataFrame(input_rows).set_index("艇番")
 
-    # ★タブ5連動用に保存
+    # tab5 連動用
     st.session_state["tab2_input_df"] = input_df.copy()
 
     st.divider()
@@ -434,7 +443,10 @@ if "会場" not in base_df.columns:
     for b in range(1, 7):
         if b in place_mean.index:
             for col in ["展示", "直線", "一周", "回り足"]:
-                if pd.notna(input_df.loc[b, col]) and pd.notna(place_mean.loc[b, col]):
+                if (
+                    pd.notna(input_df.loc[b, col])
+                    and pd.notna(place_mean.loc[b, col])
+                ):
                     adj_df.loc[b, col] = (
                         input_df.loc[b, col]
                         - place_mean.loc[b, col]
@@ -464,7 +476,10 @@ if "会場" not in base_df.columns:
     for b in range(1, 7):
         if b in lane_bias.index:
             for col in ["展示", "直線", "一周", "回り足"]:
-                if pd.notna(adj_df.loc[b, col]) and pd.notna(lane_bias.loc[b, col]):
+                if (
+                    pd.notna(adj_df.loc[b, col])
+                    and pd.notna(lane_bias.loc[b, col])
+                ):
                     final_df.loc[b, col] = (
                         adj_df.loc[b, col]
                         - lane_bias.loc[b, col]
@@ -1547,6 +1562,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
