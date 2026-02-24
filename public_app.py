@@ -326,7 +326,7 @@ with tab_stat:
     # 使用レース数表示
     # ------------------------
     race_count = (
-         place_df[["日付", "レース番号"]]
+          place_df[["日付", "レース番号"]]
          .dropna()
          .drop_duplicates()
          .shape[0]
@@ -1573,6 +1573,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
