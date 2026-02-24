@@ -252,7 +252,20 @@ with tab_pre:
                 boat_evals[i] = base_score + place_adj
 
         submitted = st.form_submit_button("予想カード生成", use_container_width=True)
+# =============================
+# ％に正規化（6艇合計＝100％）
+# =============================
+df_score["予想％"] = df_score["score"] / df_score["score"].sum() * 100
 
+# 小数1桁に丸める
+df_score["予想％"] = df_score["予想％"].round(1)
+
+# 並び替え
+df_score = df_score.sort_values("予想％", ascending=False).reset_index(drop=True)
+
+# 誤差補正（必ず合計100.0にする）
+diff = 100.0 - df_score["予想％"].sum()
+df_score.loc[0, "予想％"] = df_score.loc[0, "予想％"] + diff
     # =============================
     # 結果表示
     # =============================
@@ -1596,6 +1609,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
