@@ -1,21 +1,38 @@
 import streamlit as st
+import os
 
-# 1. 念のため「./」をつけて、現在の場所から探すことを明示する
-# もしくは、ファイル名が「01_kiryu.py」で合っているか再確認してください
-try:
-    page_01 = st.Page("pages/01_kiryu.py", title="桐生競艇場", icon="🚤")
-    page_02 = st.Page("pages/02_toda.py", title="戸田競艇場", icon="🌊")
-    page_07 = st.Page("pages/07_gamagori.py", title="蒲郡競艇場", icon="🏁")
+# 1. 最初に必ず実行（鉄則！）
+st.set_page_config(page_title="競艇Pro", layout="wide")
 
-    # ナビゲーション設定
-    pg = st.navigation([page_01, page_02, page_07])
+# 2. ページの定義
+# ファイル名が正しいか、os.path.existsでチェックしながら作成します
+def create_page(path, title, icon):
+    if os.path.exists(path):
+        return st.Page(path, title=title, icon=icon)
+    return None
+
+p01 = create_page("pages/01_kiryu.py", "桐生競艇場", "🚤")
+p02 = create_page("pages/02_toda.py", "戸田競艇場", "🌊")
+p07 = create_page("pages/07_gamagori.py", "蒲郡競艇場", "🏁")
+
+# 存在するページだけをリストにする
+valid_pages = [p for p in [p01, p02, p07] if p is not None]
+
+# 3. ナビゲーションの設定
+if valid_pages:
+    # ページ定義がある場合はナビゲーションを実行
+    pg = st.navigation(valid_pages)
+    # pg.run() を呼ぶと、現在のページの内容が表示されます
+    # ※ ボタンを表示させたいメインページ自体も navigation に含めるのが本来の形です
     pg.run()
+else:
+    # ページが見つからない場合のデバッグ表示
+    st.error("ページファイルが見つかりません。")
+    if os.path.exists("pages"):
+        st.write("pagesフォルダ内のファイル:", os.listdir("pages"))
 
-except Exception as e:
-    # どこでエラーが出ているか、画面にヒントを出します
-    st.error(f"エラーが発生しました: {e}")
-    import os
-    st.write("現在見えているファイル一覧:", os.listdir("pages") if os.path.exists("pages") else "pagesフォルダがありません")
+# --- 注意：pg.run() を使うと、以下のボタンコードは「メインページ」として 
+# navigation に登録したファイル内に書く必要があります ---
 
 st.set_page_config(page_title="競艇Pro", layout="wide")
 
@@ -50,5 +67,6 @@ with col6:
 with col7:
     if st.button("蒲郡07", use_container_width=True):
         st.switch_page("pages/07_gamagori.py")
+
 
 
