@@ -62,8 +62,74 @@ if not st.session_state["pwd_ok"]:
     st.stop()
 
 # --- 3. データ読み込み ---
-st.set_page_config(page_title="競艇 Pro 解析パネル", layout="wide")
-st.image("header.png", use_container_width=True)
+# ==============================
+# 会場トップページ
+# ==============================
+if "selected_place" not in st.session_state:
+    st.session_state.selected_place = None
+
+if st.session_state.selected_place is None:
+
+    st.title("🏁 会場を選択してください")
+
+    places = ["蒲郡", "大村", "住之江"]
+
+    cols = st.columns(3)
+
+    for i, p in enumerate(places):
+        if cols[i % 3].button(p, use_container_width=True):
+            st.session_state.selected_place = p
+            st.rerun()
+
+    st.stop()
+
+
+# ==============================
+# ここから本体処理
+# ==============================
+place = st.session_state.selected_place
+
+st.caption(f"選択中の会場：{place}")
+
+df = pd.DataFrame()
+gc = get_gsheet_client()
+
+# ▼ 会場ごとのシート名対応
+SHEET_MAP = {
+    "蒲郡": {
+        "sheet1": "蒲郡_統計シート",
+        "sheet2": "蒲郡_統計シート②"
+    },
+    "大村": {
+        "sheet1": "大村_統計シート",
+        "sheet2": "大村_統計シート②"
+    },
+    "住之江": {
+        "sheet1": "住之江_統計シート",
+        "sheet2": "住之江_統計シート②"
+    }
+}
+
+if gc:
+    try:
+        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+
+        ws1_name = SHEET_MAP[place]["sheet1"]
+        ws2_name = SHEET_MAP[place]["sheet2"]
+
+        ws1 = sh.worksheet(ws1_name)
+        ws2 = sh.worksheet(ws2_name)
+
+        rows1 = ws1.get_all_records()
+        rows2 = ws2.get_all_records()
+
+        all_rows = rows1 + rows2
+
+        if len(all_rows) > 0:
+            df = pd.DataFrame(all_rows)
+
+    except Exception as e:
+        st.error(e)
 # ▼ スリット表示用CSS（ここに貼る）
 st.markdown("""
 <style>
@@ -1612,6 +1678,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
