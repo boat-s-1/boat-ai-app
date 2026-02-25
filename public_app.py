@@ -299,7 +299,7 @@ with tab_stat:
     # データ読み込み（統計シート）
     # ------------------------
     sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-    base_df = pd.DataFrame(ws2.get_all_records())
+    base_df = pd.DataFrame(rows1+rows2)
 
     if base_df.empty:
         st.warning("統計シート にデータがありません")
@@ -1579,6 +1579,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
