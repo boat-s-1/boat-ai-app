@@ -71,7 +71,7 @@ if st.session_state.selected_place is None:
 
     st.title("🏁 レース種別を選択")
 
-cols = st.columns(3)
+cols = st.columns(4)
 
 # 使えるボタン
 if cols[0].button("混合戦", use_container_width=True):
@@ -83,7 +83,8 @@ if cols[1].button("女子戦", use_container_width=True):
     st.rerun()
 
 # 準備中（押せない）
-cols[2].button("SG競走（準備中）", disabled=True, use_container_width=True)
+cols[2].button("G1競走（準備中）", disabled=True, use_container_width=True)
+cols[3].button("SG競走（準備中）", disabled=True, use_container_width=True)
 
 # ==============================
 # ここから本体処理
