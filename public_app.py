@@ -1,4 +1,4 @@
-mport streamlit as st  # これが必要です！
+import streamlit as st  # これが必要です！
 
 # --- 以前お渡しした「自動検索コード」を使う場合 ---
 import os
@@ -26,3 +26,4 @@ with col1:
         
         if not found:
             st.error("ファイルが見つかりません。")
+
