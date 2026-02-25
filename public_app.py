@@ -1,39 +1,6 @@
 import streamlit as st
 import os
 
-# 1. 最初に必ず実行（鉄則！）
-st.set_page_config(page_title="競艇Pro", layout="wide")
-
-# 2. ページの定義
-# ファイル名が正しいか、os.path.existsでチェックしながら作成します
-def create_page(path, title, icon):
-    if os.path.exists(path):
-        return st.Page(path, title=title, icon=icon)
-    return None
-
-p01 = create_page("pages/01_kiryu.py", "桐生競艇場", "🚤")
-p02 = create_page("pages/02_toda.py", "戸田競艇場", "🌊")
-p07 = create_page("pages/07_gamagori.py", "蒲郡競艇場", "🏁")
-
-# 存在するページだけをリストにする
-valid_pages = [p for p in [p01, p02, p07] if p is not None]
-
-# 3. ナビゲーションの設定
-if valid_pages:
-    # ページ定義がある場合はナビゲーションを実行
-    pg = st.navigation(valid_pages)
-    # pg.run() を呼ぶと、現在のページの内容が表示されます
-    # ※ ボタンを表示させたいメインページ自体も navigation に含めるのが本来の形です
-    pg.run()
-else:
-    # ページが見つからない場合のデバッグ表示
-    st.error("ページファイルが見つかりません。")
-    if os.path.exists("pages"):
-        st.write("pagesフォルダ内のファイル:", os.listdir("pages"))
-
-# --- 注意：pg.run() を使うと、以下のボタンコードは「メインページ」として 
-# navigation に登録したファイル内に書く必要があります ---
-
 st.set_page_config(page_title="競艇Pro", layout="wide")
 
 st.title("🏁 会場を選択")
@@ -67,6 +34,7 @@ with col6:
 with col7:
     if st.button("蒲郡07", use_container_width=True):
         st.switch_page("pages/07_gamagori.py")
+
 
 
 
