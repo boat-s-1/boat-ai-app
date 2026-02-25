@@ -1,4 +1,5 @@
-import streamlit as st
+mport streamlit as st
+st.write("### DEBUG public_app loaded")
 
 st.set_page_config(page_title="競艇Pro", layout="wide")
 
@@ -9,5 +10,6 @@ col1, col2, col3 = st.columns(3)
 with col1:
     if st.button("蒲郡", use_container_width=True):
         st.switch_page("pages/07_蒲郡.py")
+
 
 
