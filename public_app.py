@@ -1,15 +1,21 @@
 import streamlit as st
 
-# 各ページの設定（表示名やアイコンを指定）
-page_01 = st.Page("pages/01_kiryu.py", title="桐生競艇場", icon="🚤")
-page_02 = st.Page("pages/02_toda.py", title="戸田競艇場", icon="🌊")
-page_07 = st.Page("pages/07_gamagori.py", title="蒲郡競艇場", icon="🏁")
+# 1. 念のため「./」をつけて、現在の場所から探すことを明示する
+# もしくは、ファイル名が「01_kiryu.py」で合っているか再確認してください
+try:
+    page_01 = st.Page("pages/01_kiryu.py", title="桐生競艇場", icon="🚤")
+    page_02 = st.Page("pages/02_toda.py", title="戸田競艇場", icon="🌊")
+    page_07 = st.Page("pages/07_gamagori.py", title="蒲郡競艇場", icon="🏁")
 
-# サイドバーのナビゲーションを定義
-pg = st.navigation([page_01, page_02, page_07])
+    # ナビゲーション設定
+    pg = st.navigation([page_01, page_02, page_07])
+    pg.run()
 
-# ナビゲーションの実行
-pg.run()
+except Exception as e:
+    # どこでエラーが出ているか、画面にヒントを出します
+    st.error(f"エラーが発生しました: {e}")
+    import os
+    st.write("現在見えているファイル一覧:", os.listdir("pages") if os.path.exists("pages") else "pagesフォルダがありません")
 
 st.set_page_config(page_title="競艇Pro", layout="wide")
 
@@ -44,4 +50,5 @@ with col6:
 with col7:
     if st.button("蒲郡07", use_container_width=True):
         st.switch_page("pages/07_gamagori.py")
+
 
