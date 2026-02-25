@@ -601,11 +601,21 @@ with tab_start:
 
     st.subheader("🚀 スタート予想（混合戦｜会場別補正・入力型）")
 
-    # --------- ここが一番怪しいのでガード ---------
+    # ===== まずここで必ず表示テスト =====
+    st.write("DEBUG : tab_start loaded")
+
+    # ===== GSheet 接続をこのタブ内で完結させる =====
+    gc = get_gsheet_client()
+    if gc is None:
+        st.error("Google認証に失敗しています")
+        st.stop()
+
     try:
+        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
         ws = sh.worksheet("管理用_NEW")
     except Exception as e:
-        st.error("管理用_NEW シートが取得できません")
+        st.error("管理用_NEW が開けません")
+        st.exception(e)
         st.stop()
 
     df = pd.DataFrame(ws.get_all_records())
@@ -614,7 +624,7 @@ with tab_start:
         st.info("データがありません")
         st.stop()
 
-    # 列チェック（超重要）
+    # 必須列チェック
     need_cols = ["会場", "展示", "一周", "ST", "艇番"]
     for c in need_cols:
         if c not in df.columns:
@@ -645,6 +655,104 @@ with tab_start:
     if place_df.empty:
         st.warning("この会場のデータがありません")
         st.stop()
+
+    # -----------------------
+    # 会場平均との差用
+    # -----------------------
+    mean_tenji = place_df["展示"].mean()
+    mean_isshu = place_df["一周"].mean()
+
+    st.caption(f"会場：{race_place}（過去データ平均との差で補正）")
+
+    # -----------------------
+    # 入力
+    # -----------------------
+    st.markdown("### 📝 展示・1周・ST 入力")
+
+    input_cols = st.columns(6)
+
+    tenji_input = {}
+    isshu_input = {}
+    st_input    = {}
+    eval_input  = {}
+
+    eval_list = ["", "◎", "◯", "△", "×"]
+
+    for i in range(1, 7):
+
+        with input_cols[i - 1]:
+
+            st.markdown(f"**{i}号艇**")
+
+            tenji_input[i] = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                key=f"mix_tenji_{i}"
+            )
+
+            isshu_input[i] = st.number_input(
+                "一周",
+                step=0.01,
+                format="%.2f",
+                key=f"mix_isshu_{i}"
+            )
+
+            st_input[i] = st.number_input(
+                "ST",
+                step=0.01,
+                format="%.2f",
+                key=f"mix_st_{i}"
+            )
+
+            eval_input[i] = st.selectbox(
+                "評価",
+                eval_list,
+                key=f"mix_eval_{i}"
+            )
+
+    # -----------------------
+    # スコア計算
+    # -----------------------
+    eval_map = {
+        "◎": 2.0,
+        "◯": 1.0,
+        "△": 0.5,
+        "×": -1.0
+    }
+
+    rows = []
+
+    for boat in range(1, 7):
+
+        st_score = -st_input[boat] + eval_map.get(eval_input[boat], 0)
+
+        tenji_diff = mean_tenji - tenji_input[boat]
+        isshu_diff = mean_isshu - isshu_input[boat]
+
+        total = (
+            st_score
+            + tenji_diff * 2.0
+            + isshu_diff * 0.3
+        )
+
+        rows.append({
+            "艇番": boat,
+            "展示": tenji_input[boat],
+            "一周": isshu_input[boat],
+            "ST": st_input[boat],
+            "評価": eval_input[boat],
+            "start_score": total
+        })
+
+    result_df = pd.DataFrame(rows)
+
+    st.markdown("### 📊 スタート指数")
+
+    st.dataframe(
+        result_df.sort_values("start_score", ascending=False),
+        use_container_width=True
+    )
 
 # -----------------------------
 # 閲覧用：女子戦データ
