@@ -10,7 +10,8 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("蒲郡", use_container_width=True):
-        st.switch_page("pages/07_蒲郡.py")
+       st.switch_page("pages/07_蒲郡.py")
+
 
 
 
