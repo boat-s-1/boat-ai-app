@@ -107,6 +107,7 @@ gc = get_gsheet_client()
 if gc:
     try:
         sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+
         ws1 = sh.worksheet("統計シート")
         ws2 = sh.worksheet("統計シート②")
 
@@ -114,10 +115,12 @@ if gc:
         rows2 = ws2.get_all_records()
 
         all_rows = rows1 + rows2
-        if len(raw_data) > 1:
-            df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
-    except: pass
 
+        if len(all_rows) > 0:
+            df = pd.DataFrame(all_rows)
+
+    except Exception as e:
+        st.error(e)
 st.title("予想ツール")
 
 # タブ構成
@@ -1576,6 +1579,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
