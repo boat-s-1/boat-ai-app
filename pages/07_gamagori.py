@@ -18,7 +18,7 @@ PLACE_NAME = "蒲郡"
 
 # 戻るボタン
 if st.button("← 会場選択へ戻る"):
-    st.switch_page("public_app.py")
+    st.switch_page("public_app")
 def encode_image(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
