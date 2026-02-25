@@ -106,7 +106,7 @@ gc = get_gsheet_client()
 
 if gc:
     try:
-        sh = gc.open("競艇予想学習データ")
+        sh = gc.open("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
         ws = sh.get_worksheet(0)
         raw_data = ws.get_all_values()
         if len(raw_data) > 1:
@@ -1571,6 +1571,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
