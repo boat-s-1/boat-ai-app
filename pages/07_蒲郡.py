@@ -1,21 +1,11 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import os
-import base64
-import gspread
-import plotly.express as px
-from google.oauth2.service_account import Credentials
-import datetime
 
-# -------------------------
-# 会場固定
-# -------------------------
+st.set_page_config(layout="wide")
+
 PLACE_NAME = "蒲郡"
 
-# 戻るボタン（ページ一番上）
 if st.button("← 会場選択へ戻る"):
-    st.switch_page("public_app.py")
+    st.switch_page("app.py")
 
 def encode_image(path):
     with open(path, "rb") as f:
