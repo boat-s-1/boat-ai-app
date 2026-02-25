@@ -7,7 +7,15 @@ import gspread
 import plotly.express as px
 from google.oauth2.service_account import Credentials
 import datetime
-import base64
+
+# -------------------------
+# 会場固定
+# -------------------------
+PLACE_NAME = "蒲郡"
+
+# 戻るボタン（ページ一番上）
+if st.button("← 会場選択へ戻る"):
+    st.switch_page("app.py")
 
 def encode_image(path):
     with open(path, "rb") as f:
@@ -1678,6 +1686,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
