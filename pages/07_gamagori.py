@@ -60,17 +60,6 @@ def get_gsheet_client():
         return gspread.authorize(credentials)
     except: return None
 
-# --- 2. ログイン機能 ---
-if "pwd_ok" not in st.session_state: st.session_state["pwd_ok"] = False
-if not st.session_state["pwd_ok"]:
-    st.title("🔐 競艇 Pro 解析ログイン")
-    pwd = st.text_input("アクセスコード", type="password")
-    if st.button("ログイン"):
-        if pwd == "boat-pro-777":
-            st.session_state["pwd_ok"] = True
-            st.rerun()
-    st.stop()
-
 # --- 3. データ読み込み ---
 # ==============================
 # 会場トップページ
@@ -80,11 +69,11 @@ if "selected_place" not in st.session_state:
 
 if st.session_state.selected_place is None:
 
-    st.title("🏁 会場を選択してください")
+    st.title("🏁 レースを選択")
 
-    places = ["蒲郡", "大村", "住之江"]
+    places = ["混合戦", "女子戦"]
 
-    cols = st.columns(3)
+    cols = st.columns(2)
 
     for i, p in enumerate(places):
         if cols[i % 3].button(p, use_container_width=True):
