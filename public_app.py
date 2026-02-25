@@ -296,16 +296,43 @@ with tab_stat:
     st.subheader("会場別 補正・総合比較（統計シート）")
 
     # ------------------------
-    # データ読み込み（統計シート）
+    # 読み込みボタン
     # ------------------------
-    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-    base_df = pd.DataFrame(rows1+rows2)
+    if st.button("統計データを読み込んで比較する", key="load_stat_btn"):
+
+        with st.spinner("統計データを読み込んでいます…"):
+
+            sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+
+            ws1 = sh.worksheet("統計シート")
+            ws2 = sh.worksheet("統計シート②")
+
+            rows1 = ws1.get_all_records()
+            rows2 = ws2.get_all_records()
+
+            base_df = pd.DataFrame(rows1 + rows2)
+
+            st.session_state["tab2_base_df"] = base_df
+
+    # ------------------------
+    # まだ読み込まれていない場合
+    # ------------------------
+    if "tab2_base_df" not in st.session_state:
+        st.info("上の『統計データを読み込んで比較する』ボタンを押してください。")
+        st.stop()
+
+    # ------------------------
+    # データ取得
+    # ------------------------
+    base_df = st.session_state["tab2_base_df"].copy()
 
     if base_df.empty:
         st.warning("統計シート にデータがありません")
         st.stop()
 
+    # ------------------------
     # 数値変換
+    # ------------------------
     for c in ["展示", "直線", "一周", "回り足", "艇番"]:
         if c in base_df.columns:
             base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
@@ -327,18 +354,20 @@ with tab_stat:
     if place_df.empty:
         st.warning("この会場のデータがありません")
         st.stop()
+
     # ------------------------
     # 使用レース数表示
     # ------------------------
     race_count = (
-          place_df[["日付", "レース番号"]]
-         .dropna()
-         .drop_duplicates()
-         .shape[0]
-     )
+        place_df[["日付", "レース番号"]]
+        .dropna()
+        .drop_duplicates()
+        .shape[0]
+    )
 
     st.caption(f"📊 過去データ {race_count}レースより補正")
     st.divider()
+
     # ------------------------
     # 色付け関数
     # ------------------------
@@ -346,8 +375,6 @@ with tab_stat:
 
         def color_col(s):
             s2 = pd.to_numeric(s, errors="coerce")
-
-            # 小さいほうが良い（タイム系前提）
             rank = s2.rank(method="min")
 
             out = []
@@ -426,7 +453,6 @@ with tab_stat:
 
     input_df = pd.DataFrame(input_rows).set_index("艇番")
 
-    # tab5 連動用
     st.session_state["tab2_input_df"] = input_df.copy()
 
     st.divider()
@@ -1579,6 +1605,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
