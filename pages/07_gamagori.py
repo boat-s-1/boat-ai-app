@@ -71,12 +71,12 @@ if st.session_state.selected_place is None:
 
     st.title("🏁 レースを選択")
 
-    places = ["混合戦", "女子戦"]
+    places = ["蒲郡混合戦", "蒲郡女子戦"]
 
     cols = st.columns(2)
 
     for i, p in enumerate(places):
-        if cols[i % 3].button(p, use_container_width=True):
+        if cols[i % 2].button(p, use_container_width=True):
             st.session_state.selected_place = p
             st.rerun()
 
