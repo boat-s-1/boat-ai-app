@@ -1,6 +1,3 @@
-import streamlit as st  # これが必要です！
-
-# --- 以前お渡しした「自動検索コード」を使う場合 ---
 import streamlit as st
 
 st.set_page_config(page_title="競艇Pro", layout="wide")
@@ -36,20 +33,3 @@ with col6:
 with col7:
     if st.button("蒲郡07", use_container_width=True):
         st.switch_page("pages/07_gamagori.py")
-        
-        found = False
-        for path in targets:
-            if os.path.exists(path):
-                st.switch_page(path)
-                found = True
-                break
-        
-        if not found:
-            st.error("ファイルが見つかりません。")
-
-
-
-
-
-
-
