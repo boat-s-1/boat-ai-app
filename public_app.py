@@ -35,7 +35,7 @@ with col6:
 
 with col7:
     if st.button("蒲郡07", use_container_width=True):
-        st.switch_page("pages/02_tokoname.py")
+        st.switch_page("pages/07_gamagori.py")
         
         found = False
         for path in targets:
@@ -46,6 +46,7 @@ with col7:
         
         if not found:
             st.error("ファイルが見つかりません。")
+
 
 
 
