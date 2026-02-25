@@ -20,7 +20,7 @@ with col2:
 with col3:
     if st.button("常滑", use_container_width=True):
         st.switch_page("pages/02_tokoname.py")
-        ]
+        
         
         found = False
         for path in targets:
@@ -31,6 +31,7 @@ with col3:
         
         if not found:
             st.error("ファイルが見つかりません。")
+
 
 
 
