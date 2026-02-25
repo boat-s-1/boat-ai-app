@@ -185,7 +185,7 @@ if gc:
 st.title("予想ツール")
 
 # タブ構成
-tab_pre, tab_stat,tab5,tab_mix_check,tab_cond,tab_view,tab_women_stat,tab_women_input,tab_women_start,tab_women_result = st.tabs(["簡易予想", "統計解析","スタート予想","風・波補正","スタート精度","補正閲覧"])
+tab_pre, tab_stat,tab5,tab_mix_check,tab_cond = st.tabs(["簡易予想", "統計解析","スタート予想","風・波補正","スタート精度","補正閲覧"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_pre:
