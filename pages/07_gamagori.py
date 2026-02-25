@@ -69,19 +69,21 @@ if "selected_place" not in st.session_state:
 
 if st.session_state.selected_place is None:
 
-    st.title("🏁 レースを選択")
+    st.title("🏁 レース種別を選択")
 
-    places = ["蒲郡混合戦", "蒲郡女子戦"]
+cols = st.columns(3)
 
-    cols = st.columns(2)
+# 使えるボタン
+if cols[0].button("混合戦", use_container_width=True):
+    st.session_state.selected_place = "蒲郡混合戦"
+    st.rerun()
 
-    for i, p in enumerate(places):
-        if cols[i % 2].button(p, use_container_width=True):
-            st.session_state.selected_place = p
-            st.rerun()
+if cols[1].button("女子戦", use_container_width=True):
+    st.session_state.selected_place = "蒲郡女子戦"
+    st.rerun()
 
-    st.stop()
-
+# 準備中（押せない）
+cols[2].button("SG競走（準備中）", disabled=True, use_container_width=True)
 
 # ==============================
 # ここから本体処理
