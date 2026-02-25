@@ -106,9 +106,14 @@ gc = get_gsheet_client()
 
 if gc:
     try:
-        sh = gc.open("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-        ws = sh.get_worksheet(0)
-        raw_data = ws.get_all_values()
+        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+        ws1 = sh.worksheet("統計シート")
+        ws2 = sh.worksheet("統計シート②")
+
+        rows1 = ws1.get_all_records()
+        rows2 = ws2.get_all_records()
+
+        all_rows = rows1 + rows2
         if len(raw_data) > 1:
             df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
     except: pass
@@ -1571,6 +1576,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
