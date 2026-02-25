@@ -1,5 +1,16 @@
 import streamlit as st
 
+# 各ページの設定（表示名やアイコンを指定）
+page_01 = st.Page("pages/01_kiryu.py", title="桐生競艇場", icon="🚤")
+page_02 = st.Page("pages/02_toda.py", title="戸田競艇場", icon="🌊")
+page_07 = st.Page("pages/07_gamagori.py", title="蒲郡競艇場", icon="🏁")
+
+# サイドバーのナビゲーションを定義
+pg = st.navigation([page_01, page_02, page_07])
+
+# ナビゲーションの実行
+pg.run()
+
 st.set_page_config(page_title="競艇Pro", layout="wide")
 
 st.title("🏁 会場を選択")
@@ -33,3 +44,4 @@ with col6:
 with col7:
     if st.button("蒲郡07", use_container_width=True):
         st.switch_page("pages/07_gamagori.py")
+
