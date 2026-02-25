@@ -295,10 +295,10 @@ with tab_stat:
 
     st.subheader("会場別 補正・総合比較（統計シート）")
 
-    # ------------------------
-    # 読み込みボタン
-    # ------------------------
-    if st.button("統計データを読み込んで比較する", key="load_stat_btn"):
+    # ======================================
+    # 統計データ読み込みボタン
+    # ======================================
+    if st.button("統計データを読み込んで比較する", key="tab2_load_btn"):
 
         with st.spinner("統計データを読み込んでいます…"):
 
@@ -314,31 +314,25 @@ with tab_stat:
 
             st.session_state["tab2_base_df"] = base_df
 
-    # ------------------------
-    # まだ読み込まれていない場合
-    # ------------------------
     if "tab2_base_df" not in st.session_state:
-        st.info("上の『統計データを読み込んで比較する』ボタンを押してください。")
+        st.info("『統計データを読み込んで比較する』を押してください。")
         st.stop()
 
-    # ------------------------
-    # データ取得
-    # ------------------------
     base_df = st.session_state["tab2_base_df"].copy()
 
     if base_df.empty:
-        st.warning("統計シート にデータがありません")
+        st.warning("統計シートにデータがありません")
         st.stop()
 
-    # ------------------------
-    # 数値変換
-    # ------------------------
+    # ======================================
+    # 型調整
+    # ======================================
     for c in ["展示", "直線", "一周", "回り足", "艇番"]:
         if c in base_df.columns:
             base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
 
     if "会場" not in base_df.columns:
-        st.error("統計シート に『会場』列がありません")
+        st.error("統計シートに『会場』列がありません")
         st.stop()
 
     place_list = sorted(base_df["会場"].dropna().unique())
@@ -355,9 +349,9 @@ with tab_stat:
         st.warning("この会場のデータがありません")
         st.stop()
 
-    # ------------------------
-    # 使用レース数表示
-    # ------------------------
+    # ======================================
+    # 使用レース数
+    # ======================================
     race_count = (
         place_df[["日付", "レース番号"]]
         .dropna()
@@ -368,9 +362,9 @@ with tab_stat:
     st.caption(f"📊 過去データ {race_count}レースより補正")
     st.divider()
 
-    # ------------------------
+    # ======================================
     # 色付け関数
-    # ------------------------
+    # ======================================
     def highlight_rank(df):
 
         def color_col(s):
@@ -391,75 +385,88 @@ with tab_stat:
 
         return df.style.apply(color_col, axis=0)
 
-    # ------------------------
-    # 入力（横並び）
-    # ------------------------
+    # ======================================
+    # 入力フォーム
+    # ======================================
     st.markdown("### 展示タイム入力（当日データ）")
 
-    input_rows = []
+    with st.form("tab2_input_form"):
 
-    head = st.columns([1, 2, 2, 2, 2])
-    head[0].markdown("**艇番**")
-    head[1].markdown("**一周**")
-    head[2].markdown("**回り足**")
-    head[3].markdown("**直線**")
-    head[4].markdown("**展示**")
+        input_rows = []
 
-    for b in range(1, 7):
+        head = st.columns([1, 2, 2, 2, 2])
+        head[0].markdown("**艇番**")
+        head[1].markdown("**一周**")
+        head[2].markdown("**回り足**")
+        head[3].markdown("**直線**")
+        head[4].markdown("**展示**")
 
-        cols = st.columns([1, 2, 2, 2, 2])
+        for b in range(1, 7):
 
-        cols[0].markdown(f"**{b}号艇**")
+            cols = st.columns([1, 2, 2, 2, 2])
 
-        isshu = cols[1].number_input(
-            "",
-            step=0.01,
-            format="%.2f",
-            key=f"tab2_in_isshu_{b}",
-            label_visibility="collapsed"
-        )
+            cols[0].markdown(f"**{b}号艇**")
 
-        mawari = cols[2].number_input(
-            "",
-            step=0.01,
-            format="%.2f",
-            key=f"tab2_in_mawari_{b}",
-            label_visibility="collapsed"
-        )
+            isshu = cols[1].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_isshu_{b}",
+                label_visibility="collapsed"
+            )
 
-        choku = cols[3].number_input(
-            "",
-            step=0.01,
-            format="%.2f",
-            key=f"tab2_in_choku_{b}",
-            label_visibility="collapsed"
-        )
+            mawari = cols[2].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_mawari_{b}",
+                label_visibility="collapsed"
+            )
 
-        tenji = cols[4].number_input(
-            "",
-            step=0.01,
-            format="%.2f",
-            key=f"tab2_in_tenji_{b}",
-            label_visibility="collapsed"
-        )
+            choku = cols[3].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_choku_{b}",
+                label_visibility="collapsed"
+            )
 
-        input_rows.append({
-            "艇番": b,
-            "展示": tenji,
-            "直線": choku,
-            "一周": isshu,
-            "回り足": mawari
-        })
+            tenji = cols[4].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_tenji_{b}",
+                label_visibility="collapsed"
+            )
 
-    input_df = pd.DataFrame(input_rows).set_index("艇番")
+            input_rows.append({
+                "艇番": b,
+                "展示": tenji,
+                "直線": choku,
+                "一周": isshu,
+                "回り足": mawari
+            })
 
+        submit_input = st.form_submit_button("この入力で再計算する")
+
+    if submit_input:
+        input_df = pd.DataFrame(input_rows).set_index("艇番")
+        st.session_state["tab2_input_df"] = input_df.copy()
+
+    if "tab2_input_df" not in st.session_state:
+        st.info("展示タイムを入力して『この入力で再計算する』を押してください")
+        st.stop()
+
+    input_df = st.session_state["tab2_input_df"].copy()
+
+    # tab5 連動用
     st.session_state["tab2_input_df"] = input_df.copy()
 
     st.divider()
 
-    # ------------------------
+    # ======================================
     # 入力値表示
-    # ------------------------
+    # ======================================
     st.markdown("### 公式展示タイム表（入力値）")
 
     st.dataframe(
@@ -467,9 +474,9 @@ with tab_stat:
         use_container_width=True
     )
 
-    # ------------------------
+    # ======================================
     # 場平均補正
-    # ------------------------
+    # ======================================
     st.divider()
     st.markdown("### 場平均補正タイム（会場平均との差補正）")
 
@@ -501,9 +508,9 @@ with tab_stat:
         use_container_width=True
     )
 
-    # ------------------------
+    # ======================================
     # 枠番補正
-    # ------------------------
+    # ======================================
     st.divider()
     st.markdown("### 枠番補正込みタイム（イン有利補正）")
 
@@ -1605,6 +1612,7 @@ with tab_cond:
                 st.dataframe(diff_df, use_container_width=True)
 
                 st.caption("※マイナスが大きいほど、その条件では有利な艇番傾向です")
+
 
 
 
