@@ -411,15 +411,9 @@ with tab_stat:
         st.error("統計シートに『会場』列がありません")
         st.stop()
 
-    place_list = sorted(base_df["会場"].dropna().unique())
+    st.markdown(f"#### 会場：{PLACE_NAME}")
 
-    place = st.selectbox(
-        "会場を選択",
-        place_list,
-        key="tab2_place"
-    )
-
-    place_df = base_df[base_df["会場"] == place].copy()
+    place_df = base_df[base_df["会場"] == PLACE_NAME].copy()
 
     if place_df.empty:
         st.warning("この会場のデータがありません")
