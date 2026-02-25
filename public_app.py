@@ -1,5 +1,4 @@
 import streamlit as st
-import os
 
 st.set_page_config(page_title="競艇Pro", layout="wide")
 
@@ -34,7 +33,3 @@ with col6:
 with col7:
     if st.button("蒲郡07", use_container_width=True):
         st.switch_page("pages/07_gamagori.py")
-
-
-
-
