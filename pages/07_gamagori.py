@@ -432,7 +432,8 @@ if st.session_state.selected_place is None:
 cols = st.columns(4)
 
 # 使えるボタン
-if cols[0].button("混合戦", use_container_width=True):
+# レース番号などの変数（例: race_no）をkeyに混ぜると確実に重複を避けられます
+if cols[0].button("混合戦", use_container_width=True, key=f"btn_mixed_{PLACE_NAME}"):
     st.session_state.selected_place = "蒲郡混合戦"
     st.rerun()
 
