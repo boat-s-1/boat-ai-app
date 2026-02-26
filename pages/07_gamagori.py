@@ -207,6 +207,7 @@ if gc:
 else:
     st.error("Google認証に失敗しました")
     st.stop()
+    
 st.title("予想ツール")
 
 # タブ構成
