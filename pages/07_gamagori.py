@@ -375,7 +375,7 @@ with tab_stat:
             
                 df
 
-                st.session_state["tab2_base_df_gamagori"] = base_df
+                st.session_state["tab2_base_df_gamagori"] = df
 
             except Exception as e:
                 st.error("蒲郡シートの読み込みに失敗しました")
