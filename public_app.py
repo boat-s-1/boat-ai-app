@@ -261,7 +261,7 @@ with tab_mix_check:
     st.divider()
 
     st.dataframe(res_df, use_container_width=True) # --- 検証データに基づく圧倒的な信頼性アピール ---
-        st.markdown("### 📈 嘘偽りのない「ロジックの精度」を公開中")
+    st.markdown("### 📈 嘘偽りのない「ロジックの精度」を公開中")
         
         with st.container(border=True):
             st.write("当ツールの『スタート指数』は、過去の膨大な混合戦データに基づき、常にその精度を自己検証しています。")
@@ -394,6 +394,7 @@ valid_venue_pages = [p for p in all_p if p is not None]
 
 pg = st.navigation({"メイン": [home], "会場一覧": valid_venue_pages})
 pg.run()
+
 
 
 
