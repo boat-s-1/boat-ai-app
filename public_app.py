@@ -62,7 +62,7 @@ def show_main_page():
     st.markdown(f'<div class="ticker-wrapper"><div class="ticker-text">{news_message}</div></div>', unsafe_allow_html=True)
     
            # --- ガイド枠：スプレッドシート読み込み ---
-    st.markdown("### 🎯 本日のツール注目レース・ガイド")
+    st.markdown("### 🎯 本日の注目レース")
 
     try:
         # シート「ガイド枠」を読み込み
@@ -271,6 +271,7 @@ valid_venue_pages = [p for p in all_p if p is not None]
 
 pg = st.navigation({"メイン": [home], "会場一覧": valid_venue_pages})
 pg.run()
+
 
 
 
