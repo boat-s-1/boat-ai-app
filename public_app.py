@@ -98,7 +98,7 @@ def show_main_page():
                         else:
                             st.button(f"{v_type}\n【{name}】\n未作成", use_container_width=True, disabled=True)
 
-       # --- TAB2: 使い方 ---
+        # --- TAB2: 使い方 ---
     with tab2:
         st.header("📖 競艇予想Pro 攻略マニュアル")
 
@@ -133,7 +133,7 @@ def show_main_page():
         h2 = f"{hit2:.1f}%" if 'hit2' in locals() else "解析中"
         h3 = f"{hit3:.1f}%" if 'hit3' in locals() else "解析中"
 
-         　 with st.container(border=True):
+        with st.container(border=True):
             st.write("当ツールの『スタート指数』は、過去の膨大な混合戦データに基づき、常にその精度を自己検証しています。")
             
             col_v1, col_v2, col_v3 = st.columns(3)
@@ -193,6 +193,17 @@ def show_main_page():
         """)
 
         st.link_button("最新の的中報告をチェック（公式X）", "https://x.com/bort_strike", use_container_width=True)
+
+        # --- 4. フローチャート ---
+        st.markdown("### 🏆 勝利へのフローチャート")
+        st.info("""
+        1️⃣ **朝一〜直前まで**: **STEP1**でレースの「格」をチェック。  
+        2️⃣ **展示航走後**: **STEP2**で「回り足」「伸び」を補正。  
+        3️⃣ **スタート特訓後**: **STEP3**で「スリット攻防」を確信。  
+        👉 全ての指数が揃ったときが、最大の勝負どころです！
+        """)
+
+        st.link_button("最新の的中報告をチェック（公式X）", "https://x.com/bort_strike", use_container_width=True)
     with tab3:
         st.subheader("📱 公式リンク")
         st.link_button("公式X (@bort_strike) をフォロー", "https://x.com/bort_strike", use_container_width=True)
@@ -213,6 +224,7 @@ pg = st.navigation({
 
 if __name__ == "__main__":
     pg.run()
+
 
 
 
