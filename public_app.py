@@ -60,7 +60,40 @@ def show_main_page():
     # --- ニュースティッカー ---
     news_message = "📢 只今、蒲郡無料公開中！ ｜ 2/26 桐生データ大量更新！ ｜ 本日の勝負レースは下関12R！ ｜ 公式Xにて的中速報配信中！"
     st.markdown(f'<div class="ticker-wrapper"><div class="ticker-text">{news_message}</div></div>', unsafe_allow_html=True)
+    # --- ニュースティッカーの下に配置 ---
+    st.markdown("### 🎯 本日のツール注目レース・ガイド")
+    
+    # 3つの注目レースを表示するカラム
+    g_col1, g_col2, g_col3 = st.columns(3)
 
+    with g_col1:
+        with st.container(border=True):
+            st.markdown("#### ⚓ 桐生 12R")
+            st.caption("締切 20:45")
+            st.markdown("<span style='color:#d32f2f; font-weight:bold;'>【信頼度：S】</span>", unsafe_allow_html=True)
+            st.write("指数1位が85pt超え。統計上、1着率は75%を誇る鉄板構成です。")
+            if st.button("桐生データへ", key="guide_1"):
+                st.switch_page("pages/01_kiryu.py")
+
+    with g_col2:
+        with st.container(border=True):
+            st.markdown("#### 🌊 下関 09R")
+            st.caption("締切 19:15")
+            st.markdown("<span style='color:#2563eb; font-weight:bold;'>【信頼度：A】</span>", unsafe_allow_html=True)
+            st.write("条件補正で4号艇が急浮上。カド一撃の波乱データが出ています。")
+            if st.button("下関データへ", key="guide_2"):
+                st.switch_page("pages/19_simonoseki.py")
+
+    with g_col3:
+        with st.container(border=True):
+            st.markdown("#### 🚤 蒲郡 11R")
+            st.caption("締切 20:10")
+            st.markdown("<span style='color:#16a34a; font-weight:bold;'>【信頼度：B】</span>", unsafe_allow_html=True)
+            st.write("スタート指数が上位3名拮抗。BOX買いの期待値が高いレースです。")
+            if st.button("蒲郡データへ", key="guide_3"):
+                st.switch_page("pages/07_gamagori.py")
+
+    st.divider()
     # --- タブメニュー ---
     tab1, tab2, tab3, tab4 = st.tabs(["🚩 開催一覧", "🔰 使い方", "📱 公式SNS", "📈 的中実績"])
 
@@ -237,6 +270,7 @@ valid_venue_pages = [p for p in all_p if p is not None]
 
 pg = st.navigation({"メイン": [home], "会場一覧": valid_venue_pages})
 pg.run()
+
 
 
 
