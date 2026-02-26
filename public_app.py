@@ -249,19 +249,29 @@ def show_main_page():
 
 # --- 5. ページナビゲーションの設定 ---
 
-# メインページを関数として定義
+# 1. ホームページを定義
 home_page = st.Page(show_main_page, title="ホーム", icon="🏠", default=True)
 
-# 各会場のページ（ファイルパスで指定）
-# ※ファイルが存在しないとエラーになるため、実際のファイル名と一致させてください
-all_pages = [home_page]
+# 2. 各会場のページをリスト化して一括登録
+# all_venues のリストからパスを取り出して、Pageオブジェクトに変換します
+venue_pages = []
+for name, path, v_type in all_venues:
+    if os.path.exists(path):
+        # 実際にファイルが存在する場合のみ、ナビゲーションに登録
+        p = st.Page(path, title=name, icon="🚤")
+        venue_pages.append(p)
 
-# navigationで管理することで st.switch_page が確実に動作するようになります
-pg = st.navigation(all_pages)
+# 3. ナビゲーションに全てのページを統合
+# ユーザーに見せたくない場合は、position="hidden"なども使えますが、まずはこれで動作確認してください
+pg = st.navigation({
+    "メイン": [home_page],
+    "会場別解析": venue_pages
+})
 
-# 最後に pg.run() を呼ぶ（これが show_main_page() の代わりになります）
+# 4. 実行
 if __name__ == "__main__":
     pg.run()
+
 
 
 
