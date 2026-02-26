@@ -373,7 +373,9 @@ st.set_page_config(page_title="競艇Pro 蒲郡", layout="wide")
 PLACE_NAME = "蒲郡"
 
 # 戻るボタン
-if st.button("← 会場選択へ戻る"):
+# ファイルごとに一意、あるいはページ内で一度も使っていないkeyを指定します
+if st.button("← 会場選択へ戻る", key="back_to_home_gamagori"):
+    st.switch_page("public_app.py")
     st.switch_page("public_app.py")
 def encode_image(path):
     with open(path, "rb") as f:
