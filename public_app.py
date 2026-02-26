@@ -4,100 +4,113 @@ import os
 # 1. 基本設定
 st.set_page_config(page_title="競艇予想Pro", layout="wide")
 
-# --- カスタムCSS（公式アプリの雰囲気に寄せる） ---
+# --- カスタムCSS（カードのデザインを細かく設定） ---
 st.markdown("""
     <style>
-    /* ボタン全体のスタイル */
-    .stButton > button {
-        height: 120px !important;
-        border-radius: 12px !important;
-        border: 1px solid #e5e7eb !important;
-        background-color: #ffffff !important;
-        color: #374151 !important;
-        transition: all 0.2s ease;
+    /* 全体背景 */
+    .stApp { background-color: #F3F4F6; }
+    
+    /* カードの枠組み */
+    .venue-card {
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #E5E7EB;
+        text-align: center;
+        background-color: white;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        white-space: pre-wrap !important; /* 改行を有効にする */
-        line-height: 1.4 !important;
-        font-size: 14px !important;
     }
-    /* ホバー時の挙動 */
-    .stButton > button:hover {
-        border-color: #3b82f6 !important;
-        background-color: #f8fafc !important;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    /* タブのスタイル調整 */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 20px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        font-weight: bold;
+    
+    /* 開催タイプ別のヘッダー色 */
+    .type-nighter { color: #1E40AF; font-weight: bold; font-size: 0.8em; } /* 青 */
+    .type-morning { color: #EA580C; font-weight: bold; font-size: 0.8em; } /* オレンジ */
+    .type-day { color: #111827; font-weight: bold; font-size: 0.8em; }
+    
+    /* 会場名 */
+    .venue-name { font-size: 1.2em; font-weight: bold; margin: 5px 0; color: #111827; }
+
+    /* ボタンの透明化とカードフィット */
+    .stButton > button {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #D1D5DB;
+        background-color: white;
+        height: 40px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- メインコンテンツを表示する関数 ---
-def show_venue_grid():
-    # 会場データ（表示名, パス, ステータス絵文字, クラス, 日数, 時刻）
-    # 有料版ではここを自動取得(スクレイピング)にするのが理想です
-    venues = [
-        ("桐生01", "pages/01_kiryu.py", "🌙", "一般", "3日目", "1R 15:23"),
-        ("戸田02", "pages/02_toda.py", "☀️", "一般", "2日目", "1R 10:47"),
-        ("江戸川03", "pages/03_edogawa.py", "", "非開催", "--", "--"),
-        ("平和島04", "pages/04_heiwajima.py", "☀️", "一般", "最終日", "1R 10:57"),
-        ("多摩川05", "pages/05_tamagawa.py", "🌅", "一般", "5日目", "1R 11:09"),
-        ("浜名湖06", "pages/06_hamanako.py", "", "非開催", "--", "--"),
-        ("蒲郡07", "pages/07_gamagori.py", "", "非開催", "--", "--"),
-        ("常滑08", "pages/08_tokoname.py", "☀️", "一般", "初日", "1R 10:18"),
-        # 必要に応じて24場分追加
+def draw_venue_card(name, path, venue_type):
+    """
+    会場ごとのカードを描画する関数
+    venue_type: "🌙 ナイター", "☀️ モーニング", "昼開催"
+    """
+    with st.container():
+        # HTMLで見た目を整える
+        type_class = "type-nighter" if "ナイター" in venue_type else "type-morning" if "モーニング" in venue_type else "type-day"
+        
+        st.markdown(f"""
+            <div class="venue-card">
+                <div class="{type_class}">{venue_type}</div>
+                <div class="venue-name">{name}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # カードのすぐ下にボタンを配置
+        if os.path.exists(path):
+            if st.button("予想データ", key=f"btn_{name}", use_container_width=True):
+                st.switch_page(path)
+        else:
+            st.button("準備中", key=f"btn_{name}", use_container_width=True, disabled=True)
+
+def show_main_page():
+    st.title("🚤 開催一覧")
+    
+    # 24場の設定（会場名, パス, タイプ）
+    # 実際の開催に合わせてここを書き換えるだけでデザインが変わります
+    all_venues = [
+        ("桐生", "pages/01_kiryu.py", "🌙 ナイター"),
+        ("戸田", "pages/02_toda.py", "昼開催"),
+        ("江戸川", "pages/03_edogawa.py", "昼開催"),
+        ("平和島", "pages/04_heiwajima.py", "昼開催"),
+        ("多摩川", "pages/05_tamagawa.py", "昼開催"),
+        ("浜名湖", "pages/06_hamanako.py", "☀️ モーニング"),
+        ("蒲郡", "pages/07_gamagori.py", "🌙 ナイター"),
+        ("常滑", "pages/08_tokoname.py", "昼開催"),
+        ("津", "pages/09_tu.py", "昼開催"),
+        ("三国", "pages/10_mikuni.py", "☀️ モーニング"),
+        ("びわこ", "pages/11_biwako.py", "昼開催"),
+        ("住之江", "pages/12_suminoe.py", "🌙 ナイター"),
+        ("尼崎", "pages/13_amagasaki.py", "昼開催"),
+        ("鳴門", "pages/14_naruto.py", "☀️ モーニング"),
+        ("丸亀", "pages/15_marugame.py", "🌙 ナイター"),
+        ("児島", "pages/16_kojima.py", "昼開催"),
+        ("宮島", "pages/17_miyajima.py", "昼開催"),
+        ("徳山", "pages/18_tokuyama.py", "☀️ モーニング"),
+        ("下関", "pages/19_simonoseki.py", "🌙 ナイター"),
+        ("若松", "pages/20_wakamatu.py", "🌙 ナイター"),
+        ("芦屋", "pages/21_asiya.py", "☀️ モーニング"),
+        ("福岡", "pages/22_hukuoka.py", "昼開催"),
+        ("唐津", "pages/23_karatu.py", "☀️ モーニング"),
+        ("大村", "pages/24_omura.py", "🌙 ナイター"),
     ]
 
-    # 4列のグリッド表示
-    for i in range(0, len(venues), 4):
+    # 4列で表示
+    for i in range(0, len(all_venues), 4):
         cols = st.columns(4)
         for j in range(4):
-            if i + j < len(venues):
-                name, path, icon, grade, day, time = venues[i + j]
+            if i + j < len(all_venues):
+                name, path, v_type = all_venues[i + j]
                 with cols[j]:
-                    if grade == "非開催":
-                        # 非開催のデザイン
-                        label = f"\n{name}\n\nー ー"
-                        st.button(label, use_container_width=True, disabled=True, key=f"dead_{name}")
-                    else:
-                        # 開催中のデザイン（改行を使って情報を配置）
-                        label = f"{icon}  {name}\n{grade}  {day}\n{time}"
-                        if os.path.exists(path):
-                            if st.button(label, use_container_width=True, key=f"live_{name}"):
-                                st.switch_page(path)
-                        else:
-                            st.button(f"{name}\n準備中", disabled=True, use_container_width=True)
+                    draw_venue_card(name, path, v_type)
 
-# --- アプリ構成 ---
-st.image("https://img.icons8.com/color/96/speed-boat.png", width=50) # ロゴ代わり
-st.title("トップ")
-
-# 画像にあった上部メニュー（タブ）
-tab1, tab2, tab3, tab4 = st.tabs(["🚩 開催一覧", "⏰ 締切順", "⭐ お気に入り", "📽️ レース映像"])
+# --- アプリ構造 ---
+tab1, tab2 = st.tabs(["🚩 開催一覧", "⭐ お気に入り"])
 
 with tab1:
-    show_venue_grid()
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🔄 開催情報更新", use_container_width=True):
-        st.toast("情報を更新しました")
-        st.rerun()
+    show_main_page()
 
-with tab2:
-    st.write("締切が近い順に表示されます（開発中）")
-
-with tab3:
-    st.write("お気に入りの会場が表示されます（開発中）")
-
-# サイドバー設定
+# サイドバー
 with st.sidebar:
-    st.markdown("## 🏆 競艇予想Pro")
-    st.caption("v1.0.0 有料配布版")
-    st.divider()
-    st.info("ライセンス有効期限:\n2026年12月31日まで")
+    st.markdown("### 🏆 競艇予想Pro")
+    st.caption("Premium Edition")
