@@ -8,14 +8,36 @@ import plotly.express as px
 from google.oauth2.service_account import Credentials
 import datetime
 
-# ★必ず最初に
+# -------------------------
+# 必ず最初に
+# -------------------------
 st.set_page_config(page_title="競艇Pro 蒲郡", layout="wide")
 
+PLACE_NAME = "蒲郡"
+
+# -------------------------
+# 戻るボタン（1回だけ）
+# -------------------------
+if st.button("← 会場選択へ戻る", key="back_to_home_gamagori"):
+    st.switch_page("public_app.py")
+
+# -------------------------
+# 共通関数
+# -------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def encode_image(path):
+    try:
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except:
+        return ""
+
+def highlight_rank(df):
 
     def _highlight(col):
 
         s = pd.to_numeric(col, errors="coerce")
-
         order = s.rank(method="min", ascending=True)
 
         styles = []
@@ -31,17 +53,23 @@ st.set_page_config(page_title="競艇Pro 蒲郡", layout="wide")
         return styles
 
     return df.style.apply(_highlight, axis=0).format("{:.2f}")
-# --- 1. 認証 & 接続設定 ---
-def get_gsheet_client():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    try:
-        credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-        return gspread.authorize(credentials)
-    except: return None
 
-# --- 3. データ読み込み ---
+def get_gsheet_client():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    try:
+        credentials = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=scopes
+        )
+        return gspread.authorize(credentials)
+    except:
+        return None
+
 # ==============================
-# 会場トップページ
+# レース種別選択
 # ==============================
 if "selected_place" not in st.session_state:
     st.session_state.selected_place = None
@@ -50,32 +78,30 @@ if st.session_state.selected_place is None:
 
     st.title("🏁 レース種別を選択")
 
-cols = st.columns(4)
+    cols = st.columns(4)
 
-# 使えるボタン
-if cols[0].button("混合戦", use_container_width=True):
-    st.session_state.selected_place = "蒲郡混合戦"
-    st.rerun()
+    if cols[0].button("混合戦", use_container_width=True):
+        st.session_state.selected_place = "蒲郡混合戦"
+        st.rerun()
 
-if cols[1].button("女子戦", key="gamagori_top_joshi", use_container_width=True):
-    st.session_state.selected_place = "蒲郡女子戦"
-    st.rerun()
+    if cols[1].button("女子戦", key="gamagori_top_joshi", use_container_width=True):
+        st.session_state.selected_place = "蒲郡女子戦"
+        st.rerun()
 
-# 準備中（押せない）
-cols[2].button("G1競走（準備中）", disabled=True, use_container_width=True)
-cols[3].button("SG競走（準備中）", disabled=True, use_container_width=True)
+    cols[2].button("G1競走（準備中）", disabled=True, use_container_width=True)
+    cols[3].button("SG競走（準備中）", disabled=True, use_container_width=True)
+
+    st.stop()
 
 # ==============================
-# ここから本体処理
+# ここから本体
 # ==============================
 place = st.session_state.selected_place
+st.caption(f"選択中：{place}")
 
-st.caption(f"選択中の会場：{place}")
-
-df = pd.DataFrame()
-gc = get_gsheet_client()
-
-# ▼ レースごとのシート名対応
+# -------------------------
+# シート対応
+# -------------------------
 SHEET_MAP = {
     "蒲郡混合戦": {
         "sheet1": "蒲郡混合_統計シート",
@@ -87,27 +113,37 @@ SHEET_MAP = {
     },
 }
 
-if gc:
-    try:
-        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+# -------------------------
+# データ読込
+# -------------------------
+df = pd.DataFrame()
+gc = get_gsheet_client()
 
-        ws1_name = SHEET_MAP[place]["sheet1"]
-        ws2_name = SHEET_MAP[place]["sheet2"]
+if gc is None:
+    st.error("Google認証に失敗しました")
+    st.stop()
 
-        ws1 = sh.worksheet(ws1_name)
-        ws2 = sh.worksheet(ws2_name)
+try:
+    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
-        rows1 = ws1.get_all_records()
-        rows2 = ws2.get_all_records()
+    ws1_name = SHEET_MAP[place]["sheet1"]
+    ws2_name = SHEET_MAP[place]["sheet2"]
 
-        all_rows = rows1 + rows2
+    ws1 = sh.worksheet(ws1_name)
+    ws2 = sh.worksheet(ws2_name)
 
-        if len(all_rows) > 0:
-            df = pd.DataFrame(all_rows)
+    rows1 = ws1.get_all_records()
+    rows2 = ws2.get_all_records()
 
-    except Exception as e:
-        st.error(e)
-# ▼ スリット表示用CSS（ここに貼る）
+    df = pd.DataFrame(rows1 + rows2)
+
+except Exception as e:
+    st.error(e)
+    st.stop()
+
+# -------------------------
+# スリット表示用CSS
+# -------------------------
 st.markdown("""
 <style>
 .slit-area{
@@ -117,7 +153,6 @@ st.markdown("""
     position:relative;
 }
 
-/* スタート基準ライン */
 .slit-line{
     position:absolute;
     top:0;
@@ -144,26 +179,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-df = pd.DataFrame()
-gc = get_gsheet_client()
-
-if gc:
-    try:
-        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-
-        ws1 = sh.worksheet("統計シート")
-        ws2 = sh.worksheet("統計シート②")
-
-        rows1 = ws1.get_all_records()
-        rows2 = ws2.get_all_records()
-
-        all_rows = rows1 + rows2
-
-        if len(all_rows) > 0:
-            df = pd.DataFrame(all_rows)
-
-    except Exception as e:
-        st.error(e)
+# -------------------------
+# タイトル
+# -------------------------
 st.title("予想ツール")
 
 # タブ構成
