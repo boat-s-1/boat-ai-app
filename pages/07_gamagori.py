@@ -20,9 +20,6 @@ PLACE_NAME = "蒲郡"
 # ファイルごとに一意、あるいはページ内で一度も使っていないkeyを指定します
 if st.button("← 会場選択へ戻る", key="back_to_home_gamagori"):
     st.switch_page("public_app.py")
-def encode_image(path):
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -87,7 +84,55 @@ if st.session_state.selected_place is None:
 
     # ← ここが超重要
     st.stop()
+# ==============================
+# ここから本体処理
+# ==============================
 
+place = st.session_state.selected_place
+
+st.caption(f"選択中の会場：{place}")
+
+# シート対応表
+SHEET_MAP = {
+    "蒲郡混合戦": {
+        "sheet1": "蒲郡混合_統計シート",
+        "sheet2": "蒲郡混合_統計シート②"
+    },
+    "蒲郡女子戦": {
+        "sheet1": "蒲郡女子_統計シート",
+        "sheet2": "蒲郡女子_統計シート②"
+    },
+}
+
+df = pd.DataFrame()
+gc = get_gsheet_client()
+
+# =============================
+if gc:
+    try:
+        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+
+        ws1_name = SHEET_MAP[place]["sheet1"]
+        ws2_name = SHEET_MAP[place]["sheet2"]
+
+        ws1 = sh.worksheet(ws1_name)
+        ws2 = sh.worksheet(ws2_name)
+
+        rows1 = ws1.get_all_records()
+        rows2 = ws2.get_all_records()
+
+        st.write("DEBUG rows1:", len(rows1))
+        st.write("DEBUG rows2:", len(rows2))
+
+        df = pd.DataFrame(rows1 + rows2)
+
+    except Exception as e:
+        st.error(e)
+        st.stop()
+
+else:
+    st.error("Google認証に失敗しました")
+    st.stop()
 
 
 
