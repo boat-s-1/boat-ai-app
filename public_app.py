@@ -60,41 +60,39 @@ def show_main_page():
     # --- ニュースティッカー ---
     news_message = "📢 只今、蒲郡無料公開中！ ｜ 2/26 桐生データ大量更新！ ｜ 本日の勝負レースは下関12R！ ｜ 公式Xにて的中速報配信中！"
     st.markdown(f'<div class="ticker-wrapper"><div class="ticker-text">{news_message}</div></div>', unsafe_allow_html=True)
-    # --- ニュースティッカーの下に配置 ---
-    st.markdown("### 🎯 本日のツール注目レース・ガイド")
     
-        # --- ニュースティッカーの下に配置 ---
+           # --- ガイド枠：スプレッドシート読み込み ---
     st.markdown("### 🎯 本日のツール注目レース・ガイド")
-    
-    # 3つの注目レースを表示するカラム
-    g_col1, g_col2, g_col3 = st.columns(3)
 
-    with g_col1:
-        with st.container(border=True):
-            st.markdown("#### ⚓ 桐生 12R")
-            st.caption("締切 20:45")
-            st.markdown("<span style='color:#d32f2f; font-weight:bold;'>【信頼度：S】</span>", unsafe_allow_html=True)
-            st.write("指数1位が85pt超え。統計上、1着率は75%を誇る鉄板構成です。")
-            if st.button("桐生データへ", key="guide_1"):
-                st.switch_page("pages/01_kiryu.py")
+    try:
+        # シート「ガイド枠」を読み込み
+        sh_guide = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+        ws_guide = sh_guide.worksheet("ガイド枠")
+        guide_df = pd.DataFrame(ws_guide.get_all_records())
 
-    with g_col2:
-        with st.container(border=True):
-            st.markdown("#### 🌊 下関 09R")
-            st.caption("締切 19:15")
-            st.markdown("<span style='color:#2563eb; font-weight:bold;'>【信頼度：A】</span>", unsafe_allow_html=True)
-            st.write("条件補正で4号艇が急浮上。カド一撃の波乱データが出ています。")
-            if st.button("下関データへ", key="guide_2"):
-                st.switch_page("pages/19_simonoseki.py")
+        if not guide_df.empty:
+            g_cols = st.columns(len(guide_df)) # データ数に合わせてカラムを自動調整
 
-    with g_col3:
-        with st.container(border=True):
-            st.markdown("#### 🚤 蒲郡 11R")
-            st.caption("締切 20:10")
-            st.markdown("<span style='color:#16a34a; font-weight:bold;'>【信頼度：B】</span>", unsafe_allow_html=True)
-            st.write("スタート指数が上位3名拮抗。BOX買いの期待値が高いレースです。")
-            if st.button("蒲郡データへ", key="guide_3"):
-                st.switch_page("pages/07_gamagori.py")
+            for i, row in guide_df.iterrows():
+                with g_cols[i]:
+                    with st.container(border=True):
+                        st.markdown(f"#### ⚓ {row['会場']} {row['レース番号']}")
+                        st.caption(f"締切 {row['締切']}")
+                        
+                        # 信頼度に応じた色分け
+                        color = "#d32f2f" if row['信頼度'] == "S" else "#2563eb" if row['信頼度'] == "A" else "#16a34a"
+                        st.markdown(f"<span style='color:{color}; font-weight:bold;'>【信頼度：{row['信頼度']}】</span>", unsafe_allow_html=True)
+                        
+                        st.write(row['コメント'])
+                        
+                        # ボタンクリックで指定のページへ
+                        if st.button(f"{row['会場']}データへ", key=f"guide_btn_{i}"):
+                            st.switch_page(row['ページパス'])
+        else:
+            st.info("本日の注目レースは準備中です。")
+            
+    except Exception as e:
+        st.error("ガイド枠の読み込みに失敗しました。シート名「ガイド枠」を確認してください。")
 
     st.divider()
     # --- タブメニュー ---
@@ -273,6 +271,7 @@ valid_venue_pages = [p for p in all_p if p is not None]
 
 pg = st.navigation({"メイン": [home], "会場一覧": valid_venue_pages})
 pg.run()
+
 
 
 
