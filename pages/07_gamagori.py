@@ -372,12 +372,7 @@ with tab_stat:
             try:
                 sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
-                ws1 = sh.worksheet("蒲郡_統計シート")
-                ws2 = sh.worksheet("蒲郡_統計シート②")
-
-                rows1 = ws1.get_all_records()
-                rows2 = ws2.get_all_records()
-
+            
                 base_df = pd.DataFrame(rows1 + rows2)
 
                 st.session_state["tab2_base_df_gamagori"] = base_df
