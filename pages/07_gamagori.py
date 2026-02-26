@@ -713,39 +713,213 @@ with tab_sim:
             df_score[["順位", "艇番", "score", "予想％"]],
             use_container_width=True
         )
-# --- タブ2：統計解析 ---
+# --- タブ2：統計解析（蒲郡専用） ---
 with tab_stat:
 
-    st.subheader("会場別 補正・総合比較（統計シート）")
+    st.subheader("会場別 補正・総合比較（蒲郡）")
 
     # ======================================
     # 統計データ読み込みボタン
     # ======================================
-    if st.button("統計データを読み込んで比較する", key="tab2_load_btn"):
+    if st.button("📥 蒲郡の統計データを読み込む", key="tab2_load_gamagori"):
 
-        with st.spinner("統計データを読み込んでいます…"):
+        with st.spinner("蒲郡データを読み込んでいます…"):
 
-            sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+            try:
+                sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
-            ws1 = sh.worksheet("統計シート")
-            ws2 = sh.worksheet("統計シート②")
+                ws1 = sh.worksheet("蒲郡_統計シート")
+                ws2 = sh.worksheet("蒲郡_統計シート②")
 
-            rows1 = ws1.get_all_records()
-            rows2 = ws2.get_all_records()
+                rows1 = ws1.get_all_records()
+                rows2 = ws2.get_all_records()
 
-            base_df = pd.DataFrame(rows1 + rows2)
+                base_df = pd.DataFrame(rows1 + rows2)
 
-            st.session_state["tab2_base_df"] = base_df
+                st.session_state["tab2_base_df_gamagori"] = base_df
 
-    if "tab2_base_df" not in st.session_state:
-        st.info("『統計データを読み込んで比較する』を押してください。")
+            except Exception as e:
+                st.error("蒲郡シートの読み込みに失敗しました")
+                st.exception(e)
+                st.stop()
+
+    # ======================================
+    # 未読込時
+    # ======================================
+    if "tab2_base_df_gamagori" not in st.session_state:
+        st.info("『蒲郡の統計データを読み込む』を押してください。")
         st.stop()
 
-    base_df = st.session_state["tab2_base_df"].copy()
+    base_df = st.session_state["tab2_base_df_gamagori"].copy()
 
     if base_df.empty:
-        st.warning("統計シートにデータがありません")
+        st.warning("蒲郡の統計データがありません")
         st.stop()
+
+    # ======================================
+    # 数値変換
+    # ======================================
+    for c in ["展示", "直線", "一周", "回り足", "艇番"]:
+        if c in base_df.columns:
+            base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
+
+    # 蒲郡固定
+    place_df = base_df.copy()
+
+    # 使用レース数
+    race_count = (
+        place_df[["日付", "レース番号"]]
+        .dropna()
+        .drop_duplicates()
+        .shape[0]
+    )
+
+    st.caption(f"📊 蒲郡 過去 {race_count} レースより補正")
+
+    st.divider()
+
+    # ======================================
+    # 入力
+    # ======================================
+    st.markdown("### 展示タイム入力（当日データ）")
+
+    input_rows = []
+
+    head = st.columns([1, 2, 2, 2, 2])
+    head[0].markdown("**艇番**")
+    head[1].markdown("**一周**")
+    head[2].markdown("**回り足**")
+    head[3].markdown("**直線**")
+    head[4].markdown("**展示**")
+
+    for b in range(1, 7):
+
+        cols = st.columns([1, 2, 2, 2, 2])
+
+        cols[0].markdown(f"**{b}号艇**")
+
+        isshu = cols[1].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            key=f"tab2_gm_isshu_{b}",
+            label_visibility="collapsed"
+        )
+
+        mawari = cols[2].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            key=f"tab2_gm_mawari_{b}",
+            label_visibility="collapsed"
+        )
+
+        choku = cols[3].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            key=f"tab2_gm_choku_{b}",
+            label_visibility="collapsed"
+        )
+
+        tenji = cols[4].number_input(
+            "",
+            step=0.01,
+            format="%.2f",
+            key=f"tab2_gm_tenji_{b}",
+            label_visibility="collapsed"
+        )
+
+        input_rows.append({
+            "艇番": b,
+            "展示": tenji,
+            "直線": choku,
+            "一周": isshu,
+            "回り足": mawari
+        })
+
+    input_df = pd.DataFrame(input_rows).set_index("艇番")
+
+    st.divider()
+
+    # ======================================
+    # 入力値表示
+    # ======================================
+    st.markdown("### 公式展示タイム表（入力値）")
+
+    st.dataframe(
+        highlight_rank(input_df),
+        use_container_width=True
+    )
+
+    # ======================================
+    # 会場平均との差補正
+    # ======================================
+    st.divider()
+    st.markdown("### 場平均補正タイム（蒲郡平均との差補正）")
+
+    place_mean = (
+        place_df
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
+        .mean()
+    )
+
+    overall_mean = (
+        place_df[["展示", "直線", "一周", "回り足"]]
+        .mean()
+    )
+
+    adj_df = input_df.copy()
+
+    for b in range(1, 7):
+        if b in place_mean.index:
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if (
+                    pd.notna(input_df.loc[b, col])
+                    and pd.notna(place_mean.loc[b, col])
+                ):
+                    adj_df.loc[b, col] = (
+                        input_df.loc[b, col]
+                        - place_mean.loc[b, col]
+                        + overall_mean[col]
+                    )
+
+    st.dataframe(
+        highlight_rank(adj_df),
+        use_container_width=True
+    )
+
+    # ======================================
+    # 枠番補正
+    # ======================================
+    st.divider()
+    st.markdown("### 枠番補正込みタイム（蒲郡）")
+
+    lane_bias = (
+        place_df
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
+        .mean()
+        - overall_mean
+    )
+
+    final_df = adj_df.copy()
+
+    for b in range(1, 7):
+        if b in lane_bias.index:
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if (
+                    pd.notna(adj_df.loc[b, col])
+                    and pd.notna(lane_bias.loc[b, col])
+                ):
+                    final_df.loc[b, col] = (
+                        adj_df.loc[b, col]
+                        - lane_bias.loc[b, col]
+                    )
+
+    st.dataframe(
+        highlight_rank(final_df),
+        use_container_width=True
+    )
 with tab_start:
 
     st.subheader("🚀 スタート予想（混合戦｜会場別補正・入力型）")
