@@ -14,7 +14,7 @@ st.set_page_config(page_title="競艇Pro 蒲郡", layout="wide")
 # -------------------------
 # 会場固定
 # -------------------------
-PLACE_NAME = "桐生"
+PLACE_NAME = "蒲郡"
 
 # 戻るボタン
 if st.button("← 会場選択へ戻る"):
@@ -60,33 +60,31 @@ def get_gsheet_client():
         return gspread.authorize(credentials)
     except: return None
 # --- 3. データ読み込み ---
-
 # ==============================
-# ここから本体処理
+# 会場トップページ
 # ==============================
-place = st.session_state.selected_place
+if "selected_place" not in st.session_state:
+    st.session_state.selected_place = None
 
-st.caption(f"選択中の会場：{place}")
+if st.session_state.selected_place is None:
 
-df = pd.DataFrame()
-gc = get_gsheet_client()
+    st.title("🏁 レース種別を選択")
 
-# ▼ 会場ごとのシート名対応
-SHEET_MAP = {
-    "蒲郡": {
-        "sheet1": "蒲郡_統計シート",
-        "sheet2": "蒲郡_統計シート②"
-    },
-    "大村": {
-        "sheet1": "大村_統計シート",
-        "sheet2": "大村_統計シート②"
-    },
-    "住之江": {
-        "sheet1": "住之江_統計シート",
-        "sheet2": "住之江_統計シート②"
-    }
-}
+cols = st.columns(4)
 
+# 使えるボタン
+# レース番号などの変数（例: race_no）をkeyに混ぜると確実に重複を避けられます
+if cols[0].button("混合戦", use_container_width=True, key=f"btn_mixed_{PLACE_NAME}"):
+    st.session_state.selected_place = "蒲郡混合戦"
+    st.rerun()
+
+if cols[1].button("女子戦", key="gamagori_top_joshi", use_container_width=True):
+    st.session_state.selected_place = "蒲郡女子戦"
+    st.rerun()
+
+# 準備中（押せない）
+cols[2].button("G1競走（準備中）", disabled=True, use_container_width=True)
+cols[3].button("SG競走（準備中）", disabled=True, use_container_width=True)
 if gc:
     try:
         sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
