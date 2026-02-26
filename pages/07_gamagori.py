@@ -225,7 +225,6 @@ with tab_sim:
 
         if total_score == 0:
             st.warning("すべて『無』のため、％を計算できません")
-            st.stop()
 
         df_score["予想％"] = df_score["score"] / total_score * 100
         df_score["予想％"] = df_score["予想％"].round(1)
@@ -331,13 +330,11 @@ with tab_stat:
     # ======================================
     if "tab2_base_df_gamagori" not in st.session_state:
         st.info("『蒲郡の統計データを読み込む』を押してください。")
-        st.stop()
 
     base_df = st.session_state["tab2_base_df_gamagori"].copy()
 
     if base_df.empty:
         st.warning("蒲郡の統計データがありません")
-        st.stop()
 
     # ======================================
     # 数値変換
@@ -514,7 +511,7 @@ with tab_start:
     gc = get_gsheet_client()
     if gc is None:
         st.error("Google認証に失敗しています")
-        st.stop()
+    
 
     try:
         sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
@@ -522,20 +519,20 @@ with tab_start:
     except Exception as e:
         st.error("管理用_NEW が開けません")
         st.exception(e)
-        st.stop()
+      
 
     df = pd.DataFrame(ws.get_all_records())
 
     if df.empty:
         st.info("データがありません")
-        st.stop()
+      
 
     # 必須列チェック
     need_cols = ["会場", "展示", "一周", "ST", "艇番"]
     for c in need_cols:
         if c not in df.columns:
             st.error(f"管理用_NEW に「{c}」列がありません")
-            st.stop()
+         
 
     # 型変換
     for c in ["展示", "一周", "ST", "艇番"]:
@@ -548,7 +545,7 @@ with tab_start:
 
     if len(place_list) == 0:
         st.warning("会場データがありません")
-        st.stop()
+        
 
     race_place = st.selectbox(
         "会場を選択",
@@ -560,7 +557,7 @@ with tab_start:
 
     if place_df.empty:
         st.warning("この会場のデータがありません")
-        st.stop()
+      
 
     # -----------------------
     # 会場平均との差用
