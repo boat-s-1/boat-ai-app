@@ -207,7 +207,23 @@ def show_main_page():
     with tab3:
         st.subheader("📱 公式リンク")
         st.link_button("公式X (@bort_strike) をフォロー", "https://x.com/bort_strike", use_container_width=True)
-
+ # --- TAB4: 的中実績 (Xタイムライン埋め込み) ---
+    with tab4:
+        st.subheader("📈 リアルタイム的中報告")
+        st.write("公式Xでの最新ポストを表示しています。")
+        
+        # X(Twitter)の埋め込みHTML
+        twitter_html = """
+        <a class="twitter-timeline" 
+           data-height="800" 
+           data-theme="light" 
+           href="https://twitter.com/bort_strike?ref_src=twsrc%5Etfw">
+           Tweets by bort_strike
+        </a> 
+        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        """
+        # HTMLコンポーネントとして表示
+        components.html(twitter_html, height=800, scrolling=True)
 # --- 4. ナビゲーションの設定 ---
 home_page = st.Page(show_main_page, title="ホーム", icon="🏠", default=True)
 
@@ -224,6 +240,7 @@ pg = st.navigation({
 
 if __name__ == "__main__":
     pg.run()
+
 
 
 
