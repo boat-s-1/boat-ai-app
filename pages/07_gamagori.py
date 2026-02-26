@@ -78,7 +78,7 @@ if cols[0].button("混合戦", use_container_width=True):
     st.session_state.selected_place = "蒲郡混合戦"
     st.rerun()
 
-if cols[1].button("女子戦", use_container_width=True):
+if cols[1].button("女子戦", key="gamagori_top_joshi", use_container_width=True):
     st.session_state.selected_place = "蒲郡女子戦"
     st.rerun()
 
@@ -437,7 +437,7 @@ if cols[0].button("混合戦", use_container_width=True, key=f"btn_mixed_{PLACE_
     st.session_state.selected_place = "蒲郡混合戦"
     st.rerun()
 
-if cols[1].button("女子戦", use_container_width=True):
+if cols[1].button("女子戦", key="gamagori_top_joshi", use_container_width=True):
     st.session_state.selected_place = "蒲郡女子戦"
     st.rerun()
 
