@@ -108,6 +108,7 @@ if gc is None:
     st.error("Google認証に失敗しました")
     st.stop()
 
+# ★ ここだけ1回だけ
 try:
     sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
@@ -126,9 +127,12 @@ try:
     df = pd.DataFrame(rows1 + rows2)
 
 except Exception as e:
-    st.error(e)
+    st.error("シート読み込みエラー")
+    st.exception(e)
     st.stop()
-    
+
+
+# ← ここに必ず来るか確認
 st.title("予想ツール")
 st.write("ここまで来ています")
 
