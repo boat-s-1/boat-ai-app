@@ -4,7 +4,7 @@ import os
 # 1. 基本設定
 st.set_page_config(page_title="競艇予想Pro", layout="wide")
 
-# --- カスタムCSS（.top-button という枠の中にあるボタンだけを対象にする） ---
+# --- カスタムCSS ---
 st.markdown("""
     <style>
     /* トップ画面の4列ボタン専用のスタイル */
@@ -14,8 +14,8 @@ st.markdown("""
         border: 1px solid #d1d5db !important;
         background-color: white !important;
         white-space: pre-wrap !important; 
-        line-height: 1.6 !important;
-        font-size: 14px !important;
+        line-height: 1.4 !important; /* 行間を少し詰め、3段が綺麗に収まるように調整 */
+        font-size: 15px !important;
         color: #333333 !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
@@ -29,20 +29,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 共通関数：太字（強調）を作る ---
-def to_bold(text):
-    return f"【{text}】"
-
-# --- 共通関数：ページを安全に登録する ---
-def safe_page(path, title, icon="🚤"):
-    if os.path.exists(path):
-        return st.Page(path, title=title, icon=icon)
-    return None
-
 # --- メイン画面（ホーム）の表示内容 ---
 def show_main_page():
     st.title("🏁 開催一覧")
     
+    # 会場リスト（表示名, ファイル名, 開催タイプ）
     all_venues = [
         ("桐生", "pages/01_kiryu.py", "🌙ナイター"), ("戸田", "pages/02_toda.py", "☀️昼開催"),
         ("江戸川", "pages/03_edogawa.py", "☀️昼開催"), ("平和島", "pages/04_heiwajima.py", "☀️昼開催"),
@@ -65,21 +56,26 @@ def show_main_page():
             if i + j < len(all_venues):
                 name, path, v_type = all_venues[i + j]
                 with cols[j]:
-                    label = f"{to_bold(v_type)}\n{to_bold(name)}\n予想データ"
+                    # ご要望通りの並び：1段目はそのまま、2段目を【 】で強調
+                    label = f"{v_type}\n【{name}】\n予想データ"
                     
-                    # HTMLのdivタグでボタンを囲み、CSSを適用させる
                     st.markdown('<div class="top-button">', unsafe_allow_html=True)
                     if os.path.exists(path):
                         if st.button(label, use_container_width=True, key=f"btn_{name}"):
                             st.switch_page(path)
                     else:
-                        st.button(f"{to_bold(v_type)}\n{to_bold(name)}\n未作成", use_container_width=True, disabled=True)
+                        st.button(f"{v_type}\n【{name}】\n未作成", use_container_width=True, disabled=True)
                     st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 共通関数：ページを安全に登録する ---
+def safe_page(path, title, icon="🚤"):
+    if os.path.exists(path):
+        return st.Page(path, title=title, icon=icon)
+    return None
 
 # --- ページオブジェクトの生成 ---
 home = st.Page(show_main_page, title="ホーム", icon="🏠", default=True)
 
-# 24場の登録
 all_p = [
     safe_page(f"pages/{str(i).zfill(2)}_{n}.py", t) for i, n, t in [
         (1, "kiryu", "桐生"), (2, "toda", "戸田"), (3, "edogawa", "江戸川"), (4, "heiwajima", "平和島"),
