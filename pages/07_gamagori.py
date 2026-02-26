@@ -89,10 +89,8 @@ if st.session_state.selected_place is None:
 # ==============================
 
 place = st.session_state.selected_place
-
 st.caption(f"選択中の会場：{place}")
 
-# シート対応表
 SHEET_MAP = {
     "蒲郡混合戦": {
         "sheet1": "蒲郡混合_統計シート",
@@ -104,133 +102,31 @@ SHEET_MAP = {
     },
 }
 
-df = pd.DataFrame()
 gc = get_gsheet_client()
 
-# =============================
-if gc:
-    try:
-        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-
-        ws1_name = SHEET_MAP[place]["sheet1"]
-        ws2_name = SHEET_MAP[place]["sheet2"]
-
-        ws1 = sh.worksheet(ws1_name)
-        ws2 = sh.worksheet(ws2_name)
-
-        rows1 = ws1.get_all_records()
-        rows2 = ws2.get_all_records()
-
-        st.write("DEBUG rows1:", len(rows1))
-        st.write("DEBUG rows2:", len(rows2))
-
-        df = pd.DataFrame(rows1 + rows2)
-
-    except Exception as e:
-        st.error(e)
-        st.stop()
-
-else:
+if gc is None:
     st.error("Google認証に失敗しました")
     st.stop()
 
+try:
+    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
+    ws1_name = SHEET_MAP[place]["sheet1"]
+    ws2_name = SHEET_MAP[place]["sheet2"]
 
+    ws1 = sh.worksheet(ws1_name)
+    ws2 = sh.worksheet(ws2_name)
 
+    rows1 = ws1.get_all_records()
+    rows2 = ws2.get_all_records()
 
-# =============================
-if gc:
-    try:
-        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+    st.write("DEBUG rows1:", len(rows1))
+    st.write("DEBUG rows2:", len(rows2))
 
-        ws1_name = SHEET_MAP[place]["sheet1"]
-        ws2_name = SHEET_MAP[place]["sheet2"]
+    df = pd.DataFrame(rows1 + rows2)
 
-        ws1 = sh.worksheet(ws1_name)
-        ws2 = sh.worksheet(ws2_name)
-
-        rows1 = ws1.get_all_records()
-        rows2 = ws2.get_all_records()
-
-        st.write("DEBUG rows1:", len(rows1))
-        st.write("DEBUG rows2:", len(rows2))
-
-        df = pd.DataFrame(rows1 + rows2)
-
-    except Exception as e:
-        st.error(e)
-        st.stop()
-else:
-    st.error("Google認証に失敗しました")
-    st.stop()
-# ▼ スリット表示用CSS（ここに貼る）
-st.markdown("""
-<style>
-.slit-area{
-    background:#dff3ff;
-    padding:20px;
-    border-radius:12px;
-    position:relative;
-}
-
-/* スタート基準ライン */
-.slit-line{
-    position:absolute;
-    top:0;
-    bottom:0;
-    left:120px;
-    width:3px;
-    background:#ff5c5c;
-    opacity:0.9;
-}
-
-.slit-row{
-    display:flex;
-    align-items:center;
-    height:70px;
-    position:relative;
-    z-index:2;
-}
-
-.slit-boat{
-    transition: all 0.4s ease;
-    display:flex;
-    align-items:center;
-}
-</style>
-""", unsafe_allow_html=True)
-
-df = pd.DataFrame()
-gc = get_gsheet_client()
-
-# まだ選択されていない場合は止める
-if place is None:
-    st.stop()
-
-if gc:
-    try:
-        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-
-        ws1_name = SHEET_MAP[place]["sheet1"]
-        ws2_name = SHEET_MAP[place]["sheet2"]
-
-        ws1 = sh.worksheet(ws1_name)
-        ws2 = sh.worksheet(ws2_name)
-
-        rows1 = ws1.get_all_records()
-        rows2 = ws2.get_all_records()
-
-        # デバッグ表示
-        st.write("DEBUG rows1:", len(rows1))
-        st.write("DEBUG rows2:", len(rows2))
-
-        df = pd.DataFrame(rows1 + rows2)
-
-    except Exception as e:
-        st.error(e)
-        st.stop()
-else:
-    st.error("Google認証に失敗しました")
+except Exception as e:
+    st.error(e)
     st.stop()
     
 st.title("予想ツール")
