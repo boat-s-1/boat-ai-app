@@ -11,27 +11,6 @@ import datetime
 # ★必ず最初に
 st.set_page_config(page_title="競艇Pro 蒲郡", layout="wide")
 
-# -------------------------
-# 会場固定
-# -------------------------
-PLACE_NAME = "蒲郡"
-
-# 戻るボタン
-if st.button("← 会場選択へ戻る"):
-    st.switch_page("public_app.py")
-def encode_image(path):
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode()
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-def encode_image(path):
-    try:
-        with open(path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    except:
-        return ""
-def highlight_rank(df):
 
     def _highlight(col):
 
