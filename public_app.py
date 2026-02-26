@@ -33,7 +33,7 @@ with col6:
 with col7:
     if st.button("蒲郡07", use_container_width=True):
         st.switch_page("pages/07_gamagori.py")
-
+        
 with col8:
     if st.button("常滑08", use_container_width=True):
         st.switch_page("pages/08_tokoname.py")
@@ -101,4 +101,5 @@ with col23:
 with col24:
     if st.button("大村", use_container_width=True):
         st.switch_page("pages/24_omura.py")
+
 
