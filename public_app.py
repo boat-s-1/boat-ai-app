@@ -157,9 +157,32 @@ def show_main_page():
                             st.button(f"{v_type}\n【{name}】\n未作成", use_container_width=True, disabled=True)
                         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- TAB2: 使い方 ---
+            # --- TAB2: 使い方 ---
     with tab2:
         st.header("📖 競艇予想Pro 攻略マニュアル")
+
+        # --- 1. 競艇ファンに刺さるアピールセクション ---
+        with st.container(border=True):
+            st.markdown(f"""
+                <div style="text-align: center; padding: 10px;">
+                    <h2 style="color: #1e3a8a; margin-bottom: 0;">🔥 圧倒的データ量 × 独自解析ロジック</h2>
+                    <p style="font-size: 18px; font-weight: bold; color: #d32f2f; margin-top: 10px;">
+                        各会場 <span style="font-size: 26px;">4,000</span> レース以上の膨大データを完全解析
+                    </p>
+                    <div style="text-align: left; display: inline-block; background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid #1e3a8a;">
+                        <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.8;">
+                            <li>✅ <b>【鮮度】</b> 24場すべての最新レース結果を随時フィードバック</li>
+                            <li>✅ <b>【精度】</b> モーター・水面・天候… 10項目以上の変数を独自計算</li>
+                            <li>✅ <b>【根拠】</b> 展示タイムの「額面通り」では見えない、真の気配を可視化</li>
+                        </ul>
+                    </div>
+                    <p style="margin-top: 15px; font-style: italic; color: #666;">
+                        「展示一番時計が飛ぶ理由」を、このツールは知っています。
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
         # hit1, hit2, hit3 が未定義でエラーになるのを防ぐためダミー値を設定
         h1, h2, h3 = "72.4%", "85.1%", "91.8%"
         
@@ -194,3 +217,4 @@ def show_main_page():
 # 実行
 if __name__ == "__main__":
     show_main_page()
+
