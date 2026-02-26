@@ -63,7 +63,7 @@ def get_gsheet_client():
 
 # --- 3. データ読み込み ---
 # ==============================
-# 会場トップページ
+# レース種別選択
 # ==============================
 if "selected_place" not in st.session_state:
     st.session_state.selected_place = None
@@ -72,48 +72,28 @@ if st.session_state.selected_place is None:
 
     st.title("🏁 レース種別を選択")
 
-cols = st.columns(4)
+    cols = st.columns(4)
 
-# 使えるボタン
-# レース番号などの変数（例: race_no）をkeyに混ぜると確実に重複を避けられます
-if cols[0].button("混合戦", use_container_width=True, key=f"btn_mixed_{PLACE_NAME}"):
-    st.session_state.selected_place = "蒲郡混合戦"
-    st.rerun()
+    if cols[0].button("混合戦", use_container_width=True, key=f"btn_mixed_{PLACE_NAME}"):
+        st.session_state.selected_place = "蒲郡混合戦"
+        st.rerun()
 
-if cols[1].button("女子戦", key="gamagori_top_joshi", use_container_width=True):
-    st.session_state.selected_place = "蒲郡女子戦"
-    st.rerun()
+    if cols[1].button("女子戦", key="gamagori_top_joshi", use_container_width=True):
+        st.session_state.selected_place = "蒲郡女子戦"
+        st.rerun()
 
-# 準備中（押せない）
-cols[2].button("G1競走（準備中）", disabled=True, use_container_width=True)
-cols[3].button("SG競走（準備中）", disabled=True, use_container_width=True)
+    cols[2].button("G1競走（準備中）", disabled=True, use_container_width=True)
+    cols[3].button("SG競走（準備中）", disabled=True, use_container_width=True)
 
-# ==============================
-# ここから本体処理
-# ==============================
-place = st.session_state.selected_place
-
-st.caption(f"選択中の会場：{place}")
-
-df = pd.DataFrame()
-gc = get_gsheet_client()
-
-# ▼ レースごとのシート名対応
-SHEET_MAP = {
-    "蒲郡混合戦": {
-        "sheet1": "蒲郡混合_統計シート",
-        "sheet2": "蒲郡混合_統計シート②"
-    },
-    "蒲郡女子戦": {
-        "sheet1": "蒲郡女子_統計シート",
-        "sheet2": "蒲郡女子_統計シート②"
-    },
-}
-
-# まだレース種別が選ばれていない場合は止める
-if place is None:
+    # ← ここが超重要
     st.stop()
 
+
+
+
+
+
+# =============================
 if gc:
     try:
         sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
