@@ -373,7 +373,7 @@ with tab_stat:
                 sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
             
-                base_df = pd.DataFrame(rows1 + rows2)
+                df
 
                 st.session_state["tab2_base_df_gamagori"] = base_df
 
