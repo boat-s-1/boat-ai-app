@@ -82,8 +82,6 @@ if st.session_state.selected_place is None:
     cols[2].button("G1競走（準備中）", disabled=True, use_container_width=True)
     cols[3].button("SG競走（準備中）", disabled=True, use_container_width=True)
 
-    # ← ここが超重要
-    st.stop()
 # ==============================
 # ここから本体処理
 # ==============================
