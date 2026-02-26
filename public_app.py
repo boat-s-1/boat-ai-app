@@ -133,7 +133,7 @@ def show_main_page():
         h2 = f"{hit2:.1f}%" if 'hit2' in locals() else "解析中"
         h3 = f"{hit3:.1f}%" if 'hit3' in locals() else "解析中"
 
-        with st.container(border=True):
+         with st.container(border=True):
             st.write("当ツールの『スタート指数』は、過去の膨大な混合戦データに基づき、常にその精度を自己検証しています。")
             
             col_v1, col_v2, col_v3 = st.columns(3)
@@ -213,4 +213,5 @@ pg = st.navigation({
 
 if __name__ == "__main__":
     pg.run()
+
 
