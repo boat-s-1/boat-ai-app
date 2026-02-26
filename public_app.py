@@ -247,9 +247,22 @@ def show_main_page():
         st.write("公式Xの最新ポストをチェック。")
         # (Xの埋め込み用コードなどはここに追加)
 
-# 実行
+# --- 5. ページナビゲーションの設定 ---
+
+# メインページを関数として定義
+home_page = st.Page(show_main_page, title="ホーム", icon="🏠", default=True)
+
+# 各会場のページ（ファイルパスで指定）
+# ※ファイルが存在しないとエラーになるため、実際のファイル名と一致させてください
+all_pages = [home_page]
+
+# navigationで管理することで st.switch_page が確実に動作するようになります
+pg = st.navigation(all_pages)
+
+# 最後に pg.run() を呼ぶ（これが show_main_page() の代わりになります）
 if __name__ == "__main__":
-    show_main_page()
+    pg.run()
+
 
 
 
