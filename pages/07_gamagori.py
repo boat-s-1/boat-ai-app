@@ -130,6 +130,7 @@ except Exception as e:
     st.stop()
     
 st.title("予想ツール")
+st.write("ここまで来ています")
 
 # タブ構成
 tab_sim, tab_stat,tab_start,tab_mix_check,tab_cond,tab_view = st.tabs(["簡易予想", "統計解析","スタート予想","風・波補正","スタート精度","補正閲覧"])
