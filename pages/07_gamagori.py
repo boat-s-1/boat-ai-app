@@ -180,7 +180,8 @@ if gc:
 
         rows1 = ws1.get_all_records()
         rows2 = ws2.get_all_records()
-
+        st.write("rows1 件数:", len(rows1))
+        st.write("rows2 件数:", len(rows2))
         all_rows = rows1 + rows2
 
         if len(all_rows) > 0:
