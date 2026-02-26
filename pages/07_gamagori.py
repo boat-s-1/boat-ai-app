@@ -124,10 +124,7 @@ if gc:
         rows1 = ws1.get_all_records()
         rows2 = ws2.get_all_records()
 
-        all_rows = rows1 + rows2
-
-        if len(all_rows) > 0:
-            df = pd.DataFrame(all_rows)
+        df = pd.DataFrame(all_rows)
 
     except Exception as e:
         st.error(e)
