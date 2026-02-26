@@ -20,7 +20,6 @@ PLACE_NAME = "蒲郡"
 # ファイルごとに一意、あるいはページ内で一度も使っていないkeyを指定します
 if st.button("← 会場選択へ戻る", key="back_to_home_gamagori"):
     st.switch_page("public_app.py")
-    st.switch_page("public_app.py")
 def encode_image(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
@@ -170,9 +169,16 @@ st.markdown("""
 df = pd.DataFrame()
 gc = get_gsheet_client()
 
+# まだ選択されていない場合は止める
+if place is None:
+    st.stop()
+
 if gc:
     try:
         sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+
+        ws1_name = SHEET_MAP[place]["sheet1"]
+        ws2_name = SHEET_MAP[place]["sheet2"]
 
         ws1 = sh.worksheet(ws1_name)
         ws2 = sh.worksheet(ws2_name)
@@ -180,7 +186,7 @@ if gc:
         rows1 = ws1.get_all_records()
         rows2 = ws2.get_all_records()
 
-    # ★ここに入れる
+        # デバッグ表示
         st.write("DEBUG rows1:", len(rows1))
         st.write("DEBUG rows2:", len(rows2))
 
@@ -189,6 +195,9 @@ if gc:
     except Exception as e:
         st.error(e)
         st.stop()
+else:
+    st.error("Google認証に失敗しました")
+    st.stop()
 st.title("予想ツール")
 
 # タブ構成
