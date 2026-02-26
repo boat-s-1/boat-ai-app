@@ -113,21 +113,23 @@ SHEET_MAP = {
 
 if gc:
     try:
-        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
-        ws1_name = SHEET_MAP[place]["sheet1"]
-        ws2_name = SHEET_MAP[place]["sheet2"]
+    ws1 = sh.worksheet(ws1_name)
+    ws2 = sh.worksheet(ws2_name)
 
-        ws1 = sh.worksheet(ws1_name)
-        ws2 = sh.worksheet(ws2_name)
+    rows1 = ws1.get_all_records()
+    rows2 = ws2.get_all_records()
 
-        rows1 = ws1.get_all_records()
-        rows2 = ws2.get_all_records()
+    # ★ここに入れる
+    st.write("DEBUG rows1:", len(rows1))
+    st.write("DEBUG rows2:", len(rows2))
 
-        df = pd.DataFrame(all_rows)
+    df = pd.DataFrame(rows1 + rows2)
 
-    except Exception as e:
-        st.error(e)
+except Exception as e:
+    st.error(e)
+    st.stop()
 # ▼ スリット表示用CSS（ここに貼る）
 st.markdown("""
 <style>
