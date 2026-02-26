@@ -101,3 +101,4 @@ with col23:
 with col24:
     if st.button("大村", use_container_width=True):
         st.switch_page("pages/24_omura.py")
+
