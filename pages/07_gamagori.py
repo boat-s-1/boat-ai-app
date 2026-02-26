@@ -110,24 +110,33 @@ SHEET_MAP = {
     },
 }
 
+# まだレース種別が選ばれていない場合は止める
+if place is None:
+    st.stop()
+
 if gc:
     try:
-    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
-    ws1 = sh.worksheet(ws1_name)
-    ws2 = sh.worksheet(ws2_name)
+        ws1_name = SHEET_MAP[place]["sheet1"]
+        ws2_name = SHEET_MAP[place]["sheet2"]
 
-    rows1 = ws1.get_all_records()
-    rows2 = ws2.get_all_records()
+        ws1 = sh.worksheet(ws1_name)
+        ws2 = sh.worksheet(ws2_name)
 
-    # ★ここに入れる
-    st.write("DEBUG rows1:", len(rows1))
-    st.write("DEBUG rows2:", len(rows2))
+        rows1 = ws1.get_all_records()
+        rows2 = ws2.get_all_records()
 
-    df = pd.DataFrame(rows1 + rows2)
+        st.write("DEBUG rows1:", len(rows1))
+        st.write("DEBUG rows2:", len(rows2))
 
-except Exception as e:
-    st.error(e)
+        df = pd.DataFrame(rows1 + rows2)
+
+    except Exception as e:
+        st.error(e)
+        st.stop()
+else:
+    st.error("Google認証に失敗しました")
     st.stop()
 # ▼ スリット表示用CSS（ここに貼る）
 st.markdown("""
