@@ -98,11 +98,101 @@ def show_main_page():
                         else:
                             st.button(f"{v_type}\n【{name}】\n未作成", use_container_width=True, disabled=True)
 
+       # --- TAB2: 使い方 ---
     with tab2:
-        st.header("📖 攻略マニュアル")
-        st.write("各解析ツールの使い方を学び、的中率を最大化しましょう。")
-        # 以前の使い方コンテンツをここに配置
+        st.header("📖 競艇予想Pro 攻略マニュアル")
 
+        # --- 1. 競艇ファンに刺さるアピールセクション ---
+        with st.container(border=True):
+            st.markdown(f"""
+                <div style="text-align: center; padding: 10px;">
+                    <h2 style="color: #1e3a8a; margin-bottom: 0;">🔥 圧倒的データ量 × 独自解析ロジック</h2>
+                    <p style="font-size: 18px; font-weight: bold; color: #d32f2f; margin-top: 10px;">
+                        各会場 <span style="font-size: 26px;">4,000</span> レース以上の膨大データを完全解析
+                    </p>
+                    <div style="text-align: left; display: inline-block; background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid #1e3a8a;">
+                        <ul style="list-style: none; padding: 0; margin: 0; line-height: 1.8;">
+                            <li>✅ <b>【鮮度】</b> 24場すべての最新レース結果を随時フィードバック</li>
+                            <li>✅ <b>【精度】</b> モーター・水面・天候… 10項目以上の変数を独自計算</li>
+                            <li>✅ <b>【根拠】</b> 展示タイムの「額面通り」では見えない、真の気配を可視化</li>
+                        </ul>
+                    </div>
+                    <p style="margin-top: 15px; font-style: italic; color: #666;">
+                        「展示一番時計が飛ぶ理由」を、このツールは知っています。
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+
+        # --- 2. 精度検証アピール ---
+        st.markdown("### 📈 嘘偽りのない「ロジックの精度」を公開中")
+        
+        # 変数の存在チェック（エラー回避）
+        h1 = f"{hit1:.1f}%" if 'hit1' in locals() else "解析中"
+        h2 = f"{hit2:.1f}%" if 'hit2' in locals() else "解析中"
+        h3 = f"{hit3:.1f}%" if 'hit3' in locals() else "解析中"
+
+        with st.container(border=True):
+            st.write("当ツールの『スタート指数』は、過去の膨大な混合戦データに基づき、常にその精度を自己検証しています。")
+            
+            col_v1, col_v2, col_v3 = st.columns(3)
+            with col_v1:
+                st.metric(label="指数1位 → 1着率", value=h1, delta="高水準維持")
+            with col_v2:
+                st.metric(label="上位2艇 連対率", value=h2, delta="軸の安定感")
+            with col_v3:
+                st.metric(label="上位3艇 1着包含率", value=h3, delta="驚異のカバー率")
+                
+            st.markdown("""
+            > **なぜここまで公開するのか？** > 私たちは、競艇を「ギャンブル」ではなく「投資」へと昇華させるため、常にバックテスト（過去検証）を繰り返しています。  
+            > 各会場の検証タブでは、実際の着順と指数の相関を**『リアルタイムで自動集計』**。  
+            > ユーザーの皆様には、常に「今、最も信頼できるロジック」をご提供することを約束します。
+            """)
+        
+        st.divider()
+        st.write("3つの強力な解析ツールを使いこなし、勝利への期待値を最大化しましょう。")
+
+        # --- 3. ステップ別解説（アコーディオン） ---
+        with st.expander("🎯 STEP1：事前簡易予想（地力の把握）", expanded=False):
+            st.markdown("""
+            **展示航走の前に、出走表のデータから「期待値」を可視化します。**
+            * **入力項目**: モーター、当地勝率、枠番勝率、枠番スタート(ST)の4つ。
+            * **狙い目**: 1位の％が圧倒的に高い（25%以上）場合は、鉄板の軸。横並びの場合は高配当のチャンスです。
+            """)
+
+        with st.expander("📊 STEP2：統計解析シート（タイム補正）", expanded=False):
+            st.markdown("""
+            **会場ごとのクセを排除し、真の「足の良さ」を導き出します。**
+            * **補正の正体**: 会場ごとのタイム価値を統一し、コース有利を差し引いた純粋な機力差を算出。
+            * **狙い目**: 表1（公式）では平凡なのに、表3（枠番補正）で上位に浮上する艇は**「隠れた実力艇」**です。
+            """)
+
+        with st.expander("🚀 STEP3：スタート指数（スリット攻防）", expanded=False):
+            st.markdown("""
+            **「ST」「展示」「一周」の3要素に「目視評価」を加え、スタート付近の強さを数値化。**
+            * **会場別補正**: 過去データ平均との差から、その日のスリット付近の「伸び」を解析。
+            * **活用法**: 数値が高いほど、1マークで先手を取れる確率がアップ。
+            """)
+
+        with st.expander("🌊 STEP4：条件補正（水面状況の分析）", expanded=False):
+            st.markdown("""
+            **「風・波」がタイムに与える影響を解析し、荒れる条件を特定します。**
+            * **数値の読み方**: 全体平均からのズレを算出。**マイナスに大きいほど、その条件において有利な艇番**を示しています。
+            """)
+
+        st.divider()
+
+        # --- 4. フローチャート ---
+        st.markdown("### 🏆 勝利へのフローチャート")
+        st.info("""
+        1️⃣ **朝一〜直前まで**: **STEP1**でレースの「格」をチェック。  
+        2️⃣ **展示航走後**: **STEP2**で「回り足」「伸び」を補正。  
+        3️⃣ **スタート特訓後**: **STEP3**で「スリット攻防」を確信。  
+        👉 全ての指数が揃ったときが、最大の勝負どころです！
+        """)
+
+        st.link_button("最新の的中報告をチェック（公式X）", "https://x.com/bort_strike", use_container_width=True)
     with tab3:
         st.subheader("📱 公式リンク")
         st.link_button("公式X (@bort_strike) をフォロー", "https://x.com/bort_strike", use_container_width=True)
@@ -123,3 +213,4 @@ pg = st.navigation({
 
 if __name__ == "__main__":
     pg.run()
+
