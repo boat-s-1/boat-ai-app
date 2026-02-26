@@ -4,27 +4,48 @@ import os
 # 1. 基本設定
 st.set_page_config(page_title="競艇予想Pro", layout="wide")
 
-# --- カスタムCSS ---
+# --- カスタムCSS（ボタン装飾 + ニュースティッカー） ---
 st.markdown("""
     <style>
-    /* トップ画面の4列ボタン専用のスタイル */
+    /* 1. トップ画面のボタン専用スタイル */
     div.top-button > div.stButton > button {
         height: 140px !important; 
         border-radius: 12px !important;
         border: 1px solid #d1d5db !important;
         background-color: white !important;
         white-space: pre-wrap !important; 
-        line-height: 1.4 !important; /* 行間を少し詰め、3段が綺麗に収まるように調整 */
+        line-height: 1.4 !important;
         font-size: 15px !important;
         color: #333333 !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    /* ホバー時の挙動 */
     div.top-button > div.stButton > button:hover {
         border-color: #2563eb !important;
         background-color: #f8fafc !important;
         transform: translateY(-2px);
         transition: 0.2s;
+    }
+
+    /* 2. ニュースティッカー（流れるお知らせ）のスタイル */
+    .ticker-wrapper {
+        width: 100%;
+        background-color: #1e3a8a; /* 濃い青（公式風） */
+        color: white;
+        padding: 10px 0;
+        overflow: hidden;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .ticker-text {
+        display: inline-block;
+        white-space: nowrap;
+        padding-left: 100%;
+        font-weight: bold;
+        animation: ticker 20s linear infinite;
+    }
+    @keyframes ticker {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-100%); }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -32,8 +53,20 @@ st.markdown("""
 # --- メイン画面（ホーム）の表示内容 ---
 def show_main_page():
     st.title("🏁 開催一覧")
+
+    # --- 流れるお知らせ（ニュースティッカー）の表示 ---
+    # ここにお知らせしたい文章を自由に書いてください
+    news_message = "📢 只今、蒲郡無料公開中！ ｜ 2/26 桐生データ大量更新！ ｜ 本日の勝負レースは下関12R！ ｜ 公式LINEにて予想配信中！"
     
-    # 会場リスト（表示名, ファイル名, 開催タイプ）
+    st.markdown(f"""
+        <div class="ticker-wrapper">
+            <div class="ticker-text">
+                {news_message}
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 会場リスト
     all_venues = [
         ("桐生", "pages/01_kiryu.py", "🌙ナイター"), ("戸田", "pages/02_toda.py", "☀️昼開催"),
         ("江戸川", "pages/03_edogawa.py", "☀️昼開催"), ("平和島", "pages/04_heiwajima.py", "☀️昼開催"),
@@ -56,9 +89,7 @@ def show_main_page():
             if i + j < len(all_venues):
                 name, path, v_type = all_venues[i + j]
                 with cols[j]:
-                    # ご要望通りの並び：1段目はそのまま、2段目を【 】で強調
                     label = f"{v_type}\n【{name}】\n予想データ"
-                    
                     st.markdown('<div class="top-button">', unsafe_allow_html=True)
                     if os.path.exists(path):
                         if st.button(label, use_container_width=True, key=f"btn_{name}"):
@@ -67,7 +98,7 @@ def show_main_page():
                         st.button(f"{v_type}\n【{name}】\n未作成", use_container_width=True, disabled=True)
                     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 共通関数：ページを安全に登録する ---
+# --- 共通関数：ページ登録 ---
 def safe_page(path, title, icon="🚤"):
     if os.path.exists(path):
         return st.Page(path, title=title, icon=icon)
@@ -88,13 +119,11 @@ all_p = [
 ]
 valid_venue_pages = [p for p in all_p if p is not None]
 
-# --- ナビゲーション実行 ---
 pg = st.navigation({
     "メイン": [home],
     "会場一覧": valid_venue_pages
 })
 
-# サイドバー設定
 with st.sidebar:
     st.markdown("### 🏆 競艇予想Pro")
     st.caption("Premium Edition")
