@@ -1,12 +1,14 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import os
 
 # 1. 基本設定
 st.set_page_config(page_title="競艇予想Pro", layout="wide")
 
-# --- カスタムCSS（ボタン装飾 + ニュースティッカー + タブの装飾） ---
+# --- カスタムCSS ---
 st.markdown("""
     <style>
+    /* トップボタンのデザイン */
     div.top-button > div.stButton > button {
         height: 140px !important; 
         border-radius: 12px !important;
@@ -24,6 +26,7 @@ st.markdown("""
         transform: translateY(-2px);
         transition: 0.2s;
     }
+    /* ニュースティッカー */
     .ticker-wrapper {
         width: 100%;
         background-color: #1e3a8a;
@@ -44,7 +47,6 @@ st.markdown("""
         0% { transform: translateX(0); }
         100% { transform: translateX(-100%); }
     }
-    /* タブの文字を少し大きくする */
     .stTabs [data-baseweb="tab"] {
         font-size: 18px;
         font-weight: bold;
@@ -56,11 +58,11 @@ def show_main_page():
     st.title("🏆 競艇予想Pro メインメニュー")
 
     # --- ニュースティッカー ---
-    news_message = "📢 只今、蒲郡無料公開中！ ｜ 2/26 桐生データ大量更新！ ｜ 本日の勝負レースは下関12R！ ｜ 公式LINEにて予想配信中！"
+    news_message = "📢 只今、蒲郡無料公開中！ ｜ 2/26 桐生データ大量更新！ ｜ 本日の勝負レースは下関12R！ ｜ 公式Xにて的中速報配信中！"
     st.markdown(f'<div class="ticker-wrapper"><div class="ticker-text">{news_message}</div></div>', unsafe_allow_html=True)
 
-    # --- タブメニューの作成 ---
-    tab1, tab2, tab3, tab4 = st.tabs(["🚩 開催一覧", "🔰 使い方", "📱 SNS・問合せ", "📈 的中実績"])
+    # --- タブメニュー ---
+    tab1, tab2, tab3, tab4 = st.tabs(["🚩 開催一覧", "🔰 使い方", "📱 公式SNS", "📈 的中実績"])
 
     # --- TAB1: 開催一覧 ---
     with tab1:
@@ -96,37 +98,56 @@ def show_main_page():
     # --- TAB2: 使い方 ---
     with tab2:
         st.subheader("🔰 ツールの使い方")
-        st.info("本ツールは過去10年のデータからAIが勝率を算出しています。")
+        st.info("過去の膨大なデータから導き出したAI指数を活用しましょう。")
         st.markdown("""
-        1. **会場を選択**: 開催一覧から勝負したい会場をタップ。
-        2. **指数を確認**: 1R〜12RまでのAI予想スコアを確認。
-        3. **買い目を選ぶ**: 指数80以上の選手を軸にするのがおすすめです！
+        1. **会場選び**: 開催一覧から現在のレース場を選択。
+        2. **指数の見方**: 指数が高いほど連対率がアップ。
+        3. **推奨買い目**: 指数上位3名を組み合わせたBOX買いが安定します。
         """)
 
     # --- TAB3: SNS ---
     with tab3:
         st.subheader("📱 公式リンク")
-        col_sns1, col_sns2 = st.columns(2)
-        with col_sns1:
-            st.link_button("公式LINEで無料予想を受け取る", "https://line.me/...", use_container_width=True)
-        with col_sns2:
-            st.link_button("公式X (旧Twitter) をフォロー", "https://x.com/...", use_container_width=True)
+        st.link_button("公式X (@bort_strike) をフォロー", "https://x.com/bort_strike", use_container_width=True)
+        st.info("※最新の予想配信や、ツールのアップデート情報をお届けします。")
 
-    # --- TAB4: 的中実績 ---
+    # --- TAB4: 的中実績 (Xタイムライン埋め込み) ---
     with tab4:
-        st.subheader("📈 最新の的中報告")
-        st.success("2/25 桐生12R：3連単 1-2-4 的中！ (1,240円)")
-        st.success("2/25 蒲郡8R：3連単 4-1-2 的中！ (15,400円) 🔥")
+        st.subheader("📈 リアルタイム的中報告")
+        st.write("公式Xでの最新ポストを表示しています。")
+        
+        # X(Twitter)の埋め込みHTML
+        twitter_html = """
+        <a class="twitter-timeline" 
+           data-height="800" 
+           data-theme="light" 
+           href="https://twitter.com/bort_strike?ref_src=twsrc%5Etfw">
+           Tweets by bort_strike
+        </a> 
+        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        """
+        # HTMLコンポーネントとして表示
+        components.html(twitter_html, height=800, scrolling=True)
 
-# --- ページ管理 (以前と同じ) ---
+# --- ページ管理ロジック ---
 def safe_page(path, title, icon="🚤"):
     if os.path.exists(path):
         return st.Page(path, title=title, icon=icon)
     return None
 
 home = st.Page(show_main_page, title="ホーム", icon="🏠", default=True)
-# (会場ページの登録は省略：以前のコードをそのまま使ってください)
-all_p = [safe_page(f"pages/{str(i).zfill(2)}_{n}.py", t) for i, n, t in [(1, "kiryu", "桐生"), (2, "toda", "戸田"), (3, "edogawa", "江戸川"), (4, "heiwajima", "平和島"), (5, "tamagawa", "多摩川"), (6, "hamanako", "浜名湖"), (7, "gamagori", "蒲郡"), (8, "tokoname", "常滑"), (9, "tu", "津"), (10, "mikuni", "三国"), (11, "biwako", "びわこ"), (12, "suminoe", "住之江"), (13, "amagasaki", "尼崎"), (14, "naruto", "鳴門"), (15, "marugame", "丸亀"), (16, "kojima", "児島"), (17, "miyajima", "宮島"), (18, "tokuyama", "徳山"), (19, "simonoseki", "下関"), (20, "wakamatu", "若松"), (21, "asiya", "芦屋"), (22, "hukuoka", "福岡"), (23, "karatu", "唐津"), (24, "omura", "大村")]]
+
+# 24場の登録
+all_p = [
+    safe_page(f"pages/{str(i).zfill(2)}_{n}.py", t) for i, n, t in [
+        (1, "kiryu", "桐生"), (2, "toda", "戸田"), (3, "edogawa", "江戸川"), (4, "heiwajima", "平和島"),
+        (5, "tamagawa", "多摩川"), (6, "hamanako", "浜名湖"), (7, "gamagori", "蒲郡"), (8, "tokoname", "常滑"),
+        (9, "tu", "津"), (10, "mikuni", "三国"), (11, "biwako", "びわこ"), (12, "suminoe", "住之江"),
+        (13, "amagasaki", "尼崎"), (14, "naruto", "鳴門"), (15, "marugame", "丸亀"), (16, "kojima", "児島"),
+        (17, "miyajima", "宮島"), (18, "tokuyama", "徳山"), (19, "simonoseki", "下関"), (20, "wakamatu", "若松"),
+        (21, "asiya", "芦屋"), (22, "hukuoka", "福岡"), (23, "karatu", "唐津"), (24, "omura", "大村")
+    ]
+]
 valid_venue_pages = [p for p in all_p if p is not None]
 
 pg = st.navigation({"メイン": [home], "会場一覧": valid_venue_pages})
