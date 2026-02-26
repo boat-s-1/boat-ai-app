@@ -1,100 +1,113 @@
 import streamlit as st
+import pandas as pd
 import streamlit.components.v1 as components
-import os
 
-# 1. 基本設定
-st.set_page_config(page_title="競艇予想Pro", layout="wide")
-
-# --- カスタムCSS ---
+# --- 1. 高級感あふれるカスタムCSS ---
 st.markdown("""
     <style>
-    /* トップボタンのデザイン */
-    div.top-button > div.stButton > button {
-        height: 140px !important; 
-        border-radius: 12px !important;
-        border: 1px solid #d1d5db !important;
-        background-color: white !important;
-        white-space: pre-wrap !important; 
-        line-height: 1.4 !important;
-        font-size: 15px !important;
-        color: #333333 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /* 全体の背景とフォント */
+    .main {
+        background-color: #f4f7f9;
     }
-    div.top-button > div.stButton > button:hover {
-        border-color: #2563eb !important;
-        background-color: #f8fafc !important;
-        transform: translateY(-2px);
-        transition: 0.2s;
+    
+    /* ヘッダー・タイトルの装飾 */
+    h1 {
+        color: #1e293b;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 800;
+        border-left: 8px solid #bda06d; /* ゴールドのアクセント */
+        padding-left: 15px;
     }
-    /* ニュースティッカー */
+
+    /* ニュースティッカー（ゴールド・グラデーション） */
     .ticker-wrapper {
         width: 100%;
-        background-color: #1e3a8a;
+        background: linear-gradient(90deg, #1e3a8a 0%, #bda06d 100%);
         color: white;
-        padding: 10px 0;
+        padding: 12px 0;
         overflow: hidden;
-        border-radius: 8px;
-        margin-bottom: 20px;
+        border-radius: 50px; /* 丸みをもたせて高級感を */
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    .ticker-text {
-        display: inline-block;
-        white-space: nowrap;
-        padding-left: 100%;
-        font-weight: bold;
-        animation: ticker 25s linear infinite;
+    
+    /* ガイド枠のカードデザイン */
+    .guide-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease;
     }
-    @keyframes ticker {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(-100%); }
+    .guide-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(189, 160, 109, 0.2);
+    }
+
+    /* タブのデザイン */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
     }
     .stTabs [data-baseweb="tab"] {
-        font-size: 18px;
-        font-weight: bold;
+        height: 50px;
+        background-color: white;
+        border-radius: 10px 10px 0 0;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #1e3a8a !important;
+        color: white !important;
+        border-top: 3px solid #bda06d !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-def show_main_page():
-    st.title("🏆 競艇予想Pro メインメニュー")
-
-    # --- ニュースティッカー ---
-    news_message = "📢 只今、蒲郡無料公開中！ ｜ 2/26 桐生データ大量更新！ ｜ 本日の勝負レースは下関12R！ ｜ 公式Xにて的中速報配信中！"
-    st.markdown(f'<div class="ticker-wrapper"><div class="ticker-text">{news_message}</div></div>', unsafe_allow_html=True)
+# --- 2. ガイド枠（エラー回避・高級デザイン版） ---
+def show_guide_section(gc):
+    st.markdown("### 💎 本日のプレミアム・ガイド")
     
-           # --- ガイド枠：スプレッドシート読み込み ---
-    st.markdown("### 🎯 本日のツール注目レース・ガイド")
-
     try:
-        # シート「ガイド枠」を読み込み
-        sh_guide = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-        ws_guide = sh_guide.worksheet("ガイド枠")
+        # スプレッドシート読み込み
+        sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+        
+        # シート名のリストを取得して存在確認（エラー対策）
+        worksheets = [ws.title for ws in sh.worksheets()]
+        if "ガイド枠" not in worksheets:
+            st.warning("⚠️ シート『ガイド枠』が見つかりません。スプレッドシート側に作成してください。")
+            return
+
+        ws_guide = sh.worksheet("ガイド枠")
         guide_df = pd.DataFrame(ws_guide.get_all_records())
 
         if not guide_df.empty:
-            g_cols = st.columns(len(guide_df)) # データ数に合わせてカラムを自動調整
-
+            g_cols = st.columns(len(guide_df))
             for i, row in guide_df.iterrows():
                 with g_cols[i]:
-                    with st.container(border=True):
-                        st.markdown(f"#### ⚓ {row['会場']} {row['レース番号']}")
-                        st.caption(f"締切 {row['締切']}")
-                        
-                        # 信頼度に応じた色分け
-                        color = "#d32f2f" if row['信頼度'] == "S" else "#2563eb" if row['信頼度'] == "A" else "#16a34a"
-                        st.markdown(f"<span style='color:{color}; font-weight:bold;'>【信頼度：{row['信頼度']}】</span>", unsafe_allow_html=True)
-                        
-                        st.write(row['コメント'])
-                        
-                        # ボタンクリックで指定のページへ
-                        if st.button(f"{row['会場']}データへ", key=f"guide_btn_{i}"):
-                            st.switch_page(row['ページパス'])
+                    # HTMLでカード風に装飾
+                    color = "#ef4444" if row['信頼度'] == "S" else "#3b82f6" if row['信頼度'] == "A" else "#10b981"
+                    
+                    st.markdown(f"""
+                        <div class="guide-card">
+                            <div style="font-size:0.9rem; color:#64748b;">{row['締切']} 締切</div>
+                            <div style="font-size:1.4rem; font-weight:bold; color:#1e293b; margin: 5px 0;">⚓ {row['会場']} {row['レース番号']}</div>
+                            <div style="color:{color}; font-weight:bold; font-size:1.1rem; margin-bottom:10px;">【信頼度：{row['信頼度']}】</div>
+                            <div style="font-size:0.95rem; color:#475569; line-height:1.5; min-height:60px;">{row['コメント']}</div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # ボタンも高級感のある色に
+                    if st.button(f"✨ {row['会場']} 解析データ", key=f"btn_g_{i}", use_container_width=True):
+                        st.switch_page(row['ページパス'])
         else:
-            st.info("本日の注目レースは準備中です。")
-            
-    except Exception as e:
-        st.error("ガイド枠の読み込みに失敗しました。シート名「ガイド枠」を確認してください。")
+            st.info("🌙 現在、次節のデータを精査中です。")
 
-    st.divider()
+    except Exception as e:
+        st.error(f"データの接続に一時的な制限がかかっています。時間を置いて再読み込みしてください。")
+
+# --- 実行部分 ---
+# ニュースティッカー表示の後に show_guide_section(gc) を呼び出してください
     # --- タブメニュー ---
     tab1, tab2, tab3, tab4 = st.tabs(["🚩 開催一覧", "🔰 使い方", "📱 公式SNS", "📈 的中実績"])
 
@@ -271,6 +284,7 @@ valid_venue_pages = [p for p in all_p if p is not None]
 
 pg = st.navigation({"メイン": [home], "会場一覧": valid_venue_pages})
 pg.run()
+
 
 
 
