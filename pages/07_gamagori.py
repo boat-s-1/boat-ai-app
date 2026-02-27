@@ -81,14 +81,15 @@ if gc is None:
 try:
     sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
-    ws1 = sh.worksheet(SHEET_MAP[place]["sheet1"])
+    ws1 = sh.worksheet(SHEET_MAP[place]["sheet1"]) 
     ws2 = sh.worksheet(SHEET_MAP[place]["sheet2"])
 
     rows1 = ws1.get_all_records()
-    rows2 = ws2.get_all_records()
+    rows2 = ws2.get_a ll_records()
 
     df = pd.DataFrame(rows1 + rows2)
-
+    st.session_state["base_df"] = df
+    
 except Exception as e:
     st.error("シート読み込みエラー")
     st.exception(e)
@@ -275,7 +276,11 @@ with tab_tokei:
     # ======================================
     # 統計データ読み込みボタン
     # ======================================
-    st.session_state["base_df"]
+    if "base_df" not in st.session_state:
+        st.info("データがまだ読み込まれていません")
+        st.stop()
+
+    base_df = st.session_state["base_df"].copy()
     # ======================================
     # 型調整
     # ======================================
