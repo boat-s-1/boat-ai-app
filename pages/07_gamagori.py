@@ -275,32 +275,7 @@ with tab_tokei:
     # ======================================
     # 統計データ読み込みボタン
     # ======================================
-    if st.button("統計データを読み込んで比較する", key="tab2_load_btn"):
-
-        with st.spinner("統計データを読み込んでいます…"):
-
-            sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-
-            ws1 = sh.worksheet("統計シート")
-            ws2 = sh.worksheet("統計シート②")
-
-            rows1 = ws1.get_all_records()
-            rows2 = ws2.get_all_records()
-
-            base_df = pd.DataFrame(rows1 + rows2)
-
-            st.session_state["tab2_base_df"] = base_df
-
-    if "tab2_base_df" not in st.session_state:
-        st.info("『統計データを読み込んで比較する』を押してください。")
-        st.stop()
-
-    base_df = st.session_state["tab2_base_df"].copy()
-
-    if base_df.empty:
-        st.warning("統計シートにデータがありません")
-        st.stop()
-
+    st.session_state["base_df"]
     # ======================================
     # 型調整
     # ======================================
