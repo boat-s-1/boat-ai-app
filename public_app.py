@@ -224,7 +224,8 @@ pg = st.navigation({
 })
 
 if __name__ == "__main__":
-    pg.run()
+
+
 
 
 
