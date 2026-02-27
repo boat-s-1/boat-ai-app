@@ -100,7 +100,7 @@ def show_main_page():
                             st.button(f"{v_type}\n【{name}】\n未作成", use_container_width=True, disabled=True)
 
         # --- TAB2: 使い方 ---
-    with tab2:
+     with tab2:
         st.header("📖 競艇予想Pro 攻略マニュアル")
 
         # --- 1. 競艇ファンに刺さるアピールセクション ---
@@ -224,3 +224,4 @@ pg = st.navigation({
 })
 if __name__ == "__main__":
     pg.run()
+
