@@ -223,7 +223,6 @@ pg = st.navigation({
     "会場別データ": venue_pages
 })
 
-if __name__ == "__main__":
 
 
 
