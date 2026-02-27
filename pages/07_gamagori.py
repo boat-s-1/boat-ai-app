@@ -102,3 +102,726 @@ st.write(len(df))
 
 # タブ構成
 tab_kani, tab_tokei,tab_start,tab_cond,tab_view,tab_start_view = st.tabs(["⭐ 簡易予想", "📊 統計解析","スタート予想",,"風・波補正","補正閲覧","スタート精度"])
+
+# --- タブ1：事前簡易予想 ---
+with tab_kani:
+
+    st.subheader("🎯 事前簡易予想（評価カード）")
+
+    SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
+    WEIGHTS = {
+        "モーター": 0.25,
+        "当地勝率": 0.2,
+        "枠番勝率": 0.3,
+        "枠番スタート": 0.25
+    }
+
+    with st.form("pre_eval_form"):
+
+        boat_evals = {}
+
+        for row in range(3):
+            cols = st.columns(2)
+
+            for col in range(2):
+                i = row * 2 + col + 1
+
+                with cols[col]:
+                    st.markdown(f"#### 🚤 {i}号艇")
+
+                    m = st.selectbox(
+                        "モーター",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"pre_m_{i}"
+                    )
+
+                    t = st.selectbox(
+                        "当地勝率",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"pre_t_{i}"
+                    )
+
+                    w = st.selectbox(
+                        "枠番勝率",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"pre_w_{i}"
+                    )
+
+                    s = st.selectbox(
+                        "枠番ST",
+                        ["◎", "○", "▲", "△", "×", "無"],
+                        index=5,
+                        key=f"pre_s_{i}"
+                    )
+
+                    score = (
+                        SYMBOL_VALUES[m] * WEIGHTS["モーター"]
+                        + SYMBOL_VALUES[t] * WEIGHTS["当地勝率"]
+                        + SYMBOL_VALUES[w] * WEIGHTS["枠番勝率"]
+                        + SYMBOL_VALUES[s] * WEIGHTS["枠番スタート"]
+                    )
+
+                    boat_evals[i] = round(score, 3)
+
+        submitted = st.form_submit_button(
+            "📊 予想カード生成",
+            use_container_width=True,
+            type="primary"
+        )
+
+    # -----------------------
+    # 結果表示
+    # -----------------------
+    if submitted:
+
+        df_score = pd.DataFrame(
+            [{"艇番": k, "score": v} for k, v in boat_evals.items()]
+        )
+
+        # 念のため
+        df_score["score"] = df_score["score"].fillna(0)
+
+        # -----------------------
+        # ✅ ％正規化（6艇合計＝100％）
+        # -----------------------
+        total_score = df_score["score"].sum()
+
+        if total_score == 0:
+            st.warning("すべて『無』のため、％を計算できません")
+            st.stop()
+
+        df_score["予想％"] = df_score["score"] / total_score * 100
+        df_score["予想％"] = df_score["予想％"].round(1)
+
+        # 並び替え
+        df_score = df_score.sort_values("予想％", ascending=False).reset_index(drop=True)
+
+        # 誤差補正（必ず100.0にする）
+        diff = 100.0 - df_score["予想％"].sum()
+        df_score.loc[0, "予想％"] = round(df_score.loc[0, "予想％"] + diff, 1)
+
+        # -----------------------
+        # 表示用順位
+        # -----------------------
+        df_score["順位"] = df_score.index + 1
+
+        st.markdown("### 🏁 予想結果（合計100％）")
+
+        cols = st.columns(3)
+
+        for i, r in df_score.iterrows():
+
+            rank = int(r["順位"])
+            boat = int(r["艇番"])
+            pct  = float(r["予想％"])
+
+            # 少し豪華用スタイル
+            if rank == 1:
+                bg = "#fff1c1"
+                border = "#f5b700"
+                title = "🥇 1位"
+            elif rank == 2:
+                bg = "#f0f0f0"
+                border = "#b5b5b5"
+                title = "🥈 2位"
+            elif rank == 3:
+                bg = "#ffe4d6"
+                border = "#e39a6f"
+                title = "🥉 3位"
+            else:
+                bg = "#fafafa"
+                border = "#dddddd"
+                title = f"{rank}位"
+
+            with cols[i % 3]:
+
+                st.markdown(
+                    f"""
+                    <div style="
+                        background:{bg};
+                        border:2px solid {border};
+                        border-radius:14px;
+                        padding:14px;
+                        text-align:center;
+                        box-shadow:0 4px 8px rgba(0,0,0,0.05);
+                    ">
+                        <div style="font-size:15px;color:#555;">{title}</div>
+                        <div style="font-size:26px;font-weight:700;margin-top:4px;">
+                            {boat}号艇
+                        </div>
+                        <div style="font-size:22px;color:#222;margin-top:6px;">
+                            {pct:.1f}%
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        st.divider()
+
+        st.markdown("### 📋 内訳（デバッグ用）")
+        st.dataframe(
+            df_score[["順位", "艇番", "score", "予想％"]],
+            use_container_width=True
+        )
+# --- タブ2：統計解析 ---
+with tab_tokei:
+
+    st.subheader("会場別 補正・総合比較（統計シート）")
+
+    # ======================================
+    # 統計データ読み込みボタン
+    # ======================================
+    if st.button("統計データを読み込んで比較する", key="tab2_load_btn"):
+
+        with st.spinner("統計データを読み込んでいます…"):
+
+            sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+
+            ws1 = sh.worksheet("統計シート")
+            ws2 = sh.worksheet("統計シート②")
+
+            rows1 = ws1.get_all_records()
+            rows2 = ws2.get_all_records()
+
+            base_df = pd.DataFrame(rows1 + rows2)
+
+            st.session_state["tab2_base_df"] = base_df
+
+    if "tab2_base_df" not in st.session_state:
+        st.info("『統計データを読み込んで比較する』を押してください。")
+        st.stop()
+
+    base_df = st.session_state["tab2_base_df"].copy()
+
+    if base_df.empty:
+        st.warning("統計シートにデータがありません")
+        st.stop()
+
+    # ======================================
+    # 型調整
+    # ======================================
+    for c in ["展示", "直線", "一周", "回り足", "艇番"]:
+        if c in base_df.columns:
+            base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
+
+    if "会場" not in base_df.columns:
+        st.error("統計シートに『会場』列がありません")
+        st.stop()
+
+    st.markdown(f"#### 会場：{PLACE_NAME}")
+
+    place_df = base_df[base_df["会場"] == PLACE_NAME].copy()
+
+    if place_df.empty:
+        st.warning("この会場のデータがありません")
+        st.stop()
+
+    # ======================================
+    # 使用レース数
+    # ======================================
+    race_count = (
+        place_df[["日付", "レース番号"]]
+        .dropna()
+        .drop_duplicates()
+        .shape[0]
+    )
+
+    st.caption(f"📊 過去データ {race_count}レースより補正")
+    st.divider()
+
+    # ======================================
+    # 色付け関数
+    # ======================================
+    def highlight_rank(df):
+
+        def color_col(s):
+            s2 = pd.to_numeric(s, errors="coerce")
+            rank = s2.rank(method="min")
+
+            out = []
+            for v, r in zip(s2, rank):
+                if pd.isna(v):
+                    out.append("")
+                elif r == 1:
+                    out.append("background-color:#ff6b6b;color:white;")
+                elif r == 2:
+                    out.append("background-color:#ffd43b;")
+                else:
+                    out.append("")
+            return out
+
+        return df.style.apply(color_col, axis=0)
+
+    # ======================================
+    # 入力フォーム
+    # ======================================
+    st.markdown("### 展示タイム入力（当日データ）")
+
+    with st.form("tab2_input_form"):
+
+        input_rows = []
+
+        head = st.columns([1, 2, 2, 2, 2])
+        head[0].markdown("**艇番**")
+        head[1].markdown("**一周**")
+        head[2].markdown("**回り足**")
+        head[3].markdown("**直線**")
+        head[4].markdown("**展示**")
+
+        for b in range(1, 7):
+
+            cols = st.columns([1, 2, 2, 2, 2])
+
+            cols[0].markdown(f"**{b}号艇**")
+
+            isshu = cols[1].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_isshu_{b}",
+                label_visibility="collapsed"
+            )
+
+            mawari = cols[2].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_mawari_{b}",
+                label_visibility="collapsed"
+            )
+
+            choku = cols[3].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_choku_{b}",
+                label_visibility="collapsed"
+            )
+
+            tenji = cols[4].number_input(
+                "",
+                step=0.01,
+                format="%.2f",
+                key=f"tab2_in_tenji_{b}",
+                label_visibility="collapsed"
+            )
+
+            input_rows.append({
+                "艇番": b,
+                "展示": tenji,
+                "直線": choku,
+                "一周": isshu,
+                "回り足": mawari
+            })
+
+        submit_input = st.form_submit_button("この入力で再計算する")
+
+    if submit_input:
+        input_df = pd.DataFrame(input_rows).set_index("艇番")
+        st.session_state["tab2_input_df"] = input_df.copy()
+
+    if "tab2_input_df" not in st.session_state:
+        st.info("展示タイムを入力して『この入力で再計算する』を押してください")
+        st.stop()
+
+    input_df = st.session_state["tab2_input_df"].copy()
+
+    # tab5 連動用
+    st.session_state["tab2_input_df"] = input_df.copy()
+
+    st.divider()
+
+    # ======================================
+    # 入力値表示
+    # ======================================
+    st.markdown("### 公式展示タイム表（入力値）")
+
+    st.dataframe(
+        highlight_rank(input_df),
+        use_container_width=True
+    )
+
+    # ======================================
+    # 場平均補正
+    # ======================================
+    st.divider()
+    st.markdown("### 場平均補正タイム（会場平均との差補正）")
+
+    place_mean = (
+        place_df
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
+        .mean()
+    )
+
+    overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
+
+    adj_df = input_df.copy()
+
+    for b in range(1, 7):
+        if b in place_mean.index:
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if (
+                    pd.notna(input_df.loc[b, col])
+                    and pd.notna(place_mean.loc[b, col])
+                ):
+                    adj_df.loc[b, col] = (
+                        input_df.loc[b, col]
+                        - place_mean.loc[b, col]
+                        + overall_mean[col]
+                    )
+
+    st.dataframe(
+        highlight_rank(adj_df),
+        use_container_width=True
+    )
+
+    # ======================================
+    # 枠番補正
+    # ======================================
+    st.divider()
+    st.markdown("### 枠番補正込みタイム（イン有利補正）")
+
+    lane_bias = (
+        place_df
+        .groupby("艇番")[["展示", "直線", "一周", "回り足"]]
+        .mean()
+        - overall_mean
+    )
+
+    final_df = adj_df.copy()
+
+    for b in range(1, 7):
+        if b in lane_bias.index:
+            for col in ["展示", "直線", "一周", "回り足"]:
+                if (
+                    pd.notna(adj_df.loc[b, col])
+                    and pd.notna(lane_bias.loc[b, col])
+                ):
+                    final_df.loc[b, col] = (
+                        adj_df.loc[b, col]
+                        - lane_bias.loc[b, col]
+                    )
+
+    st.dataframe(
+        highlight_rank(final_df),
+        use_container_width=True
+    )
+# --- タブ5：スタート予想（混合戦・入力型） ---
+with tab5:
+
+    st.subheader("🚀 スタート予想（混合戦｜会場別補正・入力型）")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+
+    # 型変換
+    for c in ["展示", "一周", "ST", "艇番"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # -----------------------
+    # 会場選択のみ
+    # -----------------------
+    place_list = sorted(df["会場"].dropna().unique())
+
+    race_place = st.selectbox(
+        "会場を選択",
+        place_list,
+        key="mix_input_place"
+    )
+
+    place_df = df[df["会場"] == race_place].copy()
+
+    if place_df.empty:
+        st.warning("この会場のデータがありません")
+        st.stop()
+
+    # -----------------------
+    # 会場平均との差用
+    # -----------------------
+    mean_tenji = place_df["展示"].mean()
+    mean_isshu = place_df["一周"].mean()
+
+    st.caption(f"会場：{race_place}（過去データ平均との差で補正）")
+
+    # -----------------------
+    # 入力
+    # -----------------------
+    st.markdown("### 📝 展示・1周・ST 入力")
+
+    input_cols = st.columns(6)
+
+    tenji_input = {}
+    isshu_input = {}
+    st_input    = {}
+    eval_input  = {}
+
+    eval_list = ["", "◎", "◯", "△", "×"]
+
+    for i in range(1, 7):
+
+        with input_cols[i - 1]:
+
+            st.markdown(f"**{i}号艇**")
+
+            tenji_input[i] = st.number_input(
+                "展示",
+                step=0.01,
+                format="%.2f",
+                key=f"mix_tenji_{i}"
+            )
+
+            isshu_input[i] = st.number_input(
+                "一周",
+                step=0.01,
+                format="%.2f",
+                key=f"mix_isshu_{i}"
+            )
+
+            st_input[i] = st.number_input(
+                "ST",
+                step=0.01,
+                format="%.2f",
+                key=f"mix_st_{i}"
+            )
+
+            eval_input[i] = st.selectbox(
+                "評価",
+                eval_list,
+                key=f"mix_eval_{i}"
+            )
+
+    # -----------------------
+    # スコア計算
+    # -----------------------
+    eval_map = {
+        "◎": 2.0,
+        "◯": 1.0,
+        "△": 0.5,
+        "×": -1.0
+    }
+
+    rows = []
+
+    for boat in range(1, 7):
+
+        st_score = -st_input[boat] + eval_map.get(eval_input[boat], 0)
+
+        tenji_diff = mean_tenji - tenji_input[boat]
+        isshu_diff = mean_isshu - isshu_input[boat]
+
+        total = (
+            st_score
+            + tenji_diff * 2.0
+            + isshu_diff * 0.3
+        )
+
+        rows.append({
+            "艇番": boat,
+            "展示": tenji_input[boat],
+            "一周": isshu_input[boat],
+            "ST": st_input[boat],
+            "評価": eval_input[boat],
+            "start_score": total
+        })
+
+    result_df = pd.DataFrame(rows)
+
+    # -----------------------
+    # 表
+    # -----------------------
+    st.markdown("### 📊 スタート指数")
+
+    st.dataframe(
+        result_df.sort_values("start_score", ascending=False),
+        use_container_width=True
+    )
+
+    # -----------------------
+    # スリット表示
+    # -----------------------
+    st.markdown("### 🟦 スリット予想イメージ")
+
+    st.markdown('<div class="slit-area">', unsafe_allow_html=True)
+    st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
+
+    for _, r in result_df.iterrows():
+
+        boat_no = int(r["艇番"])
+        score   = float(r["start_score"])
+
+        offset = max(0, min(160, (score + 0.5) * 120))
+
+        img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
+        img_base64 = encode_image(img_path)
+
+        html = f"""
+        <div class="slit-row">
+            <div class="slit-boat" style="margin-left:{offset}px;">
+                <img src="data:image/png;base64,{img_base64}" height="48">
+                <div style="margin-left:10px;font-size:13px;">
+                    <b>{boat_no}号艇</b><br>
+                    展示 {r["展示"]:.2f}
+                    一周 {r["一周"]:.2f}<br>
+                    ST {r["ST"]:.2f} {r["評価"]}
+                </div>
+            </div>
+        </div>
+        """
+
+        st.markdown(html, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# -----------------------------
+# 閲覧用：女子戦データ
+# -----------------------------
+with tab_view:
+
+    st.subheader("👩 女子戦データ閲覧")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+
+    # 列チェック
+    if "女子戦" not in df.columns:
+        st.error("女子戦 列が見つかりません")
+        st.stop()
+
+    # 日付を日付型に
+    df["日付"] = pd.to_datetime(df["日付"], errors="coerce")
+
+    # 女子戦のみ
+    df = df[df["女子戦"].astype(str).str.lower().isin(["true", "1", "yes", "y", "○"])]
+
+    if df.empty:
+        st.info("女子戦データがまだありません")
+        st.stop()
+
+    # 絞り込みUI
+    col1, col2 = st.columns(2)
+
+    with col1:
+        place_list = ["すべて"] + sorted(df["会場"].dropna().unique().tolist())
+        sel_place = st.selectbox("会場", place_list)
+
+    with col2:
+        date_list = ["すべて"] + sorted(
+            df["日付"].dropna().dt.strftime("%Y-%m-%d").unique().tolist()
+        )
+        sel_date = st.selectbox("日付", date_list)
+
+    view_df = df.copy()
+
+    if sel_place != "すべて":
+        view_df = view_df[view_df["会場"] == sel_place]
+
+    if sel_date != "すべて":
+        view_df = view_df[
+            view_df["日付"].dt.strftime("%Y-%m-%d") == sel_date
+        ]
+
+    view_df = view_df.sort_values(
+        ["日付", "会場", "レース番号", "艇番"]
+    )
+
+    st.caption(f"表示件数：{len(view_df)} 件")
+
+    show_cols = [
+        "日付","会場","レース番号","艇番",
+        "展示","直線","一周","回り足",
+        "ST","風向き","風速","波高",
+        "着順","スタート評価"
+    ]
+
+    exist_cols = [c for c in show_cols if c in view_df.columns]
+
+    st.dataframe(
+        view_df[exist_cols],
+        use_container_width=True,
+        hide_index=True
+    )
+
+# -----------------------------
+# 閲覧用：女子戦 × 場平均補正
+# -----------------------------
+with tab_women_stat:
+
+    st.subheader("👩 女子戦｜場平均補正タイム")
+
+    ws = sh.worksheet("管理用_NEW")
+    df = pd.DataFrame(ws.get_all_records())
+
+    if df.empty:
+        st.info("データがありません")
+        st.stop()
+
+    # 必須列チェック
+    need_cols = ["女子戦","会場","艇番","展示","直線","一周","回り足"]
+    for c in need_cols:
+        if c not in df.columns:
+            st.error(f"{c} 列が見つかりません")
+            st.stop()
+
+    # 数値化
+    for c in ["艇番","展示","直線","一周","回り足"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # 女子戦だけ
+    women_df = df[
+        df["女子戦"].astype(str).str.lower().isin(["true","1","yes","y","○"])
+    ].copy()
+
+    if women_df.empty:
+        st.info("女子戦データがまだありません")
+
+    # 会場選択
+    place_list = sorted(women_df["会場"].dropna().unique().tolist())
+    place = st.selectbox("会場を選択", place_list, key="women_stat_place")
+
+    place_df = women_df[women_df["会場"] == place].copy()
+
+    st.caption(f"{place}｜女子戦データ件数：{len(place_df)} 件")
+
+    # ------------------------
+    # 艇番別平均との差
+    # ------------------------
+    lane_mean = (
+        place_df
+        .groupby("艇番")[["展示","直線","一周","回り足"]]
+        .mean()
+    )
+
+    overall_mean = place_df[["展示","直線","一周","回り足"]].mean()
+
+    # 補正量（＝平均との差）
+    diff_df = lane_mean.copy()
+
+    for col in ["展示","直線","一周","回り足"]:
+        diff_df[col] = lane_mean[col] - overall_mean[col]
+
+    st.markdown("### 艇番別 平均タイム（女子戦）")
+    st.dataframe(
+        lane_mean.round(3),
+        use_container_width=True
+    )
+
+    st.markdown("### 場平均との差（女子戦・補正量）")
+
+    st.caption("※ プラス＝遅い / マイナス＝速い")
+
+    st.dataframe(
+        diff_df.round(3),
+        use_container_width=True
+    )
+
