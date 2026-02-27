@@ -222,14 +222,5 @@ pg = st.navigation({
     "メインメニュー": [home_page],
     "会場別データ": venue_pages
 })
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == "__main__":
+    pg.run()
