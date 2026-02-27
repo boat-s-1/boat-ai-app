@@ -102,7 +102,17 @@ st.write("読み込み件数")
 st.write(len(df))
 
 # タブ構成
-tab_kani, tab_tokei,= st.tabs(["⭐ 簡易予想","統計解析"])
+tab_kani, tab_tokei = st.tabs(["⭐ 簡易予想","統計解析"])
+
+# -------------------------
+# 選択中会場の受け取り
+# -------------------------
+if "selected_place" not in st.session_state:
+    st.warning("会場が選択されていません")
+    st.stop()
+
+PLACE_NAME = st.session_state.selected_place
+
 
 # --- タブ1：事前簡易予想 ---
 with tab_kani:
