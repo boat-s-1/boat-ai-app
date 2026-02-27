@@ -101,7 +101,7 @@ st.write("読み込み件数")
 st.write(len(df))
 
 # タブ構成
-tab_kani,= st.tabs(["⭐ 簡易予想"])
+tab_kani, tab_tokei= st.tabs(["⭐ 簡易予想","統計解析"])
 
 # --- タブ1：事前簡易予想 ---
 with tab_kani:
