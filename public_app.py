@@ -84,9 +84,9 @@ def show_main_page():
 
     st.divider()
 
-    tab1, tab2, tab3, tab4 = st.tabs(["🚩 開催一覧", "🔰 使い方", "📱 公式SNS", "📈 的中実績"])
+tab1, tab2, tab3, tab4 = st.tabs(["🚩 開催一覧", "🔰 使い方", "📱 公式SNS", "📈 的中実績"])
 
-    with tab1:
+with tab1:
         for i in range(0, len(all_venues), 4):
             cols = st.columns(4)
             for j in range(4):
@@ -100,7 +100,7 @@ def show_main_page():
                             st.button(f"{v_type}\n【{name}】\n未作成", use_container_width=True, disabled=True)
 
         # --- TAB2: 使い方 ---
-    with tab2:
+with tab2:
         st.header("📖 競艇予想Pro 攻略マニュアル")
 
         # --- 1. 競艇ファンに刺さるアピールセクション ---
@@ -205,7 +205,7 @@ def show_main_page():
         """)
 
         st.link_button("最新の的中報告をチェック（公式X）", "https://x.com/bort_strike", use_container_width=True)
-    with tab3:
+with tab3:
         st.subheader("📱 公式リンク")
         st.link_button("公式X (@bort_strike) をフォロー", "https://x.com/bort_strike", use_container_width=True)
 
@@ -224,5 +224,6 @@ pg = st.navigation({
 })
 if __name__ == "__main__":
     pg.run()
+
 
 
