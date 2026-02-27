@@ -105,7 +105,7 @@ with tab2:
 
         # --- 1. 競艇ファンに刺さるアピールセクション ---
         with st.container(border=True):
-            st.markdown(f"""
+            st.markdown("""
                 <div style="text-align: center; padding: 10px;">
                     <h2 style="color: #1e3a8a; margin-bottom: 0;">🔥 圧倒的データ量 × 独自解析ロジック</h2>
                     <p style="font-size: 18px; font-weight: bold; color: #d32f2f; margin-top: 10px;">
@@ -224,6 +224,7 @@ pg = st.navigation({
 })
 if __name__ == "__main__":
     pg.run()
+
 
 
 
