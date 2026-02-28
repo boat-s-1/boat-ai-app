@@ -122,35 +122,47 @@ with tab_stat:
     # ======================================
     # 1. 統計データ読み込みボタン
     # ======================================
-    if st.button(f"{target_sheet} データを読み込む", key="tab2_load_btn"):
-        with st.spinner(f"{target_sheet} を取得中..."):
+   # 1. 探すべきシート名をここで正確に作る
+    race_type = st.radio("統計データ種別", ["混合", "女子"], horizontal=True, key="tab2_race_type")
+    
+    # 【重要】半角のアンダーバーで結合
+    target_sheet = f"{PLACE_NAME}_{race_type}統計"
+
+    # ======================================
+    # 統計データ読み込みボタン
+    # ======================================
+    if st.button(f"📊 {target_sheet} を読み込む", key="tab2_load_btn"):
+
+        with st.spinner(f"スプレッドシートから「{target_sheet}」を読み込んでいます…"):
             try:
-                # gc (gspread_client) は事前に定義済みと想定
+                # gc (gspreadクライアント) を使って開く
                 sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+                
+                # 指定したシート（戸田_混合統計 など）を直接開く
                 ws = sh.worksheet(target_sheet)
                 rows = ws.get_all_records()
-                
+
                 if rows:
                     base_df = pd.DataFrame(rows)
-                    # 型調整
-                    for c in ["展示", "直線", "一周", "回り足", "艇番"]:
+                    
+                    # 共通の列名が存在するかチェックしながら型変換
+                    check_cols = ["展示", "直線", "一周", "回り足", "艇番"]
+                    for c in check_cols:
                         if c in base_df.columns:
                             base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
                     
+                    # セッションに保存
                     st.session_state["tab2_base_df"] = base_df
-                    st.success(f"✅ {len(base_df)}件のデータを読み込みました")
+                    st.success(f"✅ 「{target_sheet}」から {len(base_df)} 件のデータを読み込みました！")
                 else:
-                    st.error("データが空です")
+                    st.warning(f"⚠️ シート「{target_sheet}」は見つかりましたが、中身が空っぽのようです。")
+
+            except gspread.exceptions.WorksheetNotFound:
+                st.error(f"❌ シートが見つかりません。スプレッドシート側の名前が [ {target_sheet} ] になっているか確認してください（半角/全角に注意）。")
             except Exception as e:
-                st.error(f"シートの読み込みに失敗しました。シート名「{target_sheet}」が存在するか確認してください。\n{e}")
+                st.error(f"❌ 予期せぬエラーが発生しました: {e}")
 
-    # データが読み込まれていない場合は中断
-    if "tab2_base_df" not in st.session_state:
-        st.info(f"「{target_sheet} データを読み込む」ボタンを押してください。")
-        st.stop()
-
-    place_df = st.session_state["tab2_base_df"].copy()
-
+    # 以降、データがある場合の処理（base_df = st.session_state["tab2_base_df"].copy() ...）
     # ======================================
     # 2. 計算用数値の算出
     # ======================================
