@@ -379,7 +379,7 @@ with tab_start:
         """
         st.markdown(html, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
-# --- タブ：展示・ST総合ランキング（視覚的改良版） ---
+# --- タブ：展示・ST総合ランキング（枠色完全対応版） ---
 with tab_rank:
     st.subheader(f"🏆 {PLACE_NAME} 補正後ランキング分析")
 
@@ -392,17 +392,15 @@ with tab_rank:
     place_df = st.session_state["tab2_base_df"]
 
     # 2. 補正計算ロジック
-    place_mean = place_df.groupby("艇番")[["展示", "直線", "一周", "回り足"]].mean()
-    overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
+    items = ["展示", "直線", "一周", "回り足"]
+    place_mean = place_df.groupby("艇番")[items].mean()
+    overall_mean = place_df[items].mean()
     lane_bias = place_mean - overall_mean
 
     final_adj_df = input_df.copy()
-    items = ["展示", "直線", "一周", "回り足"]
-    
     for b in range(1, 7):
         if b in place_mean.index:
             for col in items:
-                # 枠番補正の計算
                 adj_val = input_df.loc[b, col] - place_mean.loc[b, col] + overall_mean[col]
                 final_adj_df.loc[b, col] = adj_val - lane_bias.loc[b, col]
 
@@ -410,28 +408,30 @@ with tab_rank:
     raw_rank = input_df[items].rank(method="min")
     adj_rank = final_adj_df[items].rank(method="min")
 
-    # 4. 🏅 項目別・最優秀機力評価（🏆表示）
+    # 4. 🥇 項目別・最優秀機力評価（🏆表示 + 枠色対応）
     st.markdown("### 🥇 項目別・機力評価サマリー")
-    st.caption("補正後に1位を獲得した項目に🏆、生タイム1位に⚡が表示されます。")
-
-    # 各項目の1位をリスト化
+    
     raw_tops = {item: raw_rank[raw_rank[item] == 1].index.tolist() for item in items}
     adj_tops = {item: adj_rank[adj_rank[item] == 1].index.tolist() for item in items}
 
-    # 1号艇〜6号艇のカードを横並びにする
+    # 枠色と文字色の設定
+    # 0番目は不使用, 1白, 2黒, 3赤, 4青, 5黄, 6緑
+    bg_colors = ["", "#FFFFFF", "#000000", "#FF0000", "#0000FF", "#FFFF00", "#008000"]
+    text_colors = ["", "#000000", "#FFFFFF", "#FFFFFF", "#FFFFFF", "#000000", "#FFFFFF"]
+
     boat_cols = st.columns(6)
     for b in range(1, 7):
         with boat_cols[b-1]:
-            # 艇番をカラーラベル風に表示
-            bg_colors = ["#ffffff", "#e0e0e0", "#ff6666", "#3399ff", "#ffcc00", "#33cc33", "#ff8c00"] # 艇旗色イメージ
+            # 艇番カラーラベル
             st.markdown(f"""
-                <div style="background-color:{bg_colors[b]}; color:{'black' if b in [1,5,6] else 'white'}; 
-                text-align:center; border-radius:5px; padding:5px; font-weight:bold; border:1px solid #ccc;">
-                {b}号艇
+                <div style="background-color:{bg_colors[b]}; color:{text_colors[b]}; 
+                text-align:center; border-radius:5px; padding:8px; font-weight:bold; 
+                border:2px solid #ccc; margin-bottom:10px; font-size:18px;">
+                {b}
                 </div>
             """, unsafe_allow_html=True)
             
-            # 獲得した称号を表示
+            # 称号表示
             found_any = False
             for item in items:
                 if b in adj_tops[item]:
@@ -446,42 +446,33 @@ with tab_rank:
 
     st.divider()
 
-    # 5. 🛠️ 枠番補正後の実力順位表（None修正版）
+    # 5. 🛠️ 枠番補正後の実力順位表
     st.markdown("### 📊 全項目・補正後順位詳細")
     
-    # 順位表の作成
-    display_rank_df = adj_rank.copy()
-    display_rank_df.columns = [f"{c}" for c in display_rank_df.columns]
-    
     # 機力指数の計算
-    max_rank_sum = 24
-    min_rank_sum = 4
+    max_sum, min_sum = 24, 4
     rank_sum = adj_rank.sum(axis=1)
-    # 0除算防止
-    final_adj_df["機力指数"] = 100 - ((rank_sum - min_rank_sum) / (max_rank_sum - min_rank_sum) * 50)
+    final_adj_df["機力指数"] = 100 - ((rank_sum - min_sum) / (max_sum - min_sum) * 50)
 
-    # 表示用テーブルの統合
     summary_table = pd.DataFrame({
         "機力指数": final_adj_df["機力指数"],
-        "展示順位": adj_rank["展示"],
-        "直線順位": adj_rank["直線"],
-        "一周順位": adj_rank["一周"],
-        "回り足順位": adj_rank["回り足"]
+        "展示": adj_rank["展示"],
+        "直線": adj_rank["直線"],
+        "一周": adj_rank["一周"],
+        "回り足": adj_rank["回り足"]
     })
 
-    # スタイリング関数（matplotlibがなくても動く簡易版）
-    def color_rank(val):
-        if val == 1: return 'background-color: #ffcccc; font-weight: bold;'
-        if val <= 2: return 'background-color: #fff3cd;'
+    # スタイリング（1位:金、2位:銀、3位:銅っぽい色）
+    def color_rank_simple(val):
+        if val == 1: return 'background-color: #FFD700; color: black; font-weight: bold;' # 金
+        if val == 2: return 'background-color: #C0C0C0; color: black;' # 銀
+        if val == 3: return 'background-color: #CD7F32; color: white;' # 銅
         return ''
 
     st.dataframe(
-        summary_table.style.applymap(color_rank, subset=["展示順位", "直線順位", "一周順位", "回り足順位"]).format("{:.1f}"),
+        summary_table.style.applymap(color_rank_simple, subset=["展示", "直線", "一周", "回り足"]).format("{:.1f}"),
         use_container_width=True
     )
-
-    st.info("💡 **アドバイス**: 🏆が複数付いている艇は、そのコースの平均を大きく上回る好気配です。")
-    # --- 検証タブ：スタート指数 精度検証 ---
 with tab_mix_check:
     st.subheader(f"📊 {PLACE_NAME}｜スタート指数 精度検証")
 
