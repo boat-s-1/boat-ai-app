@@ -116,15 +116,31 @@ with tab_pre:
 with tab_stat:
     st.subheader(f"📊 {PLACE_NAME} 補正・総合比較")
 
-    # 重複エラーを避けるためのユニークなキー
-    race_type_val = st.radio(
-        "読み込むレース種別を選択", 
-        ["混合", "女子"], 
-        horizontal=True, 
-        key="unique_race_type_selection"
-    )
+    # 1. 接続係 (gc) をここで準備する --------------------------------------
+    from google.oauth2.service_account import Credentials
+    import gspread
+
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
+    # 接続を確立
+    try:
+        creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+        gc = gspread.authorize(creds)
+    except Exception as e:
+        st.error(f"Googleへの接続に失敗しました。secretsの設定を確認してください: {e}")
+        st.stop()
+    # --------------------------------------------------------------------
+
+    race_type_val = st.radio("読み込むレース種別を選択", ["混合", "女子"], horizontal=True, key="unique_race_type_selection")
     target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
+
+    if st.button(f"📊 {target_sheet} を読み込む", key="load_btn_stat_toda"):
+        with st.spinner(f"「{target_sheet}」を取得中..."):
+            try:
+                # ここで gc が使えるようになります
+                sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+                ws = sh.worksheet(target_sheet)
+                # ...以下、前回のデータ処理コードが続く
 
     # ======================================
     # 1. 統計データ読み込みボタン
