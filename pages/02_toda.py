@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import os
+import gspread  # ← これを追加！
+import base64   # (もし画像表示を使うならこれも必要)
 
 # ==============================
 # 1. 会場名の固定定義
