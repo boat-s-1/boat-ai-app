@@ -91,8 +91,8 @@ st.divider()
 tab_pre, tab_stat, tab_start, tab_rank, tab_mix_check = st.tabs([
     "🎯 事前簡易予想", 
     "📊 統計解析", 
-    "展示・ST 項目別順位",
     "🚀 スタート予想", 
+    "展示・ST 項目別順位",
     "📝 スタート指数"
 ])
 
