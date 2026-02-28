@@ -3,17 +3,18 @@ import pandas as pd
 import os
 
 # ==============================
-# 変数の定義（ここを追加！）
+# 1. 会場名の固定定義
 # ==============================
-# セッション状態から会場名を取得し、無ければ "戸田" を代入する
-if "selected_place" not in st.session_state:
-    st.session_state["selected_place"] = "戸田"
+# 変数を「戸田」に固定します
+PLACE_NAME = "戸田"
+st.session_state["selected_place"] = PLACE_NAME 
 
-PLACE_NAME = st.session_state["selected_place"]
+# ページ設定
+st.set_page_config(page_title=f"競艇Pro {PLACE_NAME}", layout="wide")
 
-# 以降のコード（st.set_page_config など）
-
-# --- メインUI ---
+# ==============================
+# 2. メインUI
+# ==============================
 st.title(f"🚀 {PLACE_NAME} 解析システム")
 
 # タブの定義（事前予想を1番目に配置）
