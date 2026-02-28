@@ -168,7 +168,20 @@ with tab_stat:
                 st.error(f"❌ シートが見つかりません。スプレッドシート側の名前が [ {target_sheet} ] になっているか確認してください（半角/全角に注意）。")
             except Exception as e:
                 st.error(f"❌ 予期せぬエラーが発生しました: {e}")
+　　# 【重要】セッションにデータがない場合は、これ以降の計算をさせない
+    if "tab2_base_df" not in st.session_state:
+        st.info(f"「{target_sheet} データを読み込む」ボタンをまず押してください。")
+        st.stop()  # ここで一旦止めることで、NameErrorを防ぎます
 
+    # データがある場合のみ、ここから下の計算が実行される
+    place_df = st.session_state["tab2_base_df"].copy()
+
+    # ======================================
+    # 2. 計算用数値の算出
+    # ======================================
+    place_mean = place_df.groupby("艇番")[["展示", "直線", "一周", "回り足"]].mean()
+    overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
+    lane_bias = place_mean - overall_mean
     # 以降、データがある場合の処理（base_df = st.session_state["tab2_base_df"].copy() ...）
     # ======================================
     # 2. 計算用数値の算出
