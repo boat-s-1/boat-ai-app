@@ -23,7 +23,7 @@ st.set_page_config(page_title=f"競艇Pro {PLACE_NAME}", layout="wide")
 st.title(f"🚀 {PLACE_NAME} 解析システム")
 
 # タブの定義（事前予想を1番目に配置）
-tab_pre, tab_stat, tab_start, tab_mix,check = st.tabs([
+tab_pre, tab_stat, tab_start, tab_mix_check = st.tabs([
     "🎯 事前簡易予想", 
     "📊 統計解析", 
     "🚀 スタート予想", 
