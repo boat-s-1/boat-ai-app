@@ -7,6 +7,9 @@ import base64   # (もし画像表示を使うならこれも必要)
 # ==============================
 # 1. 会場名の固定定義
 # ==============================
+# 基準となるディレクトリ（フォルダ）の場所を定義
+import pathlib
+BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
 # 変数を「戸田」に固定します
 PLACE_NAME = "戸田"
 st.session_state["selected_place"] = PLACE_NAME 
