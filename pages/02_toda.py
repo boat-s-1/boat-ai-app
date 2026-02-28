@@ -88,9 +88,10 @@ st.divider()
 # ======================================
 # 3. タブの定義
 # ======================================
-tab_pre, tab_stat, tab_start, tab_mix_check = st.tabs([
+tab_pre, tab_stat, tab_start, tab_rank, tab_mix_check = st.tabs([
     "🎯 事前簡易予想", 
     "📊 統計解析", 
+    "展示・ST 項目別順位",
     "🚀 スタート予想", 
     "📝 スタート指数"
 ])
@@ -378,6 +379,81 @@ with tab_start:
         """
         st.markdown(html, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+    # --- タブ：展示・ST総合ランキング ---
+with tab_rank:
+    st.subheader(f"🏆 {PLACE_NAME} 展示・ST 項目別順位")
+
+    # 1. データの確認（タブ2の入力値を参照）
+    if "tab2_input_df" not in st.session_state:
+        st.info("「統計解析」タブで当日の展示タイムを入力してください。")
+        st.stop()
+    
+    # 入力データと統計データを取得
+    input_df = st.session_state["tab2_input_df"].copy()
+    
+    # 2. 項目ごとのランキング（順位）を計算
+    # タイムは「低い（短い）ほど良い」ので昇順でランク付け
+    rank_df = input_df.rank(method="min", ascending=True)
+
+    # 3. 視覚的なランキングボード
+    st.markdown("### 🥇 項目別ベスト3")
+    cols = st.columns(4)
+    items = ["展示", "直線", "一周", "回り足"]
+    
+    for i, item in enumerate(items):
+        with cols[i]:
+            st.markdown(f"**【{item}】**")
+            # その項目で1位の艇番を探す
+            best_boat = rank_df[rank_df[item] == 1].index.tolist()
+            if best_boat:
+                for b in best_boat:
+                    st.success(f"🥇 {b}号艇 ({input_df.loc[b, item]:.2f})")
+            
+            # 2位も表示
+            second_boat = rank_df[rank_df[item] == 2].index.tolist()
+            if second_boat:
+                for b in second_boat:
+                    st.warning(f"🥈 {b}号艇")
+
+    st.divider()
+
+    # 4. ST展示（スタート展示）の分析エリア
+    st.markdown("### 🚦 ST展示・スリット気配")
+    
+    # スタート予想タブ(tab_start)で入力されたSTデータを参照
+    # （もし入力されていれば表示）
+    st_rows = []
+    for b in range(1, 7):
+        st_val = st.session_state.get(f"st_st_{b}", 0.0)
+        eval_val = st.session_state.get(f"st_ev_{b}", "-")
+        st_rows.append({"艇番": b, "ST展示": st_val, "評価": eval_val})
+    
+    st_df = pd.DataFrame(st_rows).set_index("艇番")
+
+    c1, c2 = st.columns([2, 3])
+    with c1:
+        st.write("🏃 **ST展示順位**")
+        # STは0.01に近い（あるいは早い）順
+        # ※フライング等は考慮せず、単純に数値が小さい順
+        st.dataframe(st_df.sort_values("ST展示"), use_container_width=True)
+
+    with c2:
+        st.write("💡 **展示評価との相関**")
+        # 展示タイム1位とST評価を並べて表示
+        combined_summary = pd.DataFrame({
+            "展示順位": rank_df["展示"],
+            "ST値": st_df["ST展示"],
+            "評価": st_df["評価"]
+        })
+        
+        # 色分けルール
+        def highlight_top(s):
+            return ['background-color: #ff6b6b; color: white' if v == 1 else '' for v in s]
+        
+        st.dataframe(combined_summary.style.apply(highlight_top, subset=["展示順位"]), use_container_width=True)
+
+    # 5. 総合評価アドバイス
+    st.info("💡 **ヒント**: 展示1位と一周タイム1位が同じ艇の場合、そのコースの勝率は統計的に非常に高くなります。")
     # --- 検証タブ：スタート指数 精度検証 ---
 with tab_mix_check:
     st.subheader(f"📊 {PLACE_NAME}｜スタート指数 精度検証")
