@@ -175,44 +175,7 @@ with tab_stat:
         st.stop()
     # --------------------------------------------------------------------
 
-    # レース種別選択
-    race_type_val = st.radio(
-        "読み込むレース種別を選択", 
-        ["混合", "女子"], 
-        horizontal=True, 
-        key="unique_selection_toda"
-    )
-    
-    target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
-
-    # --- 読み込みボタン ---
-    if st.button(f"📊 {target_sheet} を読み込む", key="btn_load_toda_final"):
-        with st.spinner(f"「{target_sheet}」を取得中..."):
-            try:
-                sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-                ws = sh.worksheet(target_sheet)
-                rows = ws.get_all_records()
-                
-                if rows:
-                    base_df = pd.DataFrame(rows)
-                    # 型調整
-                    check_cols = ["展示", "直線", "一周", "回り足", "艇番"]
-                    for c in check_cols:
-                        if c in base_df.columns:
-                            base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
-                    
-                    st.session_state["tab2_base_df"] = base_df
-                    st.success(f"✅ {len(base_df)}件のデータを読み込みました")
-                else:
-                    st.error("シートにデータが見つかりません。")
-            except Exception as e:
-                st.error(f"読み込み失敗: シート名を確認してください。\nエラー: {e}")
-
-    # データがない場合はここで停止（これより下のNameErrorを防ぐ）
-    if "tab2_base_df" not in st.session_state:
-        st.info("上のボタンを押して統計データを読み込んでください。")
-        st.stop()
-
+ 
     # --- 以降、計算処理 ---
     place_df = st.session_state["tab2_base_df"].copy()
 
