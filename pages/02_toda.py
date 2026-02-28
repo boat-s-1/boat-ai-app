@@ -23,7 +23,7 @@ st.set_page_config(page_title=f"競艇Pro {PLACE_NAME}", layout="wide")
 st.title(f"🚀 {PLACE_NAME} 解析システム")
 
 # タブの定義（事前予想を1番目に配置）
-tab_pre, tab_stat, tab_start, tab_input = st.tabs([
+tab_pre, tab_stat, tab_start, tab_mix,check = st.tabs([
     "🎯 事前簡易予想", 
     "📊 統計解析", 
     "🚀 スタート予想", 
@@ -350,3 +350,109 @@ with tab_start:
         """
         st.markdown(html, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+    # --- 検証タブ：スタート指数 精度検証 ---
+with tab_mix_check:
+    st.subheader(f"📊 {PLACE_NAME}｜スタート指数 精度検証")
+
+    # 1. データの確認（タブ2で読み込んだデータを使用）
+    if "tab2_base_df" not in st.session_state:
+        st.info("「統計解析」タブで統計データを読み込んでから検証を開始してください。")
+        st.stop()
+    
+    # 統計データをコピーして使用
+    df = st.session_state["tab2_base_df"].copy()
+
+    # 必須列のチェック（着順など検証に必要な列があるか）
+    need_cols = ["日付", "レース番号", "艇番", "展示", "一周", "ST", "着順"]
+    # 統計シートに「着順」がない場合を想定したガード
+    if "着順" not in df.columns:
+        st.error("統計シートに『着順』列がないため、的中率を計算できません。シートを確認してください。")
+        st.stop()
+
+    # 型変換
+    for c in ["艇番", "展示", "一周", "ST", "着順"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # 2. スタート指数の再計算ロジック
+    # (※評価データが統計シートにある場合のみ加味。ない場合は0として計算)
+    eval_col = "スタート評価" if "スタート評価" in df.columns else "評価"
+    eval_map = {"◎": 2.0, "◯": 1.0, "△": 0.5, "×": -1.0}
+    
+    if eval_col in df.columns:
+        df["評価補正"] = df[eval_col].map(eval_map).fillna(0)
+    else:
+        df["評価補正"] = 0
+
+    # 会場平均の算出
+    mean_tenji = df["展示"].mean()
+    mean_isshu = df["一周"].mean()
+
+    # 指数計算
+    df["指数"] = (
+        -df["ST"].fillna(0)
+        + df["評価補正"]
+        + (mean_tenji - df["展示"]) * 2.0
+        + (mean_isshu - df["一周"]) * 0.3
+    )
+
+    # 3. レース単位で集計（的中判定）
+    results = []
+    # 日付とレース番号でグループ化
+    for (d, r), g in df.groupby(["日付", "レース番号"]):
+        if len(g) < 6: continue # 6艇揃っていないレースは除外
+
+        # 指数上位3艇を抽出
+        g_sorted = g.sort_values("指数", ascending=False)
+        top1 = int(g_sorted.iloc[0]["艇番"])
+        top2 = int(g_sorted.iloc[1]["艇番"])
+        top3 = int(g_sorted.iloc[2]["艇番"])
+
+        # 実際の着順を取得
+        winner_row = g[g["着順"] == 1]
+        if winner_row.empty: continue
+        
+        winner = int(winner_row.iloc[0]["艇番"])
+        
+        # 的中判定
+        results.append({
+            "日付": d,
+            "R": r,
+            "指数1位": top1,
+            "指数2位": top2,
+            "指数3位": top3,
+            "1着艇": winner,
+            "1位的中": (top1 == winner),
+            "上位2艇内": (winner in [top1, top2]),
+            "上位3艇内": (winner in [top1, top2, top3])
+        })
+
+    if not results:
+        st.warning("検証可能なレースデータ（6艇揃っており着順があるデータ）がありません。")
+        st.stop()
+
+    res_df = pd.DataFrame(results)
+
+    # 4. サマリー表示
+    total = len(res_df)
+    hit1 = res_df["1位的中"].mean() * 100
+    hit2 = res_df["上位2艇内"].mean() * 100
+    hit3 = res_df["上位3艇内"].mean() * 100
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("検証レース数", f"{total} R")
+    c2.metric("指数1位的中率", f"{hit1:.1f}%")
+    c3.metric("上位2艇 1着率", f"{hit2:.1f}%")
+    c4.metric("上位3艇 1着率", f"{hit3:.1f}%")
+
+    st.divider()
+
+    # 5. 詳細データ表示（色付け）
+    def color_hit(val):
+        return 'background-color: #d4edda' if val else ''
+
+    st.markdown("### 📋 検証詳細データ")
+    st.dataframe(
+        res_df.style.applymap(color_hit, subset=["1位的中", "上位2艇内", "上位3艇内"]),
+        use_container_width=True,
+        hide_index=True
+    )
