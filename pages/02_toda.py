@@ -114,10 +114,15 @@ with tab_pre:
 with tab_stat:
     st.subheader(f"📊 {PLACE_NAME} 補正・総合比較")
 
-    # レース種別の選択（混合か女子か）
-    # ※タブの外で定義している場合はそれを使いますが、念のためここでも確認
-    race_type = st.radio("統計データ種別", ["混合", "女子"], horizontal=True, key="tab2_race_type")
-    target_sheet = f"{PLACE_NAME}_{race_type}統計"
+    # 重複エラーを避けるため、ここで一度だけ定義
+    race_type_val = st.radio(
+        "読み込むレース種別を選択", 
+        ["混合", "女子"], 
+        horizontal=True, 
+        key="unique_race_type_key"  # 完全にユニークなキー名
+    )
+    
+    target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
 
     # ======================================
     # 1. 統計データ読み込みボタン
