@@ -21,7 +21,55 @@ st.set_page_config(page_title=f"競艇Pro {PLACE_NAME}", layout="wide")
 # 2. メインUI
 # ==============================
 st.title(f"🚀 {PLACE_NAME} 解析システム")
+# ======================================
+# サイドバー：データ読み込み設定
+# ======================================
+with st.sidebar:
+    st.header("📊 データ取得設定")
+    
+    # レース種別の選択
+    race_type_val = st.radio(
+        "読み込むレース種別", 
+        ["混合", "女子"], 
+        horizontal=True, 
+        key="sidebar_race_type"
+    )
+    
+    target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
+    
+    # 読み込みボタン
+    if st.button(f"🔄 {target_sheet} を読込", key="sidebar_load_btn"):
+        with st.spinner("通信中..."):
+            try:
+                # 認証と接続（gcが定義されている前提）
+                sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+                ws = sh.worksheet(target_sheet)
+                rows = ws.get_all_records()
+                
+                if rows:
+                    df = pd.DataFrame(rows)
+                    # 型調整
+                    for c in ["展示", "直線", "一周", "回り足", "艇番", "ST", "着順"]:
+                        if c in df.columns:
+                            df[c] = pd.to_numeric(df[c], errors="coerce")
+                    
+                    # セッションに保存
+                    st.session_state["tab2_base_df"] = df
+                    st.success(f"✅ {target_sheet} 読込完了")
+                else:
+                    st.error("シートが空です")
+            except Exception as e:
+                st.error(f"エラー: {e}")
 
+    st.divider()
+    
+    # 現在の読込状況表示
+    if "tab2_base_df" in st.session_state:
+        st.info(f"現在の適用データ:\n**{target_sheet}**")
+    else:
+        st.warning("データが未読込です")
+
+# --- ここから下に st.tabs(...) を配置する ---
 # タブの定義（事前予想を1番目に配置）
 tab_pre, tab_stat, tab_start, tab_mix_check = st.tabs([
     "🎯 事前簡易予想", 
