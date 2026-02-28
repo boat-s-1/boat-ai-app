@@ -116,12 +116,12 @@ with tab_pre:
 with tab_stat:
     st.subheader(f"📊 {PLACE_NAME} 補正・総合比較")
 
-    # 重複エラーを避けるため、ここで一度だけ定義
+    # 重複エラーを避けるためのユニークなキー
     race_type_val = st.radio(
         "読み込むレース種別を選択", 
         ["混合", "女子"], 
         horizontal=True, 
-        key="unique_race_type_key"  # 完全にユニークなキー名
+        key="unique_race_type_selection"
     )
     
     target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
@@ -129,72 +129,49 @@ with tab_stat:
     # ======================================
     # 1. 統計データ読み込みボタン
     # ======================================
-   # 1. 探すべきシート名をここで正確に作る
-    race_type = st.radio("統計データ種別", ["混合", "女子"], horizontal=True, key="tab2_race_type")
-    
-    # 【重要】半角のアンダーバーで結合
-    target_sheet = f"{PLACE_NAME}_{race_type}統計"
-
-    # ======================================
-    # 統計データ読み込みボタン
-    # ======================================
-    if st.button(f"📊 {target_sheet} を読み込む", key="tab2_load_btn"):
-
-        with st.spinner(f"スプレッドシートから「{target_sheet}」を読み込んでいます…"):
+    if st.button(f"📊 {target_sheet} を読み込む", key="load_btn_stat_toda"):
+        with st.spinner(f"「{target_sheet}」を取得中..."):
             try:
-                # gc (gspreadクライアント) を使って開く
+                # gc (gspreadクライアント) は事前に定義済みと想定
                 sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-                
-                # 指定したシート（戸田_混合統計 など）を直接開く
                 ws = sh.worksheet(target_sheet)
                 rows = ws.get_all_records()
-
+                
                 if rows:
                     base_df = pd.DataFrame(rows)
-                    
-                    # 共通の列名が存在するかチェックしながら型変換
+                    # 型調整
                     check_cols = ["展示", "直線", "一周", "回り足", "艇番"]
                     for c in check_cols:
                         if c in base_df.columns:
                             base_df[c] = pd.to_numeric(base_df[c], errors="coerce")
                     
-                    # セッションに保存
                     st.session_state["tab2_base_df"] = base_df
-                    st.success(f"✅ 「{target_sheet}」から {len(base_df)} 件のデータを読み込みました！")
+                    st.success(f"✅ {len(base_df)}件のデータを読み込みました")
                 else:
-                    st.warning(f"⚠️ シート「{target_sheet}」は見つかりましたが、中身が空っぽのようです。")
-
-            except gspread.exceptions.WorksheetNotFound:
-                st.error(f"❌ シートが見つかりません。スプレッドシート側の名前が [ {target_sheet} ] になっているか確認してください（半角/全角に注意）。")
+                    st.error("シートにデータが見つかりません。")
             except Exception as e:
-                st.error(f"❌ 予期せぬエラーが発生しました: {e}")
-　　# 【重要】セッションにデータがない場合は、これ以降の計算をさせない
-    if "tab2_base_df" not in st.session_state:
-        st.info(f"「{target_sheet} データを読み込む」ボタンをまず押してください。")
-        st.stop()  # ここで一旦止めることで、NameErrorを防ぎます
+                st.error(f"読み込み失敗: {target_sheet} というシート名が正しいか確認してください。\nエラー: {e}")
 
-    # データがある場合のみ、ここから下の計算が実行される
+    # 【重要】データがない場合はここで処理を止める（SyntaxErrorやNameErrorを防ぐ）
+    if "tab2_base_df" not in st.session_state:
+        st.info("上のボタンを押して統計データを読み込んでください。")
+        st.stop()
+
+    # データがある場合のみ続行
     place_df = st.session_state["tab2_base_df"].copy()
 
     # ======================================
     # 2. 計算用数値の算出
     # ======================================
-    place_mean = place_df.groupby("艇番")[["展示", "直線", "一周", "回り足"]].mean()
-    overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
-    lane_bias = place_mean - overall_mean
-    # 以降、データがある場合の処理（base_df = st.session_state["tab2_base_df"].copy() ...）
-    # ======================================
-    # 2. 計算用数値の算出
-    # ======================================
-    # 会場内での艇番別平均
-    place_mean = place_df.groupby("艇番")[["展示", "直線", "一周", "回り足"]].mean()
-    # 会場全体の平均
-    overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
-    # 枠番バイアス（イン有利度など）
-    lane_bias = place_mean - overall_mean
-
-    race_count = len(place_df) // 6 # 簡易的なレース数計算
-    st.caption(f"📊 {PLACE_NAME} ({race_type}戦) 過去データ約 {race_count} レースより算出")
+    try:
+        place_mean = place_df.groupby("艇番")[["展示", "直線", "一周", "回り足"]].mean()
+        overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
+        lane_bias = place_mean - overall_mean
+        race_count = len(place_df) // 6
+        st.caption(f"📊 {PLACE_NAME} ({race_type_val}) 過去約 {race_count} レースより算出")
+    except Exception as e:
+        st.error(f"計算エラー（列名が正しいか確認してください）: {e}")
+        st.stop()
 
     # ======================================
     # 3. 入力フォーム
@@ -202,7 +179,7 @@ with tab_stat:
     st.divider()
     st.markdown("### 📝 展示タイム入力（当日）")
 
-    with st.form("tab2_input_form"):
+    with st.form("tab2_input_form_toda"):
         input_rows = []
         head = st.columns([1, 2, 2, 2, 2])
         head[0].markdown("**艇番**")
@@ -214,11 +191,10 @@ with tab_stat:
         for b in range(1, 7):
             cols = st.columns([1, 2, 2, 2, 2])
             cols[0].markdown(f"**{b}号艇**")
-            isshu = cols[1].number_input("一周", step=0.01, format="%.2f", key=f"tab2_in_isshu_{b}", label_visibility="collapsed")
-            mawari = cols[2].number_input("回り足", step=0.01, format="%.2f", key=f"tab2_in_mawari_{b}", label_visibility="collapsed")
-            choku = cols[3].number_input("直線", step=0.01, format="%.2f", key=f"tab2_in_choku_{b}", label_visibility="collapsed")
-            tenji = cols[4].number_input("展示", step=0.01, format="%.2f", key=f"tab2_in_tenji_{b}", label_visibility="collapsed")
-            
+            isshu = cols[1].number_input("一周", step=0.01, format="%.2f", key=f"toda_isshu_{b}", label_visibility="collapsed")
+            mawari = cols[2].number_input("回り足", step=0.01, format="%.2f", key=f"toda_mawari_{b}", label_visibility="collapsed")
+            choku = cols[3].number_input("直線", step=0.01, format="%.2f", key=f"toda_choku_{b}", label_visibility="collapsed")
+            tenji = cols[4].number_input("展示", step=0.01, format="%.2f", key=f"toda_tenji_{b}", label_visibility="collapsed")
             input_rows.append({"艇番": b, "展示": tenji, "直線": choku, "一周": isshu, "回り足": mawari})
 
         submit_input = st.form_submit_button("🔥 タイム補正を計算する", use_container_width=True)
@@ -226,44 +202,36 @@ with tab_stat:
     if submit_input:
         st.session_state["tab2_input_df"] = pd.DataFrame(input_rows).set_index("艇番")
 
-    # 入力データがない場合はここでストップ
-    if "tab2_input_df" not in st.session_state:
-        st.stop()
+    if "tab2_input_df" in st.session_state:
+        input_df = st.session_state["tab2_input_df"]
 
-    input_df = st.session_state["tab2_input_df"]
+        # 表示用関数
+        def highlight_rank(df):
+            def color_col(s):
+                s2 = pd.to_numeric(s, errors="coerce")
+                rank = s2.rank(method="min")
+                return ["background-color:#ff6b6b;color:white;" if r == 1 else "background-color:#ffd43b;" if r == 2 else "" for r in rank]
+            return df.style.apply(color_col, axis=0).format("{:.2f}")
 
-    # ======================================
-    # 4. 補正計算と表示
-    # ======================================
-    def highlight_rank(df):
-        def color_col(s):
-            s2 = pd.to_numeric(s, errors="coerce")
-            rank = s2.rank(method="min")
-            return ["background-color:#ff6b6b;color:white;" if r == 1 else "background-color:#ffd43b;" if r == 2 else "" for r in rank]
-        return df.style.apply(color_col, axis=0).format("{:.2f}")
+        st.markdown("#### ① 公式展示タイム表（入力値）")
+        st.dataframe(highlight_rank(input_df), use_container_width=True)
 
-    # --- A. 入力値そのまま ---
-    st.markdown("#### ① 公式展示タイム表（入力値）")
-    st.dataframe(highlight_rank(input_df), use_container_width=True)
+        # 補正計算
+        adj_df = input_df.copy()
+        final_df = input_df.copy()
+        
+        for b in range(1, 7):
+            if b in place_mean.index:
+                for col in ["展示", "直線", "一周", "回り足"]:
+                    if pd.notna(input_df.loc[b, col]):
+                        # 場平均補正
+                        adj_val = input_df.loc[b, col] - place_mean.loc[b, col] + overall_mean[col]
+                        adj_df.loc[b, col] = adj_val
+                        # 枠番補正
+                        final_df.loc[b, col] = adj_val - lane_bias.loc[b, col]
 
-    # --- B. 場平均補正 ---
-    adj_df = input_df.copy()
-    for b in range(1, 7):
-        if b in place_mean.index:
-            for col in ["展示", "直線", "一周", "回り足"]:
-                if pd.notna(input_df.loc[b, col]):
-                    adj_df.loc[b, col] = input_df.loc[b, col] - place_mean.loc[b, col] + overall_mean[col]
+        st.markdown("#### ② 場平均補正（会場平均との比較）")
+        st.dataframe(highlight_rank(adj_df), use_container_width=True)
 
-    st.markdown("#### ② 場平均補正（会場平均との比較）")
-    st.dataframe(highlight_rank(adj_df), use_container_width=True)
-
-    # --- C. 枠番補正（イン有利補正） ---
-    final_df = adj_df.copy()
-    for b in range(1, 7):
-        if b in lane_bias.index:
-            for col in ["展示", "直線", "一周", "回り足"]:
-                if pd.notna(adj_df.loc[b, col]):
-                    final_df.loc[b, col] = adj_df.loc[b, col] - lane_bias.loc[b, col]
-
-    st.markdown("#### ③ 枠番補正込み（最終評価タイム）")
-    st.dataframe(highlight_rank(final_df), use_container_width=True)
+        st.markdown("#### ③ 枠番補正込み（最終評価タイム）")
+        st.dataframe(highlight_rank(final_df), use_container_width=True)
