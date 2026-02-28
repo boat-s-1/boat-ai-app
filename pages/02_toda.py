@@ -19,58 +19,52 @@ st.set_page_config(page_title=f"競艇Pro {PLACE_NAME}", layout="wide")
 
 # ==============================
 # 2. メインUI
-# ==============================
+# ======================================
+# 1. ページタイトル
+# ======================================
 st.title(f"🚀 {PLACE_NAME} 解析システム")
+
 # ======================================
-# サイドバー：データ読み込み設定
+# 2. データ管理エリア（タイトルとタブの間）
 # ======================================
-with st.sidebar:
-    st.header("📊 データ取得設定")
+with st.container(border=True): # 枠で囲って「操作パネル」感を出す
+    c1, c2, c3 = st.columns([1.5, 2, 2])
     
-    # レース種別の選択
-    race_type_val = st.radio(
-        "読み込むレース種別", 
-        ["混合", "女子"], 
-        horizontal=True, 
-        key="sidebar_race_type"
-    )
+    with c1:
+        race_type_val = st.radio(
+            "解析対象を選択", ["混合", "女子"], 
+            horizontal=True, key="top_race_type"
+        )
     
-    target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
-    
-    # 読み込みボタン
-    if st.button(f"🔄 {target_sheet} を読込", key="sidebar_load_btn"):
-        with st.spinner("通信中..."):
-            try:
-                # 認証と接続（gcが定義されている前提）
-                sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
-                ws = sh.worksheet(target_sheet)
-                rows = ws.get_all_records()
-                
-                if rows:
-                    df = pd.DataFrame(rows)
-                    # 型調整
-                    for c in ["展示", "直線", "一周", "回り足", "艇番", "ST", "着順"]:
-                        if c in df.columns:
-                            df[c] = pd.to_numeric(df[c], errors="coerce")
-                    
-                    # セッションに保存
+    with c2:
+        target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
+        if st.button(f"🔄 {target_sheet} を読み込む", use_container_width=True, key="top_load_btn"):
+            # --- 読み込み処理（中身は以前と同じ） ---
+            with st.spinner("データ取得中..."):
+                try:
+                    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+                    ws = sh.worksheet(target_sheet)
+                    df = pd.DataFrame(ws.get_all_records())
+                    # (型変換などの処理)
                     st.session_state["tab2_base_df"] = df
-                    st.success(f"✅ {target_sheet} 読込完了")
-                else:
-                    st.error("シートが空です")
-            except Exception as e:
-                st.error(f"エラー: {e}")
+                    st.toast(f"✅ {target_sheet} を適用しました") # 画面右下に小さく通知
+                except Exception as e:
+                    st.error(f"読込失敗: {e}")
 
-    st.divider()
-    
-    # 現在の読込状況表示
-    if "tab2_base_df" in st.session_state:
-        st.info(f"現在の適用データ:\n**{target_sheet}**")
-    else:
-        st.warning("データが未読込です")
+    with c3:
+        # 現在の状態を表示
+        if "tab2_base_df" in st.session_state:
+            count = len(st.session_state["tab2_base_df"])
+            st.success(f"適用中: {target_sheet} ({count}件)")
+        else:
+            st.warning("⚠️ データ未読込です")
 
-# --- ここから下に st.tabs(...) を配置する ---
-# タブの定義（事前予想を1番目に配置）
+st.divider() # タイトルエリアとタブエリアを区切る
+
+# ======================================
+# 3. タブの定義
+# ======================================
+tab1, tab2, tab3, tab4 = st.tabs(["事前簡易予想", "統計解析", "スタート予想", "精度検証"])
 tab_pre, tab_stat, tab_start, tab_mix_check = st.tabs([
     "🎯 事前簡易予想", 
     "📊 統計解析", 
