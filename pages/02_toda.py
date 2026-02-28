@@ -239,3 +239,111 @@ with tab_stat:
 
         st.markdown("#### ③ 枠番補正込み（最終評価）")
         st.dataframe(highlight_rank(final_df), use_container_width=True)
+
+# --- タブ3：スタート予想 ---
+with tab_start:
+    st.subheader(f"🚀 スタート予想（{PLACE_NAME} {race_type_val}戦）")
+
+    # 1. データの確認
+    if "tab2_base_df" not in st.session_state:
+        st.warning("「統計解析」タブでデータを読み込んでください。")
+        st.stop()
+    
+    place_df = st.session_state["tab2_base_df"]
+    mean_tenji = place_df["展示"].mean()
+    mean_isshu = place_df["一周"].mean()
+
+    st.caption(f"📊 {PLACE_NAME}平均との比較で算出（平均展示: {mean_tenji:.2f} / 平均一周: {mean_isshu:.2f}）")
+
+    # 2. 展示・一周データの引き継ぎ（タブ2からの連動）
+    # タブ2で入力があればそれを使い、無ければ 0.00 を初期値にする
+    input_defaults = st.session_state.get("tab2_input_df", pd.DataFrame())
+
+    # 3. 入力セクション
+    st.markdown("### 📝 ST・評価 入力")
+    input_cols = st.columns(6)
+
+    tenji_input = {}
+    isshu_input = {}
+    st_input    = {}
+    eval_input  = {}
+    eval_list = ["", "◎", "◯", "△", "×"]
+
+    for i in range(1, 7):
+        # 初期値の取得
+        def_tenji = input_defaults.loc[i, "展示"] if not input_defaults.empty else 0.0
+        def_isshu = input_defaults.loc[i, "一周"] if not input_defaults.empty else 0.0
+
+        with input_cols[i - 1]:
+            st.markdown(f"**{i}号艇**")
+            tenji_input[i] = st.number_input("展示", value=float(def_tenji), step=0.01, format="%.2f", key=f"st_ten_{i}")
+            isshu_input[i] = st.number_input("一周", value=float(def_isshu), step=0.01, format="%.2f", key=f"st_iss_{i}")
+            st_input[i] = st.number_input("ST", step=0.01, format="%.2f", key=f"st_st_{i}")
+            eval_input[i] = st.selectbox("評価", eval_list, key=f"st_ev_{i}")
+
+    # 4. スコア計算
+    eval_map = {"◎": 2.0, "◯": 1.0, "△": 0.5, "×": -1.0}
+    rows = []
+    for boat in range(1, 7):
+        st_score = -st_input[boat] + eval_map.get(eval_input[boat], 0)
+        tenji_diff = mean_tenji - tenji_input[boat]
+        isshu_diff = mean_isshu - isshu_input[boat]
+
+        # 指数ロジック
+        total = st_score + (tenji_diff * 2.0) + (isshu_diff * 0.3)
+        rows.append({
+            "艇番": boat,
+            "展示": tenji_input[boat],
+            "一周": isshu_input[boat],
+            "ST": st_input[boat],
+            "評価": eval_input[boat],
+            "start_score": total
+        })
+
+    result_df = pd.DataFrame(rows)
+
+    # 5. 表の表示
+    st.markdown("### 📊 スタート指数ランキング")
+    st.dataframe(result_df.sort_values("start_score", ascending=False), use_container_width=True, hide_index=True)
+
+    # 6. スリット表示（画像変換関数が必要）
+    def encode_image(path):
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+        return ""
+
+    st.markdown("### 🟦 スリット予想イメージ")
+    # CSS定義（デザイン調整用）
+    st.markdown("""
+        <style>
+        .slit-area { background: #1a1a1a; padding: 20px; border-radius: 10px; position: relative; }
+        .slit-line { position: absolute; left: 150px; top: 0; bottom: 0; width: 2px; background: #ff4b4b; z-index: 10; }
+        .slit-row { height: 60px; display: flex; align-items: center; border-bottom: 1px solid #333; }
+        .slit-boat { display: flex; align-items: center; color: white; transition: 0.5s; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="slit-area"><div class="slit-line"></div>', unsafe_allow_html=True)
+    for _, r in result_df.iterrows():
+        boat_no = int(r["艇番"])
+        score = float(r["start_score"])
+        # 指数をスリット位置(px)に変換（調整用係数: 50）
+        offset = 150 + (score * 50) 
+        offset = max(10, min(500, offset)) # 画面外へのはみ出し防止
+
+        img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
+        img_base64 = encode_image(img_path)
+
+        html = f"""
+        <div class="slit-row">
+            <div class="slit-boat" style="margin-left:{offset}px;">
+                <img src="data:image/png;base64,{img_base64}" height="40">
+                <div style="margin-left:10px; font-size:11px;">
+                    <b>{boat_no}</b> {r["評価"]}<br>ST {r["ST"]:.2f}
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
