@@ -446,7 +446,7 @@ with tab_rank:
 
     st.divider()
 
-    # 5. 🛠️ 枠番補正後の実力順位表
+# --- 5. 🛠️ 枠番補正後の実力順位表（公式色対応） ---
     st.markdown("### 📊 全項目・補正後順位詳細")
     
     # 機力指数の計算
@@ -462,15 +462,16 @@ with tab_rank:
         "回り足": adj_rank["回り足"]
     })
 
-    # スタイリング（1位:金、2位:銀、3位:銅っぽい色）
-    def color_rank_simple(val):
-        if val == 1: return 'background-color: #FFD700; color: black; font-weight: bold;' # 金
-        if val == 2: return 'background-color: #C0C0C0; color: black;' # 銀
-        if val == 3: return 'background-color: #CD7F32; color: white;' # 銅
-        return ''
+    # 公式表示風のスタイリング（1位:赤、2位:黄）
+    def color_official_style(val):
+        if val == 1: 
+            return 'background-color: #FF4B4B; color: white; font-weight: bold;' # 公式の1位（赤）
+        if val == 2: 
+            return 'background-color: #FFFF00; color: black; font-weight: bold;' # 公式の2位（黄）
+        return '' # 3位以降は色なし
 
     st.dataframe(
-        summary_table.style.applymap(color_rank_simple, subset=["展示", "直線", "一周", "回り足"]).format("{:.1f}"),
+        summary_table.style.applymap(color_official_style, subset=["展示", "直線", "一周", "回り足"]).format("{:.1f}"),
         use_container_width=True
     )
 with tab_mix_check:
