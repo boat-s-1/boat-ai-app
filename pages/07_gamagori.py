@@ -9,7 +9,7 @@ from google.oauth2.service_account import Credentials
 import datetime
 
 # ★必ず最初に
-st.set_page_config(page_title="蒲郡", layout="wide")
+st.set_page_config(page_title="ボートレース蒲郡", layout="wide")
 
 # -------------------------
 # 会場固定
@@ -60,7 +60,19 @@ def get_gsheet_client():
         return gspread.authorize(credentials)
     except: return None
 
+# --- 2. ログイン機能 ---
+if "pwd_ok" not in st.session_state: st.session_state["pwd_ok"] = False
+if not st.session_state["pwd_ok"]:
+    st.title("🔐 競艇 Pro 解析ログイン")
+    pwd = st.text_input("アクセスコード", type="password")
+    if st.button("ログイン"):
+        if pwd == "boat-pro-777":
+            st.session_state["pwd_ok"] = True
+            st.rerun()
+    st.stop()
+
 # --- 3. データ読み込み ---
+
 # ==============================
 # ここから本体処理
 # ==============================
@@ -71,20 +83,15 @@ st.caption(f"選択中の会場：{place}")
 df = pd.DataFrame()
 gc = get_gsheet_client()
 
-# ▼ 会場ごとのシート名対応
+# ▼ レースごとのシート名対応
 SHEET_MAP = {
-    "蒲郡": {
+    "混合戦": {
         "sheet1": "蒲郡_混合統計シート",
         "sheet2": "蒲郡_混合統計シート②"
     },
-    "大村": {
-        "sheet1": "大村_統計シート",
-        "sheet2": "大村_統計シート②"
-    },
-    "住之江": {
-        "sheet1": "住之江_統計シート",
-        "sheet2": "住之江_統計シート②"
-    }
+    "女子戦": {
+        "sheet1": "蒲郡_女子統計シート",
+        "sheet2": "蒲郡_女子統計シート②"
 }
 
 if gc:
@@ -151,8 +158,8 @@ if gc:
     try:
         sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
 
-        ws1 = sh.worksheet("統計シート")
-        ws2 = sh.worksheet("統計シート②")
+        ws1 = sh.worksheet("蒲郡_混合統計シート")
+        ws2 = sh.worksheet("蒲郡_混合統計シート②")
 
         rows1 = ws1.get_all_records()
         rows2 = ws2.get_all_records()
