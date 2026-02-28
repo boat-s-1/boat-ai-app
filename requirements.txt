@@ -8,3 +8,4 @@ requests
 playwright
 beautifulsoup4
 lxml
+matplotlib
