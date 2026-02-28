@@ -379,7 +379,7 @@ with tab_start:
         """
         st.markdown(html, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
-# --- タブ：展示・ST総合ランキング ---
+# --- タブ：展示・ST総合ランキング（視覚的改良版） ---
 with tab_rank:
     st.subheader(f"🏆 {PLACE_NAME} 補正後ランキング分析")
 
@@ -388,74 +388,99 @@ with tab_rank:
         st.info("「統計解析」タブでデータの読み込みとタイム入力を行ってください。")
         st.stop()
     
-    # 入力データと統計データを取得
     input_df = st.session_state["tab2_input_df"].copy()
     place_df = st.session_state["tab2_base_df"]
 
-    # 2. 補正計算ロジック（枠番のクセを排除）
+    # 2. 補正計算ロジック
     place_mean = place_df.groupby("艇番")[["展示", "直線", "一周", "回り足"]].mean()
     overall_mean = place_df[["展示", "直線", "一周", "回り足"]].mean()
     lane_bias = place_mean - overall_mean
 
     final_adj_df = input_df.copy()
+    items = ["展示", "直線", "一周", "回り足"]
+    
     for b in range(1, 7):
         if b in place_mean.index:
-            for col in ["展示", "直線", "一周", "回り足"]:
-                # 場平均補正 + 枠番偏差の除去
+            for col in items:
+                # 枠番補正の計算
                 adj_val = input_df.loc[b, col] - place_mean.loc[b, col] + overall_mean[col]
                 final_adj_df.loc[b, col] = adj_val - lane_bias.loc[b, col]
 
-    # 3. ランキング判定
-    raw_rank = input_df.rank(method="min")      # 生タイム順位
-    adj_rank = final_adj_df.rank(method="min")  # 補正後順位
+    # 3. 順位の算出
+    raw_rank = input_df[items].rank(method="min")
+    adj_rank = final_adj_df[items].rank(method="min")
 
-    # 4. 項目別 No.1 比較ボード
-    st.markdown("### 🥇 項目別 No.1（生タイム vs 補正後）")
-    cols = st.columns(4)
-    items = ["展示", "直線", "一周", "回り足"]
+    # 4. 🏅 項目別・最優秀機力評価（🏆表示）
+    st.markdown("### 🥇 項目別・機力評価サマリー")
+    st.caption("補正後に1位を獲得した項目に🏆、生タイム1位に⚡が表示されます。")
 
-    for i, item in enumerate(items):
-        with cols[i]:
-            st.write(f"**【{item}】**")
+    # 各項目の1位をリスト化
+    raw_tops = {item: raw_rank[raw_rank[item] == 1].index.tolist() for item in items}
+    adj_tops = {item: adj_rank[adj_rank[item] == 1].index.tolist() for item in items}
+
+    # 1号艇〜6号艇のカードを横並びにする
+    boat_cols = st.columns(6)
+    for b in range(1, 7):
+        with boat_cols[b-1]:
+            # 艇番をカラーラベル風に表示
+            bg_colors = ["#ffffff", "#e0e0e0", "#ff6666", "#3399ff", "#ffcc00", "#33cc33", "#ff8c00"] # 艇旗色イメージ
+            st.markdown(f"""
+                <div style="background-color:{bg_colors[b]}; color:{'black' if b in [1,5,6] else 'white'}; 
+                text-align:center; border-radius:5px; padding:5px; font-weight:bold; border:1px solid #ccc;">
+                {b}号艇
+                </div>
+            """, unsafe_allow_html=True)
             
-            # 生タイム1位
-            raw_top = raw_rank[raw_rank[item] == 1].index.tolist()
-            st.caption("⚡ 生1位")
-            for b in raw_top:
-                st.write(f"**{b}号艇**")
+            # 獲得した称号を表示
+            found_any = False
+            for item in items:
+                if b in adj_tops[item]:
+                    st.info(f"🏆{item}")
+                    found_any = True
+                elif b in raw_tops[item]:
+                    st.caption(f"⚡{item}")
+                    found_any = True
             
-            # 補正後1位
-            adj_top = adj_rank[adj_rank[item] == 1].index.tolist()
-            st.caption("🛠️ 補正後1位")
-            for b in adj_top:
-                st.success(f"**{b}号艇**")
+            if not found_any:
+                st.write("---")
 
     st.divider()
 
-    # 5. 総合機力スコア（全項目の順位合計で算出）
-    st.markdown("### 🚀 総合機力評価（補正後ベース）")
+    # 5. 🛠️ 枠番補正後の実力順位表（None修正版）
+    st.markdown("### 📊 全項目・補正後順位詳細")
     
-    # 補正後の全項目順位を合計（数値が低いほど優秀）
-    final_adj_df["総合ランク点"] = adj_rank.sum(axis=1)
-    # スコア化（100点満点からの減点方式などで見やすく）
-    max_rank_sum = 24 # すべて6位の場合
-    min_rank_sum = 4  # すべて1位の場合
-    final_adj_df["機力指数"] = 100 - ((final_adj_df["総合ランク点"] - min_rank_sum) / (max_rank_sum - min_rank_sum) * 50)
+    # 順位表の作成
+    display_rank_df = adj_rank.copy()
+    display_rank_df.columns = [f"{c}" for c in display_rank_df.columns]
+    
+    # 機力指数の計算
+    max_rank_sum = 24
+    min_rank_sum = 4
+    rank_sum = adj_rank.sum(axis=1)
+    # 0除算防止
+    final_adj_df["機力指数"] = 100 - ((rank_sum - min_rank_sum) / (max_rank_sum - min_rank_sum) * 50)
 
-    # 表示用データ作成
-    summary_df = pd.DataFrame({
-        "艇番": final_adj_df.index,
+    # 表示用テーブルの統合
+    summary_table = pd.DataFrame({
         "機力指数": final_adj_df["機力指数"],
-        "一周(補正)": final_adj_df["一周"],
-        "展示(補正)": final_adj_df["展示"]
-    }).set_index("艇番").sort_values("機力指数", ascending=False)
+        "展示順位": adj_rank["展示"],
+        "直線順位": adj_rank["直線"],
+        "一周順位": adj_rank["一周"],
+        "回り足順位": adj_rank["回り足"]
+    })
+
+    # スタイリング関数（matplotlibがなくても動く簡易版）
+    def color_rank(val):
+        if val == 1: return 'background-color: #ffcccc; font-weight: bold;'
+        if val <= 2: return 'background-color: #fff3cd;'
+        return ''
 
     st.dataframe(
-        summary_df.style.background_gradient(subset=["機力指数"], cmap="YlOrRd").format("{:.2f}"),
+        summary_table.style.applymap(color_rank, subset=["展示順位", "直線順位", "一周順位", "回り足順位"]).format("{:.1f}"),
         use_container_width=True
     )
 
-    st.info("💡 **見方**: 補正後1位が『生タイム1位』と異なる場合、その艇はコースの不利を跳ね返すほど足が良い可能性があります。")
+    st.info("💡 **アドバイス**: 🏆が複数付いている艇は、そのコースの平均を大きく上回る好気配です。")
     # --- 検証タブ：スタート指数 精度検証 ---
 with tab_mix_check:
     st.subheader(f"📊 {PLACE_NAME}｜スタート指数 精度検証")
