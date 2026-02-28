@@ -2,8 +2,16 @@ import streamlit as st
 import pandas as pd
 import os
 
-# --- 設定（PLACE_NAMEなどは共通変数として定義済みと想定） ---
-# PLACE_NAME = st.session_state.get("selected_place", "戸田")
+# ==============================
+# 変数の定義（ここを追加！）
+# ==============================
+# セッション状態から会場名を取得し、無ければ "戸田" を代入する
+if "selected_place" not in st.session_state:
+    st.session_state["selected_place"] = "戸田"
+
+PLACE_NAME = st.session_state["selected_place"]
+
+# 以降のコード（st.set_page_config など）
 
 # --- メインUI ---
 st.title(f"🚀 {PLACE_NAME} 解析システム")
