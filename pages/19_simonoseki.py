@@ -25,20 +25,50 @@ st.set_page_config(page_title=f"競艇Pro {PLACE_NAME}", layout="wide")
 st.title(f"🚀 {PLACE_NAME} 解析システム")
 
 # ======================================
-# 2. Google接続準備 (gcの定義をここで行う)
+# 3. データ管理エリア（認証が終わったので gc が使えます）
 # ======================================
-from google.oauth2.service_account import Credentials
-import gspread
+with st.container(border=True): 
+    c1, c2, c3 = st.columns([1.5, 2, 2])
+    
+    with c1:
+        race_type_val = st.radio(
+            "解析対象を選択", ["混合", "女子"], 
+            horizontal=True, key="top_race_type"
+        )
+    
+    with c2:
+        target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
+        if st.button(f"🔄 {target_sheet} を読み込む", use_container_width=True, key="top_load_btn"):
+            with st.spinner("データ取得中..."):
+                try:
+                    # ここで gc を使用
+                    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+                    ws = sh.worksheet(target_sheet)
+                    data = ws.get_all_records()
+                    
+                    if data:
+                        df = pd.DataFrame(data)
+                        # 数値型への変換（念のためここで一括処理）
+                        num_cols = ["展示", "直線", "一周", "回り足", "艇番", "ST", "着順"]
+                        for c in num_cols:
+                            if c in df.columns:
+                                df[c] = pd.to_numeric(df[c], errors="coerce")
+                        
+                        st.session_state["tab2_base_df"] = df
+                        st.toast(f"✅ {target_sheet} を適用しました")
+                    else:
+                        st.error("シートにデータがありません")
+                except Exception as e:
+                    st.error(f"読込失敗: {e}")
 
-scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    with c3:
+        if "tab2_base_df" in st.session_state:
+            count = len(st.session_state["tab2_base_df"])
+            st.success(f"適用中: {target_sheet} ({count}件)")
+        else:
+            st.warning("⚠️ データ未読込です")
 
-try:
-    # secrets から認証情報を取得して gc を作成
-    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-    gc = gspread.authorize(creds)
-except Exception as e:
-    st.error(f"Google接続設定エラー: {e}")
-    st.stop()
+st.divider()
 
 # ======================================
 # 3. データ管理エリア（認証が終わったので gc が使えます）
