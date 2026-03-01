@@ -84,13 +84,6 @@ with st.container(border=True):
         else:
             st.warning("⚠️ データ未読込です")
 
-    with c3:
-        if "tab2_base_df" in st.session_state:
-            count = len(st.session_state["tab2_base_df"])
-            st.success(f"適用中: {target_sheet} ({count}件)")
-        else:
-            st.warning("⚠️ データ未読込です")
-
 st.divider()
 # ======================================
 # 3. タブの定義
