@@ -58,7 +58,7 @@ with st.container(border=True):
             with st.spinner("データ取得中..."):
                 try:
                     # 福岡と下関で共通のシートIDを使用
-                    sh = gc.open_by_key("1rSzJuk5Hyv60nMwX67pCufXz45HLykyIXuqVE6wtNII")
+                    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
                     ws = sh.worksheet(target_sheet)
                     data = ws.get_all_records()
                     
