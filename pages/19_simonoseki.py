@@ -50,9 +50,26 @@ with st.container(border=True):
         if st.button(f"🔄 {target_sheet} を読み込む", use_container_width=True, key="top_load_btn"):
             with st.spinner("データ取得中..."):
                 try:
-                    sh = gc.open_by_key("あなたのシートID") # ここにスプレッドシートIDを
-                    ws = sh.worksheet(target_sheet)
+                    # ① スプレッドシートが開けるかチェック
+                    sh = gc.open_by_key("1rSzJuk5Hyv60nMwX67pCufXz45HLykyIXuqVE6wtNII")
+                    
+                    # ② ワークシートが存在するかチェック
+                    try:
+                        ws = sh.worksheet(target_sheet)
+                    except Exception:
+                        # 存在するシート名を一覧表示して教える
+                        all_sheets = [s.title for s in sh.worksheets()]
+                        st.error(f"❌ タブ『{target_sheet}』が見つかりません。")
+                        st.info(f"見つかったタブ一覧: {all_sheets}")
+                        st.stop()
 
+                    # 以降、データ読み込み処理...
+                    data = ws.get_all_records()
+                    df = pd.DataFrame(data)
+                    # (以下略)
+
+                except Exception as e:
+                    st.error(f"読込失敗: {e}")
                     # --- 👇 全ての処理をこの「if button」の中に入れます ---
                     data = ws.get_all_records()
                     df = pd.DataFrame(data)
