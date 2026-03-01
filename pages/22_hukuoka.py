@@ -54,19 +54,18 @@ with st.container(border=True):
     
    # --- 22_fukuoka.py の修正箇所 ---
 
-with c2:
-    target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
-    if st.button(f"🔄 {target_sheet} を読み込む", use_container_width=True, key="top_load_btn"):
-        with st.spinner("データ取得中..."):
-            try:
-                # 福岡専用のスプレッドシートIDに書き換え
-                sh = gc.open_by_key("1rSzJuk5Hyv60nMwX67pCufXz45HLykyIXuqVE6wtNII") # ← 送っていただいた福岡のIDです
-                ws = sh.worksheet(target_sheet)
-                
-                # 以下、データの読み込み処理（変更なし）
-                data = ws.get_all_records()
-                if data:
-                    df = pd.DataFrame(data)
+ with c2:
+        target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
+        if st.button(f"🔄 {target_sheet} を読み込む", use_container_width=True, key="top_load_btn"):
+            with st.spinner("データ取得中..."):
+                try:
+                    # ここで gc を使用
+                    sh = gc.open_by_key("1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4")
+                    ws = sh.worksheet(target_sheet)
+                    data = ws.get_all_records()
+                    
+                    if data:
+                        df = pd.DataFrame(data)
                     # 数値型変換処理など...
                         # 数値型への変換（念のためここで一括処理）
                         num_cols = ["展示", "直線", "一周", "回り足", "艇番", "ST", "着順"]
