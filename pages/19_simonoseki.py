@@ -25,68 +25,63 @@ st.set_page_config(page_title=f"競艇Pro {PLACE_NAME}", layout="wide")
 st.title(f"🚀 {PLACE_NAME} 解析システム")
 
 # ======================================
-# 3. データ管理エリア（認証が終わったので gc が使えます）
+# 2. Google接続準備 (ファイルの冒頭付近にあるはず)
+# ======================================
+# ここで import pandas as pd や gc の定義が必要です
+
+# ======================================
+# 3. データ管理エリア
 # ======================================
 with st.container(border=True): 
     c1, c2, c3 = st.columns([1.5, 2, 2])
     
     with c1:
-        race_type_val = st.radio(
-            "解析対象を選択", ["混合", "女子"], 
-            horizontal=True, key="top_race_type"
-        )
+        race_type_val = st.radio("解析対象を選択", ["混合", "女子"], horizontal=True, key="top_race_type")
     
     with c2:
         target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
-# --- 読み込みボタンの部分 ---
+        
+        # 読み込みボタン
         if st.button(f"🔄 {target_sheet} を読み込む", use_container_width=True, key="top_load_btn"):
             with st.spinner("データ取得中..."):
                 try:
-                    sh = gc.open_by_key("あなたのシートID")
+                    sh = gc.open_by_key("あなたのシートID") # ここにスプレッドシートIDを
                     ws = sh.worksheet(target_sheet)
 
-                    # 👇 ここから「df = ...」の行を以下のブロックに置き換えます
+                    # --- 👇 全ての処理をこの「if button」の中に入れます ---
                     data = ws.get_all_records()
                     df = pd.DataFrame(data)
 
-                    # 下関のシートに列があるかチェック
+                    # 列の存在チェックと数値変換
                     required_cols = ["展示", "直線", "一周", "回り足", "艇番", "ST", "着順"]
 
                     for c in required_cols:
                         if c in df.columns:
                             df[c] = pd.to_numeric(df[c], errors="coerce")
                         else:
-                            # 列がない場合にエラーで止めず、警告を出して「0」で埋める
                             st.warning(f"⚠️ 列『{c}』がシートに見当たりません。")
                             df[c] = 0 
-                    # 👆 ここまで
 
+                    # セッションへの保存
                     st.session_state["tab2_base_df"] = df
                     st.toast(f"✅ {target_sheet} を適用しました")
+                    # --- 👆 ここまで ---
+
                 except Exception as e:
                     st.error(f"読込失敗: {e}")
 
-# ======================================
-# 3. データ管理エリア（認証が終わったので gc が使えます）
-# ======================================
-# データ読み込み直後の処理
-df = pd.DataFrame(ws.get_all_records())
+    with c3:
+        # 現在の状態表示
+        if "tab2_base_df" in st.session_state:
+            count = len(st.session_state["tab2_base_df"])
+            st.success(f"適用中: {target_sheet} ({count}件)")
+        else:
+            st.warning("⚠️ データ未読込です")
 
-# プログラムが期待している列リスト
-required_cols = ["展示", "直線", "一周", "回り足", "艇番", "ST", "着順"]
+st.divider()
 
-# 実際にシートにあった列名を表示（デバッグ用）
-# st.write("シート内の列名:", df.columns.tolist()) 
-
-for c in required_cols:
-    if c in df.columns:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
-    else:
-        # 見つからない場合はエラーではなく警告を出して、空の列を作る
-        st.error(f"❌ 列名エラー: 『{c}』という列がシートに見当たりません。")
-        df[c] = 0  # 暫定的に0で埋めてエラー落ちを防ぐ
 # ======================================
-# 3. タブの定義
+# 4. タブの定義
 # ======================================
 tab_pre, tab_stat, tab_start, tab_rank, tab_mix_check = st.tabs([
     "🎯 事前簡易予想", 
