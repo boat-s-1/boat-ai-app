@@ -1,16 +1,21 @@
 import streamlit as st
 import pandas as pd
-import os
-import gspread  # ← これを追加！
-import base64   # (もし画像表示を使うならこれも必要)
+import gspread
+from google.oauth2.service_account import Credentials
 
-# ==============================
-# 1. 会場名の固定定義
-# ==============================
-# 基準となるディレクトリ（フォルダ）の場所を定義
-import pathlib
-BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
-# 変数を「戸田」に固定します
+# --- 1. Google Sheets 認証設定 (これがないと 'gc' が使えません) ---
+# ※ st.secrets を使っている場合
+if "gcp_service_account" in st.secrets:
+    info = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(
+        info, scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+    gc = gspread.authorize(creds) # ← ここで 'gc' が定義されます
+else:
+    st.error("Google Cloudの認証情報(Secrets)が設定されていません。")
+    st.stop()
+
+# 会場名の設定
 PLACE_NAME = "下関"
 st.session_state["selected_place"] = PLACE_NAME 
 
