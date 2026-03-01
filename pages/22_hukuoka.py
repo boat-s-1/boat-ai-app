@@ -43,7 +43,7 @@ except Exception as e:
 # ======================================
 # 3. データ管理エリア（認証が終わったので gc が使えます）
 # ======================================
-with st.container(border=True): 
+with st.container(border=True):
     c1, c2, c3 = st.columns([1.5, 2, 2])
     
     with c1:
@@ -52,14 +52,12 @@ with st.container(border=True):
             horizontal=True, key="top_race_type"
         )
     
-   # --- 22_fukuoka.py の修正箇所 ---
-
-with c2:
+    with c2:
         target_sheet = f"{PLACE_NAME}_{race_type_val}統計"
         if st.button(f"🔄 {target_sheet} を読み込む", use_container_width=True, key="top_load_btn"):
             with st.spinner("データ取得中..."):
                 try:
-                    # ① IDは下関・福岡共通でOK（同じファイル内の別タブを見に行くため）
+                    # 福岡と下関で共通のシートIDを使用
                     sh = gc.open_by_key("1rSzJuk5Hyv60nMwX67pCufXz45HLykyIXuqVE6wtNII")
                     ws = sh.worksheet(target_sheet)
                     data = ws.get_all_records()
@@ -72,13 +70,19 @@ with c2:
                             if c in df.columns:
                                 df[c] = pd.to_numeric(df[c], errors="coerce")
                         
-                        # 保存（ここがズレていないか注意！）
                         st.session_state["tab2_base_df"] = df
                         st.toast(f"✅ {target_sheet} を適用しました")
                     else:
                         st.error("シートにデータがありません")
                 except Exception as e:
-                    st.error(f"読込失敗: {e}")}")
+                    st.error(f"読込失敗: {e}")
+
+    with c3:
+        if "tab2_base_df" in st.session_state:
+            count = len(st.session_state["tab2_base_df"])
+            st.success(f"適用中: {target_sheet} ({count}件)")
+        else:
+            st.warning("⚠️ データ未読込です")
 
     with c3:
         if "tab2_base_df" in st.session_state:
