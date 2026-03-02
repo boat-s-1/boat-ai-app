@@ -11,7 +11,7 @@ import base64   # (もし画像表示を使うならこれも必要)
 import pathlib
 BASE_DIR = pathlib.Path(__file__).parent.parent.resolve()
 # 変数を「戸田」に固定します
-PLACE_NAME = "大村"
+PLACE_NAME = "唐津"
 st.session_state["selected_place"] = PLACE_NAME 
 
 # ページ設定
