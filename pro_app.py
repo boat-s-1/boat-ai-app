@@ -1,614 +1,141 @@
 import streamlit as st
 import pandas as pd
-import os
-import base64
+import numpy as np
+import plotly.express as px
+import streamlit.components.v1 as components
+import time
 
-import gspread
-from google.oauth2.service_account import Credentials
+# ==========================================
+# 1. 基本設定
+# ==========================================
+st.set_page_config(page_title="競艇Pro Analytica - 24場全読込版", layout="wide", page_icon="🎯")
 
-# ------------------
-# 基本設定
-# ------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# スプレッドシートのID（URLから抽出したもの）
+# 2つのファイルに分かれているとのことですので、両方のIDを指定します
+SPREADSHEET_ID_1 = "1lN794iGtyGV2jNwlYzUA8wEbhRwhPM7FxDAkMaoJss4"
+SPREADSHEET_ID_2 = "1rSzJuk5Hyv60nMwX67pCufXz45HLykyIXuqVE6wtNII"
 
-st.set_page_config(page_title="BOAT AI（無料版）", layout="wide")
-
-
-# ------------------
-# 画像読み込み
-# ------------------
-def encode_image(path):
-    try:
-        if not os.path.exists(path):
-            return ""
-        with open(path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    except:
-        return ""
-
-
-# ------------------
-# Google Sheets 接続
-# ------------------
-scope = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+ALL_PLACES = [
+    "桐生", "戸田", "江戸川", "平和島", "多摩川", "浜名湖", "蒲郡", "常滑", "津", 
+    "三国", "びわこ", "住之江", "尼崎", "鳴門", "丸亀", "児島", "宮島", "徳山", 
+    "下関", "若松", "芦屋", "福岡", "佐賀", "大村"
 ]
 
-credentials = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=scope,
-)
-
-gc = gspread.authorize(credentials)
-
-SPREADSHEET_KEY = st.secrets["spreadsheet_key"]
-sh = gc.open_by_key(SPREADSHEET_KEY)
-
-
-# ------------------
-# タイトル
-# ------------------
-st.title("🚤 BOAT AI（無料版）")
-
-
-# ------------------
-# タブ
-# ------------------
-tab_pre, tab2, tab3, tab5, tab_mix_check = st.tabs([
-    "📊 基本予想",
-    "🌊 条件補正",
-    "🗂 データ状況",
-    "🗂 スタート予想",
-    "🗂 混合戦"
-])
-
-
-# =====================================================
-# データ状況
-# =====================================================
-with tab3:
-
-    st.subheader("🗂 データ読み込み状況")
-
-    try:
-        ws = sh.worksheet("管理用_NEW")
-        df = pd.DataFrame(ws.get_all_records())
-
-        st.write("総レコード数：", len(df))
-        st.dataframe(df.head(20), use_container_width=True)
-
-    except Exception as e:
-        st.error(e)
-
-
-# =====================================================
-# 混合戦 スタート指数検証
-# =====================================================
-with tab_mix_check:
-
-    try:
-
-        st.subheader("🚤 混合戦｜スタート指数 精度検証")
-
-        ws = sh.worksheet("管理用_NEW")
-        df = pd.DataFrame(ws.get_all_records())
-
-        if df.empty:
-            st.info("データがありません")
-            st.stop()
-
-        need_cols = [
-            "日付","会場","レース番号",
-            "艇番","展示","一周","ST","スタート評価","着順"
-        ]
-
-        for c in need_cols:
-            if c not in df.columns:
-                st.error(f"{c} 列が見つかりません")
-                st.stop()
-
-        for c in ["艇番","展示","一周","ST","着順"]:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
-
-        df["日付"] = pd.to_datetime(df["日付"], errors="coerce")
-
-        place_list = sorted(df["会場"].dropna().unique())
-
-        place = st.selectbox(
-            "会場",
-            place_list,
-            key="mix_verify_place_free"
-        )
-
-        target = df[df["会場"] == place].copy()
-
-        if target.empty:
-            st.info("対象データがありません")
-            st.stop()
-
-        eval_map = {
-            "◎": 2.0,
-            "◯": 1.0,
-            "△": 0.5,
-            "×": -1.0
-        }
-
-        target["評価補正"] = target["スタート評価"].map(eval_map).fillna(0)
-
-        # --- 無料版：直近30走制限 ---
-        place_df = (
-            target.sort_values("日付", ascending=False)
-                  .groupby("艇番", as_index=False)
-                  .head(30)
-        )
-
-        mean_tenji = place_df["展示"].mean()
-        mean_isshu = place_df["一周"].mean()
-
-        target["指数"] = (
-            -target["ST"].fillna(0)
-            + target["評価補正"]
-            + (mean_tenji - target["展示"]) * 2.0
-            + (mean_isshu - target["一周"]) * 0.3
-        )
-
-        results = []
-
-        for (d, r), g in target.groupby(["日付","レース番号"]):
-
-            g = g.dropna(subset=["艇番","指数","着順"])
-
-            if len(g) < 6:
-                continue
-
-            g = g.sort_values("指数", ascending=False)
-
+# ==========================================
+# 2. 全シート巡回読込エンジン
+# ==========================================
+@st.cache_data(ttl=3600)
+def load_and_analyze_all_places():
+    all_stats = {}
+    
+    # 進行状況を表示（初回のみ）
+    progress_text = "全国24場の実績データを解析中..."
+    p_bar = st.sidebar.progress(0, text=progress_text)
+    
+    for idx, place in enumerate(ALL_PLACES):
+        sheet_name = f"{place}_混合統計"
+        df = pd.DataFrame()
+        
+        # 2つのスプレッドシートから対象のシートを探す
+        for ss_id in [SPREADSHEET_ID_1, SPREADSHEET_ID_2]:
             try:
-                top1 = int(g.iloc[0]["艇番"])
-                top2 = int(g.iloc[1]["艇番"])
-                top3 = int(g.iloc[2]["艇番"])
+                # 特定のシート名をCSVとして取得するURL形式
+                url = f"https://docs.google.com/spreadsheets/d/{ss_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+                tmp_df = pd.read_csv(url)
+                if not tmp_df.empty:
+                    df = tmp_df
+                    break
             except:
                 continue
-
-            win = g[g["着順"] == 1]["艇番"]
-            sec = g[g["着順"] == 2]["艇番"]
-            thi = g[g["着順"] == 3]["艇番"]
-
-            if len(win) == 0:
-                continue
-
-            winner = int(win.iloc[0])
-            second = int(sec.iloc[0]) if len(sec) else None
-            third  = int(thi.iloc[0]) if len(thi) else None
-
-            results.append({
-                "日付": d,
-                "R": r,
-                "指数1位": top1,
-                "指数2位": top2,
-                "指数3位": top3,
-                "1着": winner,
-                "2着": second,
-                "3着": third,
-                "1位的中": top1 == winner,
-                "連対的中": winner in [top1, top2],
-                "3連対的中": winner in [top1, top2, top3]
-            })
-
-        if len(results) == 0:
-            st.info("検証できるレースがありません")
-            st.stop()
-
-        res_df = pd.DataFrame(results)
-
-        total = len(res_df)
-
-        hit1 = res_df["1位的中"].mean() * 100
-        hit2 = res_df["連対的中"].mean() * 100
-        hit3 = res_df["3連対的中"].mean() * 100
-
-        c1, c2, c3, c4 = st.columns(4)
-
-        c1.metric("検証レース数", total)
-        c2.metric("指数1位 → 1着率", f"{hit1:.1f}%")
-        c3.metric("指数上位2艇 連対率", f"{hit2:.1f}%")
-        c4.metric("指数上位3艇 1着包含率", f"{hit3:.1f}%")
-
-        st.divider()
-        st.dataframe(res_df, use_container_width=True)
-
-    except Exception as e:
-        st.error(e)
-
-
-# =====================================================
-# スタート予想（入力型）
-# =====================================================
-# --- タブ5：スタート予想（混合戦・入力型｜無料版） ---
-with tab5:
-
-    st.subheader("🚀 スタート予想（混合戦｜会場別補正・入力型）")
-
-    ws = sh.worksheet("管理用_NEW")
-    df = pd.DataFrame(ws.get_all_records())
-
-    if df.empty:
-        st.info("データがありません")
-        st.stop()
-
-    # 型変換
-    for c in ["展示", "一周", "ST", "艇番"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
-
-    # -----------------------
-    # 会場選択
-    # -----------------------
-    place_list = sorted(df["会場"].dropna().unique())
-
-    race_place = st.selectbox(
-        "会場を選択",
-        place_list,
-        key="mix_input_place"
-    )
-
-    place_df = df[df["会場"] == race_place].copy()
-
-    # -----------------------
-    # ✅ 有料版チェック（無料版では固定）
-    # -----------------------
-    st.checkbox(
-        "全データを使って補正する（有料版）",
-        value=False,
-        disabled=True
-    )
-    st.caption("※無料版では直近30走のみ利用できます")
-
-    # -----------------------
-    # ✅ 無料版：直近30走固定
-    # -----------------------
-    place_df["日付"] = pd.to_datetime(place_df["日付"], errors="coerce")
-
-    place_df = (
-        place_df
-        .sort_values("日付", ascending=False)
-        .groupby("艇番", as_index=False)
-        .head(30)
-    )
-
-    if place_df.empty:
-        st.warning("この会場のデータがありません")
-        st.stop()
-
-    # -----------------------
-    # 会場平均との差用
-    # -----------------------
-    mean_tenji = place_df["展示"].mean()
-    mean_isshu = place_df["一周"].mean()
-
-    st.caption(f"会場：{race_place}（直近30走平均との差で補正）")
-
-    # -----------------------
-    # 入力
-    # -----------------------
-    st.markdown("### 📝 展示・1周・ST 入力")
-
-    input_cols = st.columns(6)
-
-    tenji_input = {}
-    isshu_input = {}
-    st_input    = {}
-    eval_input  = {}
-
-    eval_list = ["", "◎", "◯", "△", "×"]
-
-    for i in range(1, 7):
-        with input_cols[i - 1]:
-
-            st.markdown(f"**{i}号艇**")
-
-            tenji_input[i] = st.number_input(
-                "展示",
-                step=0.01,
-                format="%.2f",
-                key=f"mix_tenji_{i}"
-            )
-
-            isshu_input[i] = st.number_input(
-                "一周",
-                step=0.01,
-                format="%.2f",
-                key=f"mix_isshu_{i}"
-            )
-
-            st_input[i] = st.number_input(
-                "ST",
-                step=0.01,
-                format="%.2f",
-                key=f"mix_st_{i}"
-            )
-
-            eval_input[i] = st.selectbox(
-                "評価",
-                eval_list,
-                key=f"mix_eval_{i}"
-            )
-
-    # -----------------------
-    # スコア計算
-    # -----------------------
-    eval_map = {
-        "◎": 2.0,
-        "◯": 1.0,
-        "△": 0.5,
-        "×": -1.0
-    }
-
-    rows = []
-
-    for boat in range(1, 7):
-
-        st_score = -st_input[boat] + eval_map.get(eval_input[boat], 0)
-
-        tenji_diff = mean_tenji - tenji_input[boat]
-        isshu_diff = mean_isshu - isshu_input[boat]
-
-        total = (
-            st_score
-            + tenji_diff * 2.0
-            + isshu_diff * 0.3
-        )
-
-        rows.append({
-            "艇番": boat,
-            "展示": tenji_input[boat],
-            "一周": isshu_input[boat],
-            "ST": st_input[boat],
-            "評価": eval_input[boat],
-            "start_score": total
-        })
-
-    result_df = pd.DataFrame(rows)
-
-    # -----------------------
-    # 表
-    # -----------------------
-    st.markdown("### 📊 スタート指数")
-
-    result_df = result_df.sort_values("start_score", ascending=False)
-
-    st.dataframe(
-        result_df,
-        use_container_width=True
-    )
-
-    # -----------------------
-    # スリット表示
-    # -----------------------
-    st.markdown("### 🟦 スリット予想イメージ")
-
-    st.markdown('<div class="slit-area">', unsafe_allow_html=True)
-    st.markdown('<div class="slit-line"></div>', unsafe_allow_html=True)
-
-    for _, r in result_df.iterrows():
-
-        boat_no = int(r["艇番"])
-        score   = float(r["start_score"])
-
-        offset = max(0, min(160, (score + 0.5) * 120))
-
-        img_path = os.path.join(BASE_DIR, "images", f"boat{boat_no}.png")
-        img_base64 = encode_image(img_path)
-
-        html = f"""
-        <div class="slit-row">
-            <div class="slit-boat" style="margin-left:{offset}px;">
-                <img src="data:image/png;base64,{img_base64}" height="48">
-                <div style="margin-left:10px;font-size:13px;">
-                    <b>{boat_no}号艇</b><br>
-                    展示 {r["展示"]:.2f}
-                    一周 {r["一周"]:.2f}<br>
-                    ST {r["ST"]:.2f} {r["評価"]}
-                </div>
-            </div>
-        </div>
-        """
-
-        st.markdown(html, unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-# --- タブ1：事前簡易予想（場補正ON/OFF切替・無料版） ---
-with tab_pre:
-
-    st.subheader("🧩 事前簡易予想（場補正 切り替え対応・無料版）")
-
-    SYMBOL_VALUES = {"◎": 100, "○": 80, "▲": 60, "△": 40, "×": 20, "無": 0}
-    WEIGHTS = {
-        "モーター": 0.25,
-        "当地勝率": 0.20,
-        "枠番勝率": 0.30,
-        "枠番スタート": 0.25
-    }
-
-    # -------------------------
-    # 会場補正ON / OFF
-    # -------------------------
-    use_place_corr = st.checkbox(
-        "会場データ補正を使う（無料版：直近30走）",
-        value=True
-    )
-
-    # -------------------------
-    # 会場選択（補正用）
-    # -------------------------
-    try:
-        ws = sh.worksheet("管理用_NEW")
-        base_df = pd.DataFrame(ws.get_all_records())
-    except Exception as e:
-        st.error(e)
-        st.stop()
-
-    place_list = sorted(base_df["会場"].dropna().unique())
-
-    place = st.selectbox(
-        "会場",
-        place_list,
-        key="pre_place"
-    )
-
-    # -------------------------
-    # 会場補正データ作成
-    # -------------------------
-    boat_corr = {}
-
-    if use_place_corr:
-
-        corr_df = base_df[base_df["会場"] == place].copy()
-
-        corr_df["日付"] = pd.to_datetime(corr_df["日付"], errors="coerce")
-        corr_df["艇番"] = pd.to_numeric(corr_df["艇番"], errors="coerce")
-        corr_df["ST"] = pd.to_numeric(corr_df["ST"], errors="coerce")
-
-        # 無料版：直近30走
-        corr_df = (
-            corr_df
-            .sort_values("日付", ascending=False)
-            .groupby("艇番", as_index=False)
-            .head(30)
-        )
-
-        if not corr_df.empty:
-
-            overall = corr_df["ST"].mean()
-            tmp = corr_df.groupby("艇番")["ST"].mean()
-
-            # STが良い艇ほどプラス
-            for k, v in tmp.items():
-                if pd.notna(k) and pd.notna(v):
-                    boat_corr[int(k)] = (overall - v) * 15
-
-        st.caption(f"※{place} の直近30走スタート傾向で補正中（無料版）")
-
-    else:
-        st.caption("※会場補正なし（入力評価のみで計算）")
-
+        
+        # 読み込めた場合、解析を行う
+        if not df.empty:
+            # 列名のクリーニング
+            df.columns = df.columns.str.strip()
+            # 数値変換
+            df['着順_num'] = pd.to_numeric(df['着順'], errors='coerce')
+            df['展示_num'] = pd.to_numeric(df['展示'], errors='coerce')
+            
+            # 各レース内での展示順位を算出
+            df['展示順位'] = df.groupby(['日付', 'レース番号'])['展示_num'].rank(method='min')
+            
+            # 統計計算
+            top_ex = df[df['展示順位'] == 1]
+            win_rate = (top_ex['着順_num'] == 1).mean() * 100 if not top_ex.empty else 35.0
+            show_rate = (top_ex['着順_num'] <= 3).mean() * 100 if not top_ex.empty else 65.0
+            in_nige = (df[df['艇番'] == 1]['着順_num'] == 1).mean() * 100 if not df[df['艇番'] == 1].empty else 50.0
+            
+            all_stats[place] = {
+                "展示信頼度": round(win_rate, 1),
+                "展示貢献度": round(show_rate, 1),
+                "イン逃げ率": round(in_nige, 1),
+                "サンプル数": len(df)
+            }
+        
+        # 進捗更新
+        p_bar.progress((idx + 1) / len(ALL_PLACES), text=f"{place}を解析済み...")
+    
+    p_bar.empty()
+    return all_stats
+
+# 実績解析の実行
+ACTUAL_STATS = load_and_analyze_all_places()
+
+# ==========================================
+# 3. ユーティリティ
+# ==========================================
+get_symbol = lambda val: {6: "◎", 5: "○", 4: "▲", 3: "△", 2: "×", 1: "・", 0: "無"}.get(val, "無")
+boat_bg = {1: "#ffffff", 2: "#333333", 3: "#e03131", 4: "#1971c2", 5: "#fcc419", 6: "#2f9e44"}
+boat_tx = {1: "#000000", 2: "#ffffff", 3: "#ffffff", 4: "#ffffff", 5: "#000000", 6: "#ffffff"}
+
+# ==========================================
+# 4. メイン画面
+# ==========================================
+with st.sidebar:
+    st.header("📋 解析設定")
+    # 解析に成功した会場のみリストに出す
+    found_places = sorted(list(ACTUAL_STATS.keys()))
+    r_place = st.selectbox("開催地を選択", found_places if found_places else ["戸田"])
+    r_num = st.number_input("レース番号", 1, 12, 1)
+    
+    # 統計情報の表示
+    p_stat = ACTUAL_STATS.get(r_place, {"展示信頼度": 35.0, "展示貢献度": 65.0, "イン逃げ率": 50.0, "サンプル数": 0})
     st.divider()
+    st.metric("📊 実績イン逃げ率", f"{p_stat['イン逃げ率']}%")
+    st.metric("⏱️ 展示1位の1着率", f"{p_stat['展示信頼度']}%")
+    st.caption(f"分析レース数: {p_stat['サンプル数']} 件")
+    
+    st.write("")
+    components.html('<script src="https://adm.shinobi.jp/s/00848ad75df65c15ca7f98de1efcf942"></script>', height=260)
 
-    # -------------------------
-    # 入力フォーム
-    # -------------------------
-    with st.form("pre_eval_form"):
+tab1, tab2 = st.tabs(["📝 事前予想", "🔥 実績連動解析"])
 
-        boat_evals = {}
+with tab2:
+    st.subheader(f"🏟️ {r_place} 実績反映シミュレーター")
+    
+    # 実績に基づく動的ウェイト
+    ex_w = min(0.5, p_stat['展示信頼度'] / 100 + 0.1)
+    other_w = (1.0 - ex_w) / 3
+    weights = {"展示": round(ex_w, 2), "直線": round(other_w, 2), "回り足": round(other_w, 2), "一周": round(other_w, 2)}
 
-        for row in range(3):
+    st.plotly_chart(px.pie(values=list(weights.values()), names=list(weights.keys()), hole=0.4, title="この会場の配点バランス"), use_container_width=True)
 
-            cols = st.columns(2)
+    with st.form("live_analysis"):
+        results = []
+        cols = st.columns(2)
+        for i in range(1, 7):
+            with cols[(i-1)%2]:
+                with st.expander(f"{i}号艇の気配入力", expanded=(i==1)):
+                    st.markdown(f'<div style="background:{boat_bg[i]}; color:{boat_tx[i]}; padding:5px; border-radius:4px; text-align:center; font-weight:bold;">{i}号艇</div>', unsafe_allow_html=True)
+                    f1 = st.select_slider(f"展示_{i}", range(7), 0, get_symbol, key=f"ex_{i}")
+                    f2 = st.select_slider(f"直線_{i}", range(7), 0, get_symbol, key=f"st_{i}")
+                    f3 = st.select_slider(f"回り足_{i}", range(7), 0, get_symbol, key=f"tu_{i}")
+                    f4 = st.select_slider(f"一周_{i}", range(7), 0, get_symbol, key=f"lp_{i}")
+                    score = (f1*weights["展示"] + f2*weights["直線"] + f3*weights["回り足"] + f4*weights["一周"])
+                    results.append({"艇番": i, "score": score, "展示": get_symbol(f1)})
 
-            for col in range(2):
-
-                i = row * 2 + col + 1
-
-                with cols[col]:
-
-                    st.markdown(f"### {i}号艇")
-
-                    m = st.selectbox("モーター", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"m_{i}")
-                    t = st.selectbox("当地勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"t_{i}")
-                    w = st.selectbox("枠番勝率", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"w_{i}")
-                    s = st.selectbox("枠番ST", ["◎", "○", "▲", "△", "×", "無"], index=5, key=f"s_{i}")
-
-                    base_score = (
-                        SYMBOL_VALUES[m] * WEIGHTS["モーター"]
-                        + SYMBOL_VALUES[t] * WEIGHTS["当地勝率"]
-                        + SYMBOL_VALUES[w] * WEIGHTS["枠番勝率"]
-                        + SYMBOL_VALUES[s] * WEIGHTS["枠番スタート"]
-                    )
-
-                    corr = boat_corr.get(i, 0)
-
-                    boat_evals[i] = base_score + corr
-
-        submitted = st.form_submit_button(
-            "予想カード生成",
-            use_container_width=True,
-            type="primary"
-        )
-
-    # -------------------------
-    # 結果表示（100％化）
-    # -------------------------
-    if submitted:
-
-        total_raw = sum(max(v, 0) for v in boat_evals.values())
-
-        if total_raw == 0:
-            st.warning("すべてのスコアが0です")
-            st.stop()
-
-        percent = {
-            k: max(v, 0) / total_raw * 100
-            for k, v in boat_evals.items()
-        }
-
-        sorted_boats = sorted(
-            percent.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-
-        st.markdown("### 🏁 事前簡易予想（合計100％）")
-
-        st.markdown("""
-        <style>
-        .card{
-            background:#ffffff;
-            border-radius:14px;
-            padding:14px;
-            margin-bottom:12px;
-            border:1px solid #eee;
-        }
-        .rank1{border:3px solid #ffd700;}
-        .rank2{border:3px solid #c0c0c0;}
-        .rank3{border:3px solid #cd7f32;}
-        .rank-title{
-            font-size:18px;
-            font-weight:700;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        cols = st.columns(3)
-
-        for idx, (boat, p) in enumerate(sorted_boats):
-
-            if idx == 0:
-                cls = "card rank1"
-                icon = "🥇"
-            elif idx == 1:
-                cls = "card rank2"
-                icon = "🥈"
-            elif idx == 2:
-                cls = "card rank3"
-                icon = "🥉"
-            else:
-                cls = "card"
-                icon = "🚤"
-
-            with cols[idx % 3]:
-
-                st.markdown(
-                    f"""
-                    <div class="{cls}">
-                        <div class="rank-title">{icon} {boat}号艇</div>
-                        <div style="font-size:26px;font-weight:800;">
-                            {p:.1f}%
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-        st.caption("※6艇の合計は必ず100％になります")
-        st.caption("※女子戦補正・全期間データ補正は有料版で開放予定です")
-
+        if st.form_submit_button("🔥 実績に基づいた最終解析", use_container_width=True, type="primary"):
+            df = pd.DataFrame(results).sort_values("score", ascending=False)
+            df["期待値"] = (df["score"] / df["score"].sum() * 100).round(1) if df["score"].sum() > 0 else 0
+            st.success(f"🥇 推奨：{df.iloc[0]['艇番']}号艇（展示1位の3連対率: {p_stat['展示貢献度']}%）")
+            st.dataframe(df[["艇番", "期待値", "展示"]], use_container_width=True, hide_index=True)
