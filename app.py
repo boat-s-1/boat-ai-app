@@ -25,10 +25,10 @@ with st.sidebar.expander("キイナ (穴)", expanded=True):
 st.title("📰 BOAT STRIKE 最終予想セクション")
 st.write("プレビュー画面（このまま画像出力が可能です）")
 
-# CSSの波括弧を {{ }} にして、Python変数用の { } と区別させています
-final_ui_html = f"""
+# 【修正の肝】CSSをf-stringの外に出すことで、波括弧 { } の干渉を完全に防ぎます
+css_style = """
 <style>
-    .newspaper-container {{
+    .newspaper-container {
         display: flex !important;
         justify-content: space-between !important;
         gap: 15px !important;
@@ -36,8 +36,8 @@ final_ui_html = f"""
         padding: 20px;
         border: 2px solid #1e293b;
         border-radius: 15px;
-    }}
-    .char-card {{
+    }
+    .char-card {
         flex: 1 !important;
         background: white !important;
         border-radius: 12px !important;
@@ -45,12 +45,13 @@ final_ui_html = f"""
         text-align: center !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         border-top: 8px solid !important;
-    }}
-    .ichika-border {{ border-top-color: #ef4444 !important; }}
-    .hatsune-border {{ border-top-color: #3b82f6 !important; }}
-    .kiina-border {{ border-top-color: #f59e0b !important; }}
+        min-width: 0; /* 幅がはみ出すのを防ぐ */
+    }
+    .ichika-border { border-top-color: #ef4444 !important; }
+    .hatsune-border { border-top-color: #3b82f6 !important; }
+    .kiina-border { border-top-color: #f59e0b !important; }
     
-    .char-icon {{
+    .char-icon {
         width: 70px; height: 70px;
         border: 2px solid #cbd5e1;
         border-radius: 50%;
@@ -58,9 +59,9 @@ final_ui_html = f"""
         display: flex; align-items: center; justify-content: center;
         background: #f8fafc;
         font-weight: bold; font-size: 14px;
-    }}
-    .title-label {{ font-weight: bold; font-size: 16px; margin-bottom: 10px; }}
-    .bet-display {{
+    }
+    .title-label { font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+    .bet-display {
         background: #1e293b;
         color: white;
         padding: 12px 5px;
@@ -69,10 +70,13 @@ final_ui_html = f"""
         border-radius: 6px;
         margin: 10px 0;
         letter-spacing: 2px;
-    }}
-    .comment-text {{ font-size: 12px; color: #475569; line-height: 1.4; min-height: 3em; }}
+    }
+    .comment-text { font-size: 12px; color: #475569; line-height: 1.4; min-height: 3em; }
 </style>
+"""
 
+# HTML部分のみf-stringを適用
+content_html = f"""
 <div class="newspaper-container">
     <div class="char-card ichika-border">
         <div class="char-icon" style="color:#ef4444; border-color:#ef4444;">一果</div>
@@ -80,14 +84,12 @@ final_ui_html = f"""
         <div class="bet-display">{i_bet}</div>
         <div class="comment-text">「{i_msg}」</div>
     </div>
-
     <div class="char-card hatsune-border">
         <div class="char-icon" style="color:#3b82f6; border-color:#3b82f6;">初音</div>
         <div class="title-label" style="color:#3b82f6;">初音の客観数値</div>
         <div class="bet-display">{h_bet}</div>
         <div class="comment-text">「{h_msg}」</div>
     </div>
-
     <div class="char-card kiina-border">
         <div class="char-icon" style="color:#f59e0b; border-color:#f59e0b;">キイナ</div>
         <div class="title-label" style="color:#f59e0b;">キイナの穴狙い！</div>
@@ -97,7 +99,9 @@ final_ui_html = f"""
 </div>
 """
 
-st.markdown(final_ui_html, unsafe_allow_html=True)
+# スタイルとコンテンツを分けて読み込ませる
+st.markdown(css_style, unsafe_allow_html=True)
+st.markdown(content_html, unsafe_allow_html=True)
 
 st.divider()
 st.info("💡 サイドバーの値を書き換えると、上のプレビューがリアルタイムに更新されます。")
