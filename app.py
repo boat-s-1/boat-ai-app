@@ -1,103 +1,60 @@
 import streamlit as st
 
-def show_ichika_report(field_name, field_avg, current_expectancy, wall_strength):
-    diff = current_expectancy - field_avg
-    diff_color = "#ff4b4b" if diff >= 0 else "#1f77b4"
-    diff_text = f"+{diff}%" if diff >= 0 else f"{diff}%"
-    
-    # 判定スタンプの決定
-    if diff >= 15:
-        status = "鬼絞り（鉄板）"
-        stamp_color = "#ff0000"
-    elif diff >= 5:
-        status = "有力"
-        stamp_color = "#ff8c00"
-    else:
-        status = "波乱含み"
-        stamp_color = "#707070"
+# 新聞全体のスタイル設定
+st.markdown("""
+<style>
+    .newspaper-container {
+        background-color: #f9f9f9;
+        padding: 10px;
+        border: 1px solid #ddd;
+    }
+    .section-card {
+        background: white;
+        border: 2px solid #333;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 15px;
+    }
+    .kiina-header { background-color: #f1c40f; color: #333; padding: 5px; font-weight: bold; border-radius: 4px; }
+    .hatsune-header { background-color: #3498db; color: white; padding: 5px; font-weight: bold; border-radius: 4px; }
+    .status-badge { font-size: 20px; font-weight: bold; color: #e67e22; border: 2px solid #e67e22; padding: 2px 10px; transform: rotate(-5deg); display: inline-block; }
+</style>
+""", unsafe_allow_html=True)
 
-    # HTML/CSSでの新聞風デザイン
-    st.markdown(f"""
-    <style>
-        .report-box {{
-            background-color: #ffffff;
-            border: 3px solid #333;
-            border-radius: 10px;
-            padding: 20px;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            max-width: 500px;
-        }}
-        .header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-        }}
-        .field-label {{
-            background-color: #333;
-            color: white;
-            padding: 2px 10px;
-            border-radius: 5px;
-            font-weight: bold;
-        }}
-        .main-score {{
-            text-align: center;
-            padding: 20px 0;
-        }}
-        .diff-value {{
-            font-size: 60px;
-            font-weight: 900;
-            color: {diff_color};
-            line-height: 1;
-        }}
-        .diff-label {{
-            font-size: 14px;
-            color: #666;
-        }}
-        .stamp {{
-            border: 4px double {stamp_color};
-            color: {stamp_color};
-            font-size: 24px;
-            font-weight: bold;
-            padding: 5px 15px;
-            transform: rotate(-10deg);
-            display: inline-block;
-            margin-top: 10px;
-        }}
-        .comment-box {{
-            background-color: #fff0f0;
-            border-radius: 5px;
-            padding: 10px;
-            margin-top: 15px;
-            font-size: 14px;
-            border-left: 5px solid #ff4b4b;
-        }}
-    </style>
+with st.container():
+    st.write("### BOAT STRIKE データ新聞（プロトタイプ）")
     
-    <div class="report-box">
-        <div class="header">
-            <span class="field-label">{field_name} {st.session_state.get('race_num', '11')}R</span>
-            <span style="font-weight:bold;">一果のイン逃げ判定</span>
-        </div>
-        
-        <div class="main-score">
-            <div class="diff-label">場平均（{field_avg}%）より</div>
-            <div class="diff-value">{diff_text}</div>
-            <div class="diff-label">イン逃げ期待値：{current_expectancy}%</div>
-            <div class="stamp">{status}</div>
-        </div>
-
-        <div style="display: flex; align-items: flex-start;">
-            <div style="width: 60px; height: 60px; background: #ddd; border-radius: 50%; margin-right: 10px; flex-shrink: 0; display:flex; align-items:center; justify-content:center; font-size:10px; text-align:center;">
-                一果<br>Icon
-            </div>
-            <div class="comment-box">
-                「{field_name}の平均よりかなり高いね！壁役の{wall_strength}も安定してるし、ここは一果にお任せ！」
-            </div>
+    # 1. 一果セクション (簡略版)
+    st.markdown("""
+    <div class="section-card">
+        <div style="display:flex; justify-content:space-between;"><b>一果のイン逃げ判定</b> <span style="color:red;">住之江 11R</span></div>
+        <div style="text-align:center; padding:10px;">
+            <div style="font-size:12px;">場平均より</div>
+            <div style="font-size:40px; font-weight:bold; color:red;">+22%</div>
+            <div class="status-badge">鬼絞り</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 呼び出し例
-show_ichika_report("住之江", 52, 74, "2号艇")
+    # 2. キイナセクション
+    st.markdown("""
+    <div class="section-card">
+        <div class="kiina-header">⚡ キイナの5アタマ穴狙い！</div>
+        <div style="display:flex; align-items:center; margin-top:10px;">
+            <div style="font-size:30px; font-weight:bold; color:#e67e22; margin-right:15px;">買わなきゃ損！</div>
+            <div style="font-size:13px;">「4号艇が凹む予感！5号艇の伸び足なら一気に飲み込めるよ！」</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 3. 初音セクション
+    st.markdown("""
+    <div class="section-card">
+        <div class="hatsune-header">📊 初音の客観的数値</div>
+        <table style="width:100%; font-size:12px; margin-top:10px; border-collapse:collapse;">
+            <tr style="border-bottom:1px solid #eee;"><th>艇</th><th>評価</th><th>補正展示</th><th>配当予測</th></tr>
+            <tr style="text-align:center;"><td>1</td><td>◎</td><td>6.62</td><td rowspan="6">中央値:<br>1,190円</td></tr>
+            <tr style="text-align:center;"><td>5</td><td>穴</td><td>6.58</td></tr>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
