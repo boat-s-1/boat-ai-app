@@ -4,104 +4,146 @@ import streamlit as st
 st.set_page_config(page_title="BOAT STRIKE 新聞生成App", layout="wide")
 
 # --- 1. サイドバー：データ入力 ---
-st.sidebar.header("🏆 予想データ入力")
+st.sidebar.header("🏆 専門紙データ入力")
 
-# 一果（本命）の設定
 with st.sidebar.expander("一果 (本命)", expanded=True):
-    i_bet = st.text_input("買い目", value="1-2-34", key="ichika_b")
-    i_msg = st.text_input("一言", value="場平均より+22%も高いよ！ここは一果を信じて鬼絞りっ！", key="ichika_m")
+    i_bet = st.text_input("本線買い目", value="1-2-34", key="ichika_b")
+    i_msg = st.text_input("短評", value="イン信頼度S。場平均を大きく上回る足色。逃げ鉄板。", key="ichika_m")
 
-# 初音（客観）の設定
 with st.sidebar.expander("初音 (客観)", expanded=True):
-    h_bet = st.text_input("買い目", value="1-4-全", key="hatsune_b")
-    h_msg = st.text_input("一言", value="補正展示タイムから算出。オッズの歪みを含めるとこの目が合理的です。", key="hatsune_m")
+    h_bet = st.text_input("推奨買い目", value="1-4-全", key="hatsune_b")
+    h_msg = st.text_input("短評", value="データ上は1-4が本線。オッズ乖離から期待値高い。", key="hatsune_m")
 
-# キイナ（穴）の設定
 with st.sidebar.expander("キイナ (穴)", expanded=True):
-    k_bet = st.text_input("買い目", value="5-全-全", key="kiina_b")
-    k_msg = st.text_input("一言", value="4が凹めば5のまくり差しが炸裂するっしょ！買わなきゃ損だよ！", key="kiina_m")
+    k_bet = st.text_input("爆穴買い目", value="5-全-全", key="kiina_b")
+    k_msg = st.text_input("短評", value="4凹みなら5のまくり差し一閃。万舟への最短距離。", key="kiina_m")
 
 # --- 2. メイン画面：新聞生成 ---
-st.title("📰 BOAT STRIKE 最終予想セクション")
-st.write("プレビュー画面（このまま画像出力が可能です）")
+st.title("📰 BOAT STRIKE 専門紙・最終見解")
 
-# 【修正の肝】CSSをf-stringの外に出すことで、波括弧 { } の干渉を完全に防ぎます
 css_style = """
 <style>
+    .newspaper-board {
+        background-color: #f4f1ea; /* 新聞紙のような少し黄色味のある白 */
+        border: 4px double #333;
+        padding: 0;
+        font-family: "MS PMincho", "MS Mincho", serif; /* 新聞らしい明朝体風 */
+        color: #1a1a1a;
+    }
+    .newspaper-header {
+        background-color: #1a1a1a;
+        color: #fff;
+        text-align: center;
+        padding: 5px 0;
+        font-weight: bold;
+        letter-spacing: 10px;
+        font-size: 18px;
+        border-bottom: 2px solid #1a1a1a;
+    }
     .newspaper-container {
         display: flex !important;
         justify-content: space-between !important;
-        gap: 15px !important;
-        background-color: #f1f5f9;
-        padding: 20px;
-        border: 2px solid #1e293b;
-        border-radius: 15px;
     }
     .char-card {
         flex: 1 !important;
-        background: white !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
+        padding: 20px 10px;
         text-align: center !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-        border-top: 8px solid !important;
-        min-width: 0; /* 幅がはみ出すのを防ぐ */
+        border-right: 1px dashed #666; /* 新聞の区切り線（点線） */
     }
-    .ichika-border { border-top-color: #ef4444 !important; }
-    .hatsune-border { border-top-color: #3b82f6 !important; }
-    .kiina-border { border-top-color: #f59e0b !important; }
+    .char-card:last-child {
+        border-right: none;
+    }
     
-    .char-icon {
-        width: 70px; height: 70px;
-        border: 2px solid #cbd5e1;
-        border-radius: 50%;
-        margin: 0 auto 10px;
-        display: flex; align-items: center; justify-content: center;
-        background: #f8fafc;
-        font-weight: bold; font-size: 14px;
+    .yoso-mark {
+        font-size: 50px;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 5px;
+        display: block;
     }
-    .title-label { font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+    .ichika-color { color: #d32f2f; }
+    .hatsune-color { color: #1976d2; }
+    .kiina-color { color: #f57c00; }
+    
+    .title-label { 
+        font-size: 14px; 
+        font-weight: bold; 
+        border: 1px solid #1a1a1a;
+        display: inline-block;
+        padding: 2px 8px;
+        margin-bottom: 15px;
+    }
+    
     .bet-display {
-        background: #1e293b;
-        color: white;
-        padding: 12px 5px;
-        font-size: 24px;
-        font-weight: bold;
-        border-radius: 6px;
-        margin: 10px 0;
-        letter-spacing: 2px;
+        background: transparent;
+        color: #000;
+        border: 3px solid #000;
+        padding: 10px 0;
+        font-size: 32px;
+        font-weight: 900;
+        margin: 10px 5px;
+        font-family: "Arial Black", sans-serif;
     }
-    .comment-text { font-size: 12px; color: #475569; line-height: 1.4; min-height: 3em; }
+    
+    .comment-box {
+        font-size: 13px;
+        text-align: left;
+        padding: 0 10px;
+        line-height: 1.6;
+        height: 4.8em;
+        overflow: hidden;
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+    }
+    .char-name-footer {
+        font-size: 12px;
+        font-weight: bold;
+        margin-top: 10px;
+        display: block;
+        text-align: right;
+    }
 </style>
 """
 
-# HTML部分のみf-stringを適用
 content_html = f"""
-<div class="newspaper-container">
-    <div class="char-card ichika-border">
-        <div class="char-icon" style="color:#ef4444; border-color:#ef4444;">一果</div>
-        <div class="title-label" style="color:#ef4444;">一果のズバリ！</div>
-        <div class="bet-display">{i_bet}</div>
-        <div class="comment-text">「{i_msg}」</div>
-    </div>
-    <div class="char-card hatsune-border">
-        <div class="char-icon" style="color:#3b82f6; border-color:#3b82f6;">初音</div>
-        <div class="title-label" style="color:#3b82f6;">初音の客観数値</div>
-        <div class="bet-display">{h_bet}</div>
-        <div class="comment-text">「{h_msg}」</div>
-    </div>
-    <div class="char-card kiina-border">
-        <div class="char-icon" style="color:#f59e0b; border-color:#f59e0b;">キイナ</div>
-        <div class="title-label" style="color:#f59e0b;">キイナの穴狙い！</div>
-        <div class="bet-display">{k_bet}</div>
-        <div class="comment-text">「{k_msg}」</div>
+<div class="newspaper-board">
+    <div class="newspaper-header">最終ジャッジ</div>
+    <div class="newspaper-container">
+        <div class="char-card">
+            <span class="yoso-mark ichika-color">◎</span>
+            <div class="title-label">本命・一果</div>
+            <div class="bet-display">{i_bet}</div>
+            <div class="comment-box">
+                {i_msg}
+                <span class="char-name-footer">― 記者・一果</span>
+            </div>
+        </div>
+
+        <div class="char-card">
+            <span class="yoso-mark hatsune-color">○</span>
+            <div class="title-label">対抗・初音</div>
+            <div class="bet-display">{h_bet}</div>
+            <div class="comment-box">
+                {h_msg}
+                <span class="char-name-footer">― 記者・初音</span>
+            </div>
+        </div>
+
+        <div class="char-card">
+            <span class="yoso-mark kiina-color">穴</span>
+            <div class="title-label">特注・キイナ</div>
+            <div class="bet-display">{k_bet}</div>
+            <div class="comment-box">
+                {k_msg}
+                <span class="char-name-footer">― 記者・キイナ</span>
+            </div>
+        </div>
     </div>
 </div>
 """
 
-# スタイルとコンテンツを分けて読み込ませる
 st.markdown(css_style, unsafe_allow_html=True)
 st.markdown(content_html, unsafe_allow_html=True)
 
 st.divider()
-st.info("💡 サイドバーの値を書き換えると、上のプレビューがリアルタイムに更新されます。")
+st.caption("※このセクションは画像保存してSNS投稿に使用することを想定しています。")
