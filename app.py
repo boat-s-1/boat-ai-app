@@ -1,60 +1,94 @@
 import streamlit as st
 
-# 新聞全体のスタイル設定
-st.markdown("""
-<style>
-    .newspaper-container {
-        background-color: #f9f9f9;
-        padding: 10px;
-        border: 1px solid #ddd;
-    }
-    .section-card {
-        background: white;
-        border: 2px solid #333;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        padding: 15px;
-    }
-    .kiina-header { background-color: #f1c40f; color: #333; padding: 5px; font-weight: bold; border-radius: 4px; }
-    .hatsune-header { background-color: #3498db; color: white; padding: 5px; font-weight: bold; border-radius: 4px; }
-    .status-badge { font-size: 20px; font-weight: bold; color: #e67e22; border: 2px solid #e67e22; padding: 2px 10px; transform: rotate(-5deg); display: inline-block; }
-</style>
-""", unsafe_allow_html=True)
+# --- レイアウト設定 ---
+st.set_page_config(layout="wide")
 
-with st.container():
-    st.write("### BOAT STRIKE データ新聞（プロトタイプ）")
+st.title("📄 BOAT STRIKE 予想新聞生成システム")
+
+# --- サイドバー：データ入力 ---
+with st.sidebar:
+    st.header("📊 レースデータ入力")
+    race_place = st.selectbox("開催場", ["住之江", "平和島", "戸田", "大村"])
+    race_num = st.number_input("レース番号", 1, 12, 11)
     
-    # 1. 一果セクション (簡略版)
-    st.markdown("""
-    <div class="section-card">
-        <div style="display:flex; justify-content:space-between;"><b>一果のイン逃げ判定</b> <span style="color:red;">住之江 11R</span></div>
-        <div style="text-align:center; padding:10px;">
-            <div style="font-size:12px;">場平均より</div>
-            <div style="font-size:40px; font-weight:bold; color:red;">+22%</div>
-            <div class="status-badge">鬼絞り</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.divider()
+    st.subheader("💡 3人の買い目入力")
+    ichika_bet = st.text_input("一果（本命）", "1-2-34")
+    hatsune_bet = st.text_input("初音（効率）", "1-4-全")
+    kiina_bet = st.text_input("キイナ（穴）", "5-全-全")
 
-    # 2. キイナセクション
-    st.markdown("""
-    <div class="section-card">
-        <div class="kiina-header">⚡ キイナの5アタマ穴狙い！</div>
-        <div style="display:flex; align-items:center; margin-top:10px;">
-            <div style="font-size:30px; font-weight:bold; color:#e67e22; margin-right:15px;">買わなきゃ損！</div>
-            <div style="font-size:13px;">「4号艇が凹む予感！5号艇の伸び足なら一気に飲み込めるよ！」</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+# --- メイン：新聞プレビュー ---
+st.subheader("🖼 プレビュー（このまま画像出力）")
 
-    # 3. 初音セクション
-    st.markdown("""
-    <div class="section-card">
-        <div class="hatsune-header">📊 初音の客観的数値</div>
-        <table style="width:100%; font-size:12px; margin-top:10px; border-collapse:collapse;">
-            <tr style="border-bottom:1px solid #eee;"><th>艇</th><th>評価</th><th>補正展示</th><th>配当予測</th></tr>
-            <tr style="text-align:center;"><td>1</td><td>◎</td><td>6.62</td><td rowspan="6">中央値:<br>1,190円</td></tr>
-            <tr style="text-align:center;"><td>5</td><td>穴</td><td>6.58</td></tr>
-        </table>
+# HTML/CSSで3人並びのセクションを作成
+newspaper_html = f"""
+<style>
+    .newspaper-footer {{
+        display: flex;
+        gap: 20px;
+        background-color: #f8fafc;
+        padding: 20px;
+        border: 3px solid #1e293b;
+        border-radius: 15px;
+    }}
+    .char-card {{
+        flex: 1;
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-top: 8px solid;
+    }}
+    .ichika-border {{ border-top-color: #ef4444; }}
+    .hatsune-border {{ border-top-color: #3b82f6; }}
+    .kiina-border {{ border-top-color: #f59e0b; }}
+    
+    .char-name {{ font-weight: bold; margin-bottom: 10px; font-size: 18px; }}
+    .bet-display {{
+        background: #1e293b;
+        color: #fff;
+        padding: 10px;
+        font-size: 24px;
+        font-weight: bold;
+        border-radius: 5px;
+        letter-spacing: 2px;
+    }}
+    .char-icon {{
+        width: 80px; height: 80px;
+        background: #eee; border-radius: 50%;
+        margin: 0 auto 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; color: #666;
+    }}
+</style>
+
+<div class="newspaper-footer">
+    <div class="char-card ichika-border">
+        <div class="char-icon">一果<br>ICON</div>
+        <div class="char-name" style="color:#ef4444;">一果のズバリ！</div>
+        <div class="bet-display">{ichika_bet}</div>
+        <p style="font-size:12px; margin-top:10px;">「ここは逃げ鉄板だよ！」</p>
     </div>
-    """, unsafe_allow_html=True)
+    
+    <div class="char-card hatsune-border">
+        <div class="char-icon">初音<br>ICON</div>
+        <div class="char-name" style="color:#3b82f6;">初音の客観</div>
+        <div class="bet-display">{hatsune_bet}</div>
+        <p style="font-size:12px; margin-top:10px;">「期待値はこの目が最大です。」</p>
+    </div>
+    
+    <div class="char-card kiina-border">
+        <div class="char-icon">キイナ<br>ICON</div>
+        <div class="char-name" style="color:#f59e0b;">キイナの穴</div>
+        <div class="bet-display">{kiina_bet}</div>
+        <p style="font-size:12px; margin-top:10px;">「一撃狙うならこれっしょ！」</p>
+    </div>
+</div>
+"""
+
+st.markdown(newspaper_html, unsafe_allow_html=True)
+
+st.divider()
+if st.button("📸 予想新聞を画像として保存"):
+    st.info("ここにHTMLを画像に変換するロジック（playwright等）を組み込みます。")
