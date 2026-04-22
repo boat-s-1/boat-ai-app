@@ -8,30 +8,36 @@ st.set_page_config(page_title="Birthstones新聞 生成App", layout="wide")
 today = datetime.date.today()
 formatted_date = today.strftime("%Y年%m月%d日")
 
-# --- 1. サイドバー：全データ入力 ---
-st.sidebar.header("📰 編集会議：全セクション入力")
+# --- 1. サイドバー：入力 ---
+st.sidebar.header("📊 新聞記事のデータ入力")
 
-with st.sidebar.expander("🚩 左エリア：一果 ＆ 補正タイム", expanded=True):
+with st.sidebar.expander("⏱ 左エリア：展示タイム入力", expanded=True):
     i_place = st.text_input("レース場", value="住之江")
     i_race = st.text_input("レース番号", value="12R")
-    st.write("--- 展示補正タイム ---")
-    ori_time = st.text_input("オリ展タイム（秒）", value="6.52")
-    hosei_time = st.text_input("イン逃げ補正タイム", value="-0.03")
-    i_exp = st.slider("最終イン逃げ期待値 (%)", 30, 100, 78)
-    i_text = st.text_area("一果の判定詳細", value="展示タイムが場平均を大きく上回っています！イン逃げ補正を含めても鉄板と言える数値です。")
+    st.write("各艇の展示タイム")
+    t_cols = st.columns(3)
+    times = [t_cols[i % 3].text_input(f"{i+1}号艇", value="6.52") for i in range(6)]
+    
+    st.write("独自補正データ")
+    hosei_val = st.text_input("イン逃げ・場補正値", value="-0.03")
+    final_time = st.text_input("補正後タイム（1号艇）", value="6.49")
 
-with st.sidebar.expander("📊 右エリア：3人の個別コーナー", expanded=False):
-    st.subheader("初音のデータ")
-    h_eval = st.text_input("初音の格付け", value="1=◯, 4=△, 5=✖️")
-    h_text = st.text_area("初音の分析", value="補正タイム1位。期待配当との乖離なし。")
-    st.write("---")
-    st.subheader("キイナの穴")
+with st.sidebar.expander("💎 右エリア：3人の個別判定", expanded=True):
+    st.subheader("一果（右上）")
+    i_exp = st.slider("逃げ期待値 (%)", 30, 100, 78)
+    i_text = st.text_area("一果の判定", value="補正タイムが抜群！一果にお任せ！")
+    
+    st.subheader("初音（右中）")
+    h_eval = st.text_input("格付け", value="1=◯, 4=△, 5=✖️")
+    h_text = st.text_area("初音の分析", value="期待配当との乖離は軽微。")
+    
+    st.subheader("キイナ（右下）")
     k_eval = st.selectbox("穴判定", ["見", "GO", "買わなきゃ損！"], index=2)
     k_text = st.text_area("キイナの予感", value="4が凹めば5が突き抜ける！")
 
-with st.sidebar.expander("🤝 最下部：トータル意見（3人の合議）", expanded=True):
-    total_verdict = st.text_input("合議のタイトル", value="【結論】1号艇の独壇場。2、3着争い！")
-    total_text = st.text_area("3人の合議内容", value="一果のイン逃げ鉄板判定と、初音のタイム分析が一致しました。キイナの穴狙いは今回抑え程度に留め、1頭固定で勝負できるレースです！")
+with st.sidebar.expander("🤝 最下部：トータル意見", expanded=False):
+    total_verdict = st.text_input("最終結論タイトル", value="1頭固定の鉄板レース！")
+    total_text = st.text_area("合議内容", value="3人の見解が「1頭」で一致。キイナの穴も5の連絡みまで。")
 
 # --- 2. CSSスタイル定義 ---
 st.markdown("""
@@ -47,36 +53,30 @@ st.markdown("""
         color: #334155 !important;
     }
 
-    /* 補正タイムテーブル */
-    .time-table {
-        width: 100%; border-collapse: collapse; margin: 10px 0;
-        font-size: 14px; background: #fff;
+    /* タイム表のデザイン */
+    .data-table {
+        width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px;
     }
-    .time-table th { background: #fee2e2; border: 1px solid #f87171; padding: 6px; font-weight: bold; }
-    .time-table td { border: 1px solid #f87171; padding: 6px; text-align: center; font-weight: bold; font-size: 16px; }
+    .data-table th { background: #f1f5f9; border: 1px solid #94a3b8; padding: 5px; }
+    .data-table td { border: 1px solid #94a3b8; padding: 5px; text-align: center; font-weight: bold; }
+    .hosei-highlight { background: #fee2e2; color: #ef4444; border: 2px solid #ef4444 !important; }
 
     /* ボックス装飾 */
     .memo-box {
-        position: relative; border: 2px solid #57534e; border-radius: 12px;
-        padding: 15px; background: #fff; margin-bottom: 18px;
+        position: relative; border: 2px solid #57534e; border-radius: 10px;
+        padding: 12px; background: #fff; margin-bottom: 15px;
     }
     .box-title {
-        font-weight: bold; border-bottom: 2px dashed #57534e; margin-bottom: 10px;
-        display: flex; align-items: center; gap: 6px; font-size: 16px;
+        font-weight: bold; border-bottom: 2px dashed #57534e; margin-bottom: 8px;
+        display: flex; align-items: center; gap: 5px; font-size: 15px;
     }
-    .voice-bubble {
-        display: flex; gap: 8px; background: #fefce8; padding: 8px;
-        border-radius: 10px; font-family: 'Yomogi', cursive; font-size: 13px;
+    .voice-mini {
+        display: flex; gap: 8px; background: #fefce8; padding: 6px;
+        border-radius: 8px; font-family: 'Yomogi', cursive; font-size: 12px;
     }
-    .char-icon {
-        width: 38px; height: 38px; background: #fff; border: 1.5px solid #57534e;
-        border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px;
-    }
-
-    /* 最下部エリア */
-    .total-box {
-        background: #f8fafc !important; border: 3px double #334155 !important;
-        margin-top: 10px; padding: 20px; border-radius: 10px;
+    .char-circle {
+        width: 35px; height: 35px; background: #fff; border: 1px solid #57534e;
+        border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -87,91 +87,84 @@ needle_angle = (i_exp - 50) * 1.8
 html_content = (
     '<div class="newspaper-base">'
     '  '
-    '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 4px double #57534e; padding-bottom: 10px;">'
-    '    <div style="font-size: 12px;">【部外秘】3年1組<br>BOAT STRIKE新聞係</div>'
-    '    <div style="font-size: 40px; font-weight: bold; letter-spacing: 5px;">💎 Birthstones新聞</div>'
-    f'    <div style="text-align: right; font-size: 12px;">{formatted_date}<br>第17号 / 編集長 企画</div>'
+    '  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 4px double #57534e; padding-bottom: 10px;">'
+    '    <div style="font-size: 11px;">【秘】学級新聞<br>BOAT STRIKE!</div>'
+    '    <div style="font-size: 36px; font-weight: bold; letter-spacing: 4px;">💎 Birthstones新聞</div>'
+    f'    <div style="text-align: right; font-size: 11px;">{formatted_date}<br>第18号 / 編集係</div>'
     '  </div>'
     
     '  <div style="display: flex; gap: 20px;">'
     '    '
-    '    <div style="flex: 1.8;">'
-    '      <div class="memo-box" style="background: #fffcf5; border-color: #f59e0b; min-height: 480px;">'
-    '        <div class="box-title">🚩 特集：一果の精密イン逃げ調査</div>'
-    f'        <p style="font-size: 14px; margin-bottom: 15px;">対象：ボートレース<b>{i_place}</b> ({i_race})</p>'
+    '    <div style="flex: 1.7;">'
+    '      <div class="memo-box" style="background: #f8fafc; border-color: #64748b; min-height: 500px;">'
+    '        <div class="box-title">📊 公式発表：展示タイム表</div>'
+    f'        <p style="font-size: 13px;">{i_place} {i_race} / 展示航走データ</p>'
+    '        <table class="data-table">'
+    '          <tr><th>1号艇</th><th>2号艇</th><th>3号艇</th><th>4号艇</th><th>5号艇</th><th>6号艇</th></tr>'
+    f'         <tr><td>{times[0]}</td><td>{times[1]}</td><td>{times[2]}</td><td>{times[3]}</td><td>{times[4]}</td><td>{times[5]}</td></tr>'
+    '        </table>'
     
-    '        '
-    '        <div style="background: #fff; border: 1px solid #f59e0b; padding: 10px; border-radius: 8px; margin-bottom: 20px;">'
-    '          <span style="font-size: 12px; color: #b45309; font-weight: bold;">📊 展示補正タイム・データ</span>'
-    '          <table class="time-table">'
-    '            <tr><th>オリ展タイム</th><th>イン逃げ補正</th><th>最終評価</th></tr>'
-    f'           <tr><td>{ori_time}s</td><td>{hosei_time}s</td><td style="color:red;">▲ {hosei_time}加速</td></tr>'
+    '        <div style="margin-top: 30px;" class="box-title">🔍 独自解析：補正展示タイム</div>'
+    '        <div style="background: #fff; border: 2px solid #ef4444; border-radius: 8px; padding: 15px;">'
+    '          <p style="font-size: 12px; margin-bottom: 10px;">過去の場別・風速データを加味したイン逃げ信頼度用タイム</p>'
+    '          <table class="data-table">'
+    '            <tr style="background:#fee2e2;"><th>1号艇 生タイム</th><th>イン補正</th><th>補正後タイム</th></tr>'
+    f'           <tr><td>{times[0]}s</td><td>{hosei_val}s</td><td class="hosei-highlight">{final_time}s</td></tr>'
     '          </table>'
-    '          <p style="font-size: 11px; color: #6b7280; margin-top: 5px;">※過去3年間の場別・風速別データから算出した独自補正値</p>'
-    '        </div>'
-
-    '        '
-    '        <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px;">'
-    '          <div style="text-align: center;">'
-    '            <div style="position: relative; width: 140px; height: 75px; border-bottom: 2px solid #57534e; overflow: hidden; margin: 0 auto;">'
-    '              <div style="width: 140px; height: 140px; border-radius: 50%; border: 12px solid #e2e8f0; border-bottom-color: transparent; border-left-color: #f87171; border-top-color: #fca5a5; transform: rotate(45deg);"></div>'
-    f'              <div style="position: absolute; bottom: 0; left: 50%; width: 3px; height: 60px; background: #1e293b; transform-origin: bottom center; transform: translateX(-50%) rotate({needle_angle}deg);"></div>'
-    '            </div>'
-    f'            <div style="font-size: 12px; margin-top: 5px;">逃げ信頼度: {i_exp}%</div>'
-    '          </div>'
-    '          <div style="text-align: center;">'
-    '            <div style="border: 2px double #ef4444; color: #ef4444; font-weight: bold; padding: 10px; transform: rotate(-5deg);">'
-    '              <span style="font-size: 12px;">一果ランク</span><br><span style="font-size: 24px;">S級：鬼絞り</span>'
-    '            </div>'
-    '          </div>'
-    '        </div>'
-
-    '        <div class="voice-bubble">'
-    '          <div class="char-icon">一果</div>'
-    f'          <div>「{i_text}」</div>'
+    '          <p style="font-size: 11px; color: #ef4444; margin-top: 5px;">※補正後タイムが{final_time}sを切るとイン逃げ成功率が急上昇します。</p>'
     '        </div>'
     '      </div>'
     '    </div>'
 
     '    '
-    '    <div style="flex: 1.2;">'
+    '    <div style="flex: 1.3;">'
     '      '
-    '      <div class="memo-box" style="border-color: #f59e0b; padding: 10px; background: #fffcf5;">'
-    '        <div style="font-weight: bold; font-size: 14px; color: #f59e0b;">🧡 一果の守護</div>'
-    '        <div style="font-size: 11px;">逃げ信頼度トップ。盤石の構えです。</div>'
+    '      <div class="memo-box" style="border-color: #f59e0b; background: #fffcf5;">'
+    '        <div style="font-weight: bold; color: #f59e0b; font-size: 14px; margin-bottom: 5px;">🚩 一果のイン判定</div>'
+    '        <div style="display: flex; align-items: center; gap: 10px;">'
+    '          <div style="position: relative; width: 100px; height: 55px; border-bottom: 2px solid #57534e; overflow: hidden;">'
+    '            <div style="width: 100px; height: 100px; border-radius: 50%; border: 8px solid #e2e8f0; border-bottom-color: transparent; border-left-color: #f87171; transform: rotate(45deg);"></div>'
+    f'            <div style="position: absolute; bottom: 0; left: 50%; width: 2px; height: 45px; background: #1e293b; transform-origin: bottom center; transform: translateX(-50%) rotate({needle_angle}deg);"></div>'
+    '          </div>'
+    f'          <div style="font-size: 18px; font-weight: bold; color: #ef4444;">{i_exp}%</div>'
+    '        </div>'
+    '        <div class="voice-mini">'
+    '          <div class="char-circle" style="background:#fff7ed">一果</div>'
+    f'          <div>「{i_text}」</div>'
+    '        </div>'
     '      </div>'
+
     '      '
-    '      <div class="memo-box" style="border-color: #3b82f6; background: #f0f9ff; padding: 10px;">'
-    '        <div style="font-weight: bold; font-size: 14px; color: #3b82f6;">💙 初音の客観データ</div>'
-    f'        <div style="background: #1e293b; color: white; padding: 3px; text-align: center; border-radius: 4px; font-size: 14px; margin: 5px 0;">{h_eval}</div>'
-    f'        <div style="font-size: 11px; font-family: \'Yomogi\', cursive;">「{h_text}」</div>'
+    '      <div class="memo-box" style="border-color: #3b82f6; background: #f0f9ff;">'
+    '        <div style="font-weight: bold; color: #3b82f6; font-size: 14px; margin-bottom: 5px;">📚 初音の精密分析</div>'
+    f'        <div style="background:#1e293b; color:white; padding:2px; text-align:center; border-radius:4px; font-size:12px; margin-bottom:5px;">{h_eval}</div>'
+    '        <div class="voice-mini" style="background:#f8fafc; border:1px solid #cbd5e0;">'
+    '          <div class="char-circle" style="background:#f0f9ff">初音</div>'
+    f'          <div>「{h_text}」</div>'
+    '        </div>'
     '      </div>'
+
     '      '
-    '      <div class="memo-box" style="border-color: #eab308; background: #fffdf0; padding: 10px;">'
-    '        <div style="font-weight: bold; font-size: 14px; color: #854d0e;">💛 キイナの穴狙い</div>'
-    f'        <div style="text-align: center; background:#ef4444; color:white; padding:2px; border-radius:4px; font-size:12px; font-weight:bold; margin:5px 0;">判定：{k_eval}</div>'
-    f'        <div style="font-size: 11px; font-family: \'Yomogi\', cursive;">「{k_text}」</div>'
+    '      <div class="memo-box" style="border-color: #eab308; background: #fffdf0;">'
+    '        <div style="font-weight: bold; color: #854d0e; font-size: 14px; margin-bottom: 5px;">⚡ キイナの穴予感</div>'
+    f'        <div style="text-align:center; background:#ef4444; color:white; padding:2px; border-radius:4px; font-size:11px; font-weight:bold; margin-bottom:5px;">{k_eval}</div>'
+    '        <div class="voice-mini" style="background:#fff; border:1px solid #fef08a;">'
+    '          <div class="char-circle" style="background:#fffdf0">キイナ</div>'
+    f'          <div>「{k_text}」</div>'
+    '        </div>'
     '      </div>'
     '    </div>'
     '  </div>'
 
     '  '
-    '  <div class="memo-box total-box">'
-    '    <div style="display: flex; gap: 15px; align-items: center;">'
-    '       <div style="display: flex; gap: -5px;">'
-    '         <div class="char-icon" style="background:#fff7ed">一果</div>'
-    '         <div class="char-icon" style="background:#f0f9ff">初音</div>'
-    '         <div class="char-icon" style="background:#fffdf0">キイナ</div>'
-    '       </div>'
-    '       <div style="font-weight: bold; font-size: 18px; color: #1e293b;">🤝 3人の放課後ミーティング（トータル意見）</div>'
-    '    </div>'
-    '    <div style="margin-top: 15px; padding: 15px; background: white; border: 1.5px dashed #cbd5e0; border-radius: 8px;">'
-    f'      <div style="font-weight: bold; font-size: 16px; color: #dc2626; margin-bottom: 8px;">{total_verdict}</div>'
-    f'      <div style="font-size: 14px; line-height: 1.6; font-family: \'Yomogi\', cursive;">{total_text}</div>'
+    '  <div class="memo-box" style="background: #f8fafc; border: 3px double #334155;">'
+    '    <div style="font-weight: bold; font-size: 18px; display: flex; align-items: center; gap: 10px;">🤝 3人の放課後ミーティング</div>'
+    '    <div style="margin-top: 10px; padding: 12px; background: white; border: 1.5px dashed #cbd5e0; border-radius: 8px;">'
+    f'      <div style="font-weight: bold; color: #dc2626; margin-bottom: 5px;">{total_verdict}</div>'
+    f'      <div style="font-size: 13px; font-family: \'Yomogi\', cursive;">{total_text}</div>'
     '    </div>'
     '  </div>'
-    
-    '  <div style="text-align: center; margin-top: 15px; font-size: 11px; color: #94a3b8;">(c) BOAT STRIKE - Birthstones新聞係</div>'
+    '  <div style="text-align: center; margin-top: 10px; font-size: 10px; color: #94a3b8;">(c) BOAT STRIKE - 学級新聞係</div>'
     '</div>'
 )
 
