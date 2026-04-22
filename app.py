@@ -1,94 +1,128 @@
 import streamlit as st
 
-# --- レイアウト設定 ---
-st.set_page_config(layout="wide")
+# ページ設定
+st.set_page_config(page_title="BOAT STRIKE 新聞生成App", layout="wide")
 
-st.title("📄 BOAT STRIKE 予想新聞生成システム")
-
-# --- サイドバー：データ入力 ---
-with st.sidebar:
-    st.header("📊 レースデータ入力")
-    race_place = st.selectbox("開催場", ["住之江", "平和島", "戸田", "大村"])
-    race_num = st.number_input("レース番号", 1, 12, 11)
-    
-    st.divider()
-    st.subheader("💡 3人の買い目入力")
-    ichika_bet = st.text_input("一果（本命）", "1-2-34")
-    hatsune_bet = st.text_input("初音（効率）", "1-4-全")
-    kiina_bet = st.text_input("キイナ（穴）", "5-全-全")
-
-# --- メイン：新聞プレビュー ---
-st.subheader("🖼 プレビュー（このまま画像出力）")
-
-# HTML/CSSで3人並びのセクションを作成
-newspaper_html = f"""
+# --- 1. スタイル定義 (CSS) ---
+# 3人のキャラカラーとカードデザインを定義します
+st.markdown("""
 <style>
-    .newspaper-footer {{
+    .newspaper-footer {
         display: flex;
-        gap: 20px;
-        background-color: #f8fafc;
-        padding: 20px;
+        gap: 15px;
+        background-color: #f1f5f9;
+        padding: 25px;
         border: 3px solid #1e293b;
         border-radius: 15px;
-    }}
-    .char-card {{
+        margin-top: 20px;
+    }
+    .char-card {
         flex: 1;
         background: white;
-        border-radius: 10px;
-        padding: 15px;
+        border-radius: 12px;
+        padding: 20px;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-top: 8px solid;
-    }}
-    .ichika-border {{ border-top-color: #ef4444; }}
-    .hatsune-border {{ border-top-color: #3b82f6; }}
-    .kiina-border {{ border-top-color: #f59e0b; }}
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-top: 10px solid;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    /* キャラの個別の色設定 */
+    .ichika-box { border-top-color: #ef4444; }
+    .hatsune-box { border-top-color: #3b82f6; }
+    .kiina-box { border-top-color: #f59e0b; }
     
-    .char-name {{ font-weight: bold; margin-bottom: 10px; font-size: 18px; }}
-    .bet-display {{
-        background: #1e293b;
-        color: #fff;
-        padding: 10px;
-        font-size: 24px;
+    .char-name {
+        font-size: 20px;
         font-weight: bold;
-        border-radius: 5px;
-        letter-spacing: 2px;
-    }}
-    .char-icon {{
-        width: 80px; height: 80px;
-        background: #eee; border-radius: 50%;
+        margin-bottom: 15px;
+    }
+    .bet-area {
+        background: #1e293b;
+        color: #ffffff;
+        padding: 15px;
+        font-size: 28px;
+        font-weight: 900;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-family: 'Courier New', Courier, monospace;
+        letter-spacing: 3px;
+    }
+    .comment {
+        font-size: 14px;
+        color: #475569;
+        font-style: italic;
+        margin-top: 10px;
+        line-height: 1.4;
+    }
+    .char-icon-placeholder {
+        width: 80px;
+        height: 80px;
+        background: #e2e8f0;
+        border-radius: 50%;
         margin: 0 auto 10px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 12px; color: #666;
-    }}
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+    }
 </style>
+""", unsafe_allow_html=True)
 
+# --- 2. サイドバー (データ入力) ---
+st.sidebar.header("🏆 予想入力")
+st.sidebar.write("各キャラクターの買い目とコメントを設定してください。")
+
+# 一果の入力
+with st.sidebar.expander("一果 (本命) の設定", expanded=True):
+    ichika_bet = st.text_input("買い目", value="1-2-34", key="i_b")
+    ichika_msg = st.text_area("コメント", value="場平均より+22%も高いよ！ここは一果を信じて鬼絞りっ！", key="i_m")
+
+# 初音の入力
+with st.sidebar.expander("初音 (客観) の設定", expanded=True):
+    hatsune_bet = st.text_input("買い目", value="1-4-全", key="h_b")
+    hatsune_msg = st.text_area("コメント", value="補正展示タイムから算出。オッズの歪みを含めるとこの目が合理的です。", key="h_m")
+
+# キイナの入力
+with st.sidebar.expander("キイナ (穴) の設定", expanded=True):
+    kiina_bet = st.text_input("買い目", value="5-全-全", key="k_b")
+    kiina_msg = st.text_area("コメント", value="4が凹めば5のまくり差しが炸裂するっしょ！買わなきゃ損だよ！", key="k_m")
+
+# --- 3. メイン画面 (新聞生成) ---
+st.title("📰 BOAT STRIKE 最終予想セクション")
+st.write("サイドバーで入力した内容が、以下の新聞フォーマットにリアルタイムで反映されます。")
+
+# 新聞のHTML組み立て
+footer_html = f"""
 <div class="newspaper-footer">
-    <div class="char-card ichika-border">
-        <div class="char-icon">一果<br>ICON</div>
+    <div class="char-card ichika-box">
+        <div class="char-icon-placeholder" style="color:#ef4444; border: 2px solid #ef4444;">一果</div>
         <div class="char-name" style="color:#ef4444;">一果のズバリ！</div>
-        <div class="bet-display">{ichika_bet}</div>
-        <p style="font-size:12px; margin-top:10px;">「ここは逃げ鉄板だよ！」</p>
+        <div class="bet-area">{ichika_bet}</div>
+        <div class="comment">「{ichika_msg}」</div>
     </div>
     
-    <div class="char-card hatsune-border">
-        <div class="char-icon">初音<br>ICON</div>
-        <div class="char-name" style="color:#3b82f6;">初音の客観</div>
-        <div class="bet-display">{hatsune_bet}</div>
-        <p style="font-size:12px; margin-top:10px;">「期待値はこの目が最大です。」</p>
+    <div class="char-card hatsune-box">
+        <div class="char-icon-placeholder" style="color:#3b82f6; border: 2px solid #3b82f6;">初音</div>
+        <div class="char-name" style="color:#3b82f6;">初音の客観数値</div>
+        <div class="bet-area">{hatsune_bet}</div>
+        <div class="comment">「{hatsune_msg}」</div>
     </div>
     
-    <div class="char-card kiina-border">
-        <div class="char-icon">キイナ<br>ICON</div>
-        <div class="char-name" style="color:#f59e0b;">キイナの穴</div>
-        <div class="bet-display">{kiina_bet}</div>
-        <p style="font-size:12px; margin-top:10px;">「一撃狙うならこれっしょ！」</p>
+    <div class="char-card kiina-box">
+        <div class="char-icon-placeholder" style="color:#f59e0b; border: 2px solid #f59e0b;">キイナ</div>
+        <div class="char-name" style="color:#f59e0b;">キイナの穴狙い！</div>
+        <div class="bet-area">{kiina_bet}</div>
+        <div class="comment">「{kiina_msg}」</div>
     </div>
 </div>
 """
 
-st.markdown(newspaper_html, unsafe_allow_html=True)
+# HTMLを表示
+st.markdown(footer_html, unsafe_allow_html=True)
 
+# --- 4. 画像保存のアナウンス ---
 st.divider()
-if st.button("📸 予想新聞を画像として保存"):
-    st.info("ここにHTMLを画像に変換するロジック（playwright等）を組み込みます。")
+st.info("💡 実際の運用では、このHTMLブロックを `html2image` などのライブラリで画像化して保存します。")
