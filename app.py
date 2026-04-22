@@ -40,40 +40,36 @@ best_t = sorted_u[0]
 second_t = sorted_u[1] if len(sorted_u) > 1 else None
 
 def get_t_style(t):
-    if t == best_t: return 'background-color:#ef4444 !important; color:white !important; border:1px solid #333 !important;'
-    if t == second_t: return 'background-color:#fef08a !important; color:#854d0e !important; border:1px solid #333 !important;'
-    return 'background-color:white !important; color:#333 !important;'
+    if t == best_t: return 'background-color:#ef4444; color:white; border:2px solid #333;'
+    if t == second_t: return 'background-color:#fef08a; color:#854d0e; border:2px solid #333;'
+    return 'background-color:white; color:#333;'
 
-# --- 3. CSS定義（デザインの骨格を先に固定） ---
+# --- 3. CSS定義（デザインの骨格） ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Yomogi&display=swap');
     .stApp { font-family: 'Kosugi Maru', sans-serif; background-color: #f0f4f8; }
-    
-    .paper-frame { background-color: white !important; max-width: 950px; margin: 0 auto; padding: 40px; border: 2px solid #333; box-shadow: 12px 12px 0px #cbd5e0; }
-    .news-box { border: 2px solid #333 !important; border-radius: 10px !important; padding: 15px !important; background: #fff !important; margin-bottom: 20px !important; min-height: 100px; }
-    .box-header { font-weight: bold !important; border-bottom: 2px dashed #333 !important; margin-bottom: 15px; font-size: 18px !important; display: flex; align-items: center; gap: 8px; }
-    
+    .news-box { border: 2px solid #333 !important; border-radius: 10px; padding: 15px; background: #fff; margin-bottom: 20px; }
+    .box-header { font-weight: bold; border-bottom: 2px dashed #333; margin-bottom: 15px; font-size: 18px; display: flex; align-items: center; gap: 8px; }
     .data-table { width: 100%; border-collapse: collapse; text-align: center; }
-    .data-table th { background: #edf2f7; border: 1px solid #333; padding: 5px; font-size: 12px; }
+    .data-table th { background: #edf2f7; border: 1px solid #333; padding: 5px; font-size: 11px; }
     .data-table td { border: 1px solid #333; padding: 8px; font-size: 18px; font-weight: bold; }
-    
-    .voice-bubble { display: flex; gap: 10px; background: #fefce8; padding: 10px; border-radius: 12px; border: 1px solid #fef08a; font-family: 'Yomogi', cursive; font-size: 14px; margin-top: 10px; }
+    .voice-bubble { display: flex; gap: 10px; background: #fefce8; padding: 10px; border-radius: 12px; border: 1px solid #fef08a; font-family: 'Yomogi', cursive; font-size: 14px; }
     .char-icon { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid #333; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. 描画開始（各パーツを完全に独立して描画） ---
+# --- 4. 描画（一括HTMLをやめ、パーツごとに描画） ---
 
-# 台紙の開始タグ
-st.markdown('<div class="paper-frame">', unsafe_allow_html=True)
+# 全体を囲う枠
+st.markdown('<div style="background-color: white; max-width: 950px; margin: 0 auto; padding: 40px; border: 2px solid #333; box-shadow: 12px 12px 0px #cbd5e0;">', unsafe_allow_html=True)
 
 # ヘッダー
 st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 4px double #333; padding-bottom: 15px; margin-bottom: 30px;">
-        <div style="font-size: 12px;">3年1組<br>BOAT STRIKE! 係</div>
+        <div style="font-size: 12px;">3年1組 BOAT STRIKE!</div>
         <div style="background: linear-gradient(to right, #ffecd2, #fcb69f); padding: 8px 60px; border: 2px solid #333; border-radius: 50px; font-size: 38px; font-weight: bold; color: #1a1a1a;">Birthstones新聞</div>
-        <div style="text-align: right; font-size: 12px;">{formatted_date} 第27号</div>
+        <div style="text-align: right; font-size: 12px;">{formatted_date} 第28号</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -81,12 +77,11 @@ st.markdown(f"""
 col_l, col_r = st.columns([1.7, 1.3])
 
 with col_l:
-    # 生タイム
+    # 展示タイム生データ
     raw_tds = "".join([f"<td>{t:.2f}</td>" for t in raw_t])
     st.markdown(f"""
-        <div class="news-box" style="background: #f8fafc; min-height: 550px;">
+        <div class="news-box" style="background: #f8fafc; min-height: 520px;">
             <div class="box-header">📊 公式：展示タイム生データ</div>
-            <p style="font-size: 13px;">会場：ボートレース{i_place} {i_race}</p>
             <table class="data-table">
                 <tr><th>1号</th><th>2号</th><th>3号</th><th>4号</th><th>5号</th><th>6号</th></tr>
                 <tr>{raw_tds}</tr>
@@ -97,47 +92,48 @@ with col_l:
     f_tds = "".join([f'<td style="{get_t_style(t)}">{t:.2f}</td>' for t in final_t])
     st.markdown(f"""
             <div style="margin-top: 40px;" class="box-header">🔍 独自：補正展示タイム解析</div>
-            <div style="background: white; border: 2px solid #333; border-radius: 8px; padding: 15px;">
-                <table class="data-table">
-                    <tr><th>1号</th><th>2号</th><th>3号</th><th>4号</th><th>5号</th><th>6号</th></tr>
-                    <tr>{f_tds}</tr>
-                </table>
-                <div style="margin-top: 10px; display: flex; gap: 20px; font-size: 12px;">
-                    <span><b style="color:#ef4444;">■</b> 1番時計</span> <span><b style="color:#d69e2e;">■</b> 2番時計</span>
-                </div>
-            </div>
-            <p style="font-size: 11px; color: #64748b; margin-top: 20px;">※場別・風速を考慮した独自解析値</p>
+            <table class="data-table">
+                <tr><th>1号</th><th>2号</th><th>3号</th><th>4号</th><th>5号</th><th>6号</th></tr>
+                <tr>{f_tds}</tr>
+            </table>
+            <p style="font-size: 11px; color: #64748b; margin-top: 20px;">※1位：赤、2位：黄で自動色分けしています。</p>
         </div>
     """, unsafe_allow_html=True)
 
 with col_r:
-    # 判定エリア
+    # 右側の3人
     needle = (i_exp - 50) * 1.8
     st.markdown(f"""
         <div class="news-box" style="border-color: #f59e0b; background: #fffcf5;">
-            <div class="box-header" style="color: #f59e0b;">🚩 一果のイン判定</div>
+            <div class="box-header" style="color: #f59e0b;">🚩 一果の判定</div>
             <div style="display: flex; align-items: center; justify-content: space-around; margin: 5px 0;">
-                <div style="position: relative; width: 120px; height: 65px; border-bottom: 2px solid #333; overflow: hidden;">
-                    <div style="width: 120px; height: 120px; border-radius: 50%; border: 10px solid #e2e8f0; border-bottom-color: transparent; border-left-color: #f87171; border-top-color: #fca5a5; transform: rotate(45deg);"></div>
+                <div style="position: relative; width: 110px; height: 60px; border-bottom: 2px solid #333; overflow: hidden;">
+                    <div style="width: 110px; height: 110px; border-radius: 50%; border: 10px solid #e2e8f0; border-bottom-color: transparent; border-left-color: #f87171; transform: rotate(45deg);"></div>
                     <div style="position: absolute; bottom: 0; left: 50%; width: 3px; height: 50px; background: #1a1a1a; transform-origin: bottom center; transform: translateX(-50%) rotate({needle}deg);"></div>
                 </div>
-                <div style="font-size: 32px; font-weight: bold; color: #ef4444;">{i_exp}%</div>
+                <div style="font-size: 28px; font-weight: bold; color: #ef4444;">{i_exp}%</div>
             </div>
             <div class="voice-bubble"><div class="char-icon">一果</div><div>「{i_text}」</div></div>
         </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
         <div class="news-box" style="border-color: #3b82f6; background: #f0f9ff;">
-            <div class="box-header" style="color: #3b82f6;">📚 初音の精密分析</div>
+            <div class="box-header" style="color: #3b82f6;">📚 初音の分析</div>
             <div style="background: #1e293b; color: white; padding: 4px; text-align: center; border-radius: 5px; font-weight: bold;">{h_eval}</div>
             <div class="voice-bubble" style="background: #f8fafc;"><div class="char-icon">初音</div><div>「{h_text}」</div></div>
         </div>
-        <div class="news-box" style="border-color: #eab308; background: #fffdf0; margin-bottom: 0px !important;">
-            <div class="box-header" style="color: #854d0e;">⚡ キイナの穴狙い</div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <div class="news-box" style="border-color: #eab308; background: #fffdf0;">
+            <div class="box-header" style="color: #854d0e;">⚡ キイナの穴</div>
             <div style="background: #ef4444; color: white; padding: 4px; text-align: center; border-radius: 5px; font-weight: bold;">判定：{k_eval}</div>
             <div class="voice-bubble" style="background: white;"><div class="char-icon">キイナ</div><div>「{k_text}」</div></div>
         </div>
     """, unsafe_allow_html=True)
 
-# 合議エリア
+# 最下部
 st.markdown(f"""
     <div class="news-box" style="background: #f8fafc; border: 3px double #333; margin-top: 10px;">
         <div class="box-header">🤝 3人の放課後ミーティング</div>
@@ -148,5 +144,4 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# 台紙の終了タグ
 st.markdown('</div>', unsafe_allow_html=True)
