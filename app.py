@@ -9,47 +9,46 @@ st.sidebar.header("🏆 予想データ入力")
 # 一果（本命）の設定
 with st.sidebar.expander("一果 (本命)", expanded=True):
     i_bet = st.text_input("買い目", value="1-2-34", key="ichika_b")
-    i_msg_val = st.text_input("一言", value="場平均より+22%も高いよ！ここは一果を信じて鬼絞りっ！", key="ichika_m")
+    i_msg = st.text_input("一言", value="場平均より+22%も高いよ！ここは一果を信じて鬼絞りっ！", key="ichika_m")
 
 # 初音（客観）の設定
 with st.sidebar.expander("初音 (客観)", expanded=True):
     h_bet = st.text_input("買い目", value="1-4-全", key="hatsune_b")
-    h_msg_val = st.text_input("一言", value="補正展示タイムから算出。オッズの歪みを含めるとこの目が合理的です。", key="hatsune_m")
+    h_msg = st.text_input("一言", value="補正展示タイムから算出。オッズの歪みを含めるとこの目が合理的です。", key="hatsune_m")
 
 # キイナ（穴）の設定
 with st.sidebar.expander("キイナ (穴)", expanded=True):
     k_bet = st.text_input("買い目", value="5-全-全", key="kiina_b")
-    k_msg_val = st.text_input("一言", value="4が凹めば5のまくり差しが炸裂するっしょ！買わなきゃ損だよ！", key="kiina_m")
+    k_msg = st.text_input("一言", value="4が凹めば5のまくり差しが炸裂するっしょ！買わなきゃ損だよ！", key="kiina_m")
 
 # --- 2. メイン画面：新聞生成 ---
 st.title("📰 BOAT STRIKE 最終予想セクション")
 st.write("プレビュー画面（このまま画像出力が可能です）")
 
-# 全体のHTMLとCSSを一つの変数にまとめます
-# ここで変数名をサイドバーと完全に一致させています
+# CSSの波括弧を {{ }} にして、Python変数用の { } と区別させています
 final_ui_html = f"""
 <style>
     .newspaper-container {{
-        display: flex;
-        justify-content: space-between;
-        gap: 15px;
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 15px !important;
         background-color: #f1f5f9;
         padding: 20px;
         border: 2px solid #1e293b;
         border-radius: 15px;
     }}
     .char-card {{
-        flex: 1;
-        background: white;
-        border-radius: 12px;
-        padding: 15px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-top: 8px solid;
+        flex: 1 !important;
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        text-align: center !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        border-top: 8px solid !important;
     }}
-    .ichika-border {{ border-top-color: #ef4444; }}
-    .hatsune-border {{ border-top-color: #3b82f6; }}
-    .kiina-border {{ border-top-color: #f59e0b; }}
+    .ichika-border {{ border-top-color: #ef4444 !important; }}
+    .hatsune-border {{ border-top-color: #3b82f6 !important; }}
+    .kiina-border {{ border-top-color: #f59e0b !important; }}
     
     .char-icon {{
         width: 70px; height: 70px;
@@ -79,26 +78,25 @@ final_ui_html = f"""
         <div class="char-icon" style="color:#ef4444; border-color:#ef4444;">一果</div>
         <div class="title-label" style="color:#ef4444;">一果のズバリ！</div>
         <div class="bet-display">{i_bet}</div>
-        <div class="comment-text">「{i_msg_val}」</div>
+        <div class="comment-text">「{i_msg}」</div>
     </div>
 
     <div class="char-card hatsune-border">
         <div class="char-icon" style="color:#3b82f6; border-color:#3b82f6;">初音</div>
         <div class="title-label" style="color:#3b82f6;">初音の客観数値</div>
         <div class="bet-display">{h_bet}</div>
-        <div class="comment-text">「{h_msg_val}」</div>
+        <div class="comment-text">「{h_msg}」</div>
     </div>
 
     <div class="char-card kiina-border">
         <div class="char-icon" style="color:#f59e0b; border-color:#f59e0b;">キイナ</div>
         <div class="title-label" style="color:#f59e0b;">キイナの穴狙い！</div>
         <div class="bet-display">{k_bet}</div>
-        <div class="comment-text">「{k_msg_val}」</div>
+        <div class="comment-text">「{k_msg}」</div>
     </div>
 </div>
 """
 
-# unsafe_allow_html=True を指定して一気に描画
 st.markdown(final_ui_html, unsafe_allow_html=True)
 
 st.divider()
